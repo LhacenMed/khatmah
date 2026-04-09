@@ -2,6 +2,7 @@ package com.lhacenmed.khatmah
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.MenuItem
+import androidx.activity.OnBackPressedCallback
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.navigation.NavigationBarView
 
@@ -19,9 +20,11 @@ class MainActivity : AppCompatActivity() {
 
         bottomNavigationView = findViewById(R.id.bottom_navigation)
 
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.container, homeFragment)
-            .commit()
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.container, homeFragment)
+                .commit()
+        }
 
         bottomNavigationView.getOrCreateBadge(R.id.notification).apply {
             isVisible = true
@@ -51,5 +54,16 @@ class MainActivity : AppCompatActivity() {
                 else -> false
             }
         }
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (bottomNavigationView.selectedItemId != R.id.home) {
+                    bottomNavigationView.selectedItemId = R.id.home
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
     }
 }
