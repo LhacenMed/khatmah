@@ -1,0 +1,4 @@
+<resources>
+    <!-- Night variant — also must NOT use NoActionBar -->
+    <style name="Base.Theme.BottomNavDemo" parent="Theme.Material3.DayNight" />
+</resources>

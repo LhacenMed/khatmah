@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+    <style name="Theme.Khatmah" parent="Theme.Material3.DayNight">
+        <item name="colorSurface">@color/nav_surface</item>
+        <item name="bottomNavigationStyle">@style/Widget.App.BottomNav</item>
+    </style>.
+
+    <!-- Transparent active indicator = no pill, ripple still works -->
+    <style name="Widget.App.BottomNav" parent="Widget.Material3.BottomNavigationView">
+        <item name="itemActiveIndicatorStyle">@style/Widget.App.BottomNav.ActiveIndicator</item>
+        <item name="itemIconTint">@color/nav_item_tint</item>
+        <item name="itemTextColor">@color/nav_item_tint</item>
+    </style>
+
+    <style name="Widget.App.BottomNav.ActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@android:color/transparent</item>
+    </style>
+
+    <style name="Theme.BottomNavDemo" parent="Theme.Khatmah" />
+</resources>
