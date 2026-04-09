@@ -1,18 +1,19 @@
 package com.lhacenmed.khatmah
+
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.view.MenuItem
 import androidx.activity.OnBackPressedCallback
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.android.material.navigation.NavigationBarView
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var bottomNavigationView: BottomNavigationView
 
-    private val homeFragment = HomeFragment()
-    private val settingsFragment = SettingsFragment()
-    private val notificationFragment = NotificationFragment()
+    private val todayFragment = TodayFragment()
+    private val athkarFragment = AthkarFragment()
+    private val prayersFragment = PrayersFragment()
+    private val indexFragment = IndexFragment()
+    private val moreFragment = MoreFragment()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,32 +23,39 @@ class MainActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
-                .replace(R.id.container, homeFragment)
+                .replace(R.id.container, todayFragment)
                 .commit()
-        }
-
-        bottomNavigationView.getOrCreateBadge(R.id.notification).apply {
-            isVisible = true
-            number = 8
         }
 
         bottomNavigationView.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.home -> {
+                R.id.today -> {
                     supportFragmentManager.beginTransaction()
-                        .replace(R.id.container, homeFragment)
+                        .replace(R.id.container, todayFragment)
                         .commit()
                     true
                 }
-                R.id.notification -> {
+                R.id.athkar -> {
                     supportFragmentManager.beginTransaction()
-                        .replace(R.id.container, notificationFragment)
+                        .replace(R.id.container, athkarFragment)
                         .commit()
                     true
                 }
-                R.id.settings -> {
+                R.id.prayers -> {
                     supportFragmentManager.beginTransaction()
-                        .replace(R.id.container, settingsFragment)
+                        .replace(R.id.container, prayersFragment)
+                        .commit()
+                    true
+                }
+                R.id.index -> {
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.container, indexFragment)
+                        .commit()
+                    true
+                }
+                R.id.more -> {
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.container, moreFragment)
                         .commit()
                     true
                 }
@@ -57,8 +65,8 @@ class MainActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (bottomNavigationView.selectedItemId != R.id.home) {
-                    bottomNavigationView.selectedItemId = R.id.home
+                if (bottomNavigationView.selectedItemId != R.id.today) {
+                    bottomNavigationView.selectedItemId = R.id.today
                 } else {
                     isEnabled = false
                     onBackPressedDispatcher.onBackPressed()

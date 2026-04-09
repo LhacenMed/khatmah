@@ -1,8 +1,10 @@
 <resources>
     <string name="app_name">Khatmah</string>
-    <string name="home">Home</string>
-    <string name="notification">Notification</string>
-    <string name="settings">Settings</string>
+    <string name="today">Today</string>
+    <string name="athkar">Athkar</string>
+    <string name="prayers">Prayers</string>
+    <string name="index">Index</string>
+    <string name="more">More</string>
     <string name="settings_fragment">Settings Fragment</string>
     <string name="home_fragment">Home Fragment</string>
     <string name="notification_fragment">Notification Fragment</string>
