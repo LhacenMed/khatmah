@@ -1,34 +1,55 @@
 package com.lhacenmed.khatmah
-
-import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.navigation.NavController
-import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.setupActionBarWithNavController
-import androidx.navigation.ui.setupWithNavController
+import android.os.Bundle
+import android.view.MenuItem
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.navigation.NavigationBarView
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var navController: NavController
+    private lateinit var bottomNavigationView: BottomNavigationView
+
+    private val homeFragment = HomeFragment()
+    private val settingsFragment = SettingsFragment()
+    private val notificationFragment = NotificationFragment()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_nav)
+        bottomNavigationView = findViewById(R.id.bottom_navigation)
 
-        val navHost = supportFragmentManager
-            .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
-        navController = navHost.navController
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.container, homeFragment)
+            .commit()
 
-        // All three are top-level destinations — no back arrow on any of them
-        val appBarConfig = AppBarConfiguration(
-            setOf(R.id.firstFragment, R.id.secondFragment, R.id.thirdFragment, R.id.fourthFragment)
-        )
+        bottomNavigationView.getOrCreateBadge(R.id.notification).apply {
+            isVisible = true
+            number = 8
+        }
 
-        setupActionBarWithNavController(navController, appBarConfig)
-        bottomNav.setupWithNavController(navController)
+        bottomNavigationView.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.home -> {
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.container, homeFragment)
+                        .commit()
+                    true
+                }
+                R.id.notification -> {
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.container, notificationFragment)
+                        .commit()
+                    true
+                }
+                R.id.settings -> {
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.container, settingsFragment)
+                        .commit()
+                    true
+                }
+                else -> false
+            }
+        }
     }
 }
