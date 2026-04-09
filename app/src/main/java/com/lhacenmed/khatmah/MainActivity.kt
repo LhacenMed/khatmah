@@ -25,6 +25,7 @@ class MainActivity : AppCompatActivity() {
             supportFragmentManager.beginTransaction()
                 .replace(R.id.container, todayFragment)
                 .commit()
+            supportActionBar?.title = getString(R.string.today)
         }
 
         bottomNavigationView.setOnItemSelectedListener { item ->
@@ -33,30 +34,35 @@ class MainActivity : AppCompatActivity() {
                     supportFragmentManager.beginTransaction()
                         .replace(R.id.container, todayFragment)
                         .commit()
+                    supportActionBar?.title = getString(R.string.today)
                     true
                 }
                 R.id.athkar -> {
                     supportFragmentManager.beginTransaction()
                         .replace(R.id.container, athkarFragment)
                         .commit()
+                    supportActionBar?.title = getString(R.string.athkar)
                     true
                 }
                 R.id.prayers -> {
                     supportFragmentManager.beginTransaction()
                         .replace(R.id.container, prayersFragment)
                         .commit()
+                    supportActionBar?.title = getString(R.string.prayers)
                     true
                 }
                 R.id.index -> {
                     supportFragmentManager.beginTransaction()
                         .replace(R.id.container, indexFragment)
                         .commit()
+                    supportActionBar?.title = getString(R.string.index)
                     true
                 }
                 R.id.more -> {
                     supportFragmentManager.beginTransaction()
                         .replace(R.id.container, moreFragment)
                         .commit()
+                    supportActionBar?.title = getString(R.string.more)
                     true
                 }
                 else -> false
@@ -67,6 +73,7 @@ class MainActivity : AppCompatActivity() {
             override fun handleOnBackPressed() {
                 if (bottomNavigationView.selectedItemId != R.id.today) {
                     bottomNavigationView.selectedItemId = R.id.today
+                    supportActionBar?.title = getString(R.string.today)
                 } else {
                     isEnabled = false
                     onBackPressedDispatcher.onBackPressed()
