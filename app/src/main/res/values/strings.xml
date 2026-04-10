@@ -1,16 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Khatmah</string>
+
+    <!-- Bottom navigation -->
     <string name="today">Today</string>
     <string name="athkar">Athkar</string>
     <string name="prayers">Prayers</string>
     <string name="index">Index</string>
     <string name="more">More</string>
-    <string name="settings_fragment">Settings Fragment</string>
-    <string name="home_fragment">Home Fragment</string>
-    <string name="notification_fragment">Notification Fragment</string>
-    <!-- TODO: Remove or change this placeholder text -->
+
+    <!-- Theme settings -->
     <string name="theme_settings">Theme</string>
     <string name="theme_system">System Default</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+
+    <!-- Language settings -->
+    <string name="language_settings">Language</string>
+    <string name="language_system_default">System Default</string>
+    <string name="language_english">English</string>
+    <string name="language_arabic">Arabic — العربية</string>
+
+    <!-- Shared UI -->
+    <string name="back">Back</string>
 </resources>

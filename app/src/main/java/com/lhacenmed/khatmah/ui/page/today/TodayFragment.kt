@@ -1,4 +1,4 @@
-package com.lhacenmed.khatmah
+package com.lhacenmed.khatmah.ui.page.today
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import com.lhacenmed.khatmah.R
 
 class TodayFragment : Fragment() {
 
@@ -18,6 +19,9 @@ class TodayFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         view.findViewById<View>(R.id.btn_theme_settings).setOnClickListener {
             findNavController().navigate(R.id.action_today_to_themeSettings)
+        }
+        view.findViewById<View>(R.id.btn_language).setOnClickListener {
+            findNavController().navigate(R.id.action_today_to_language)
         }
     }
 }

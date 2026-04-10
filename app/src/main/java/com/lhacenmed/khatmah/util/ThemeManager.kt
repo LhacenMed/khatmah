@@ -1,4 +1,4 @@
-package com.lhacenmed.khatmah
+package com.lhacenmed.khatmah.util
 
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate

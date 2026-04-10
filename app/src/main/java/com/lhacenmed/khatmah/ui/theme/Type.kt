@@ -2,33 +2,27 @@ package com.lhacenmed.khatmah.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextDirection
 
-// Set of Material typography styles to start with
-val Typography = Typography(
-    bodyLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.5.sp
+// TextDirection.Content: Compose text auto-resolves direction based on locale (RTL for Arabic, LTR for English)
+val Typography = Typography().run {
+    copy(
+        displayLarge  = displayLarge.rtl(),
+        displayMedium = displayMedium.rtl(),
+        displaySmall  = displaySmall.rtl(),
+        headlineLarge  = headlineLarge.rtl(),
+        headlineMedium = headlineMedium.rtl(),
+        headlineSmall  = headlineSmall.rtl(),
+        titleLarge  = titleLarge.rtl(),
+        titleMedium = titleMedium.rtl(),
+        titleSmall  = titleSmall.rtl(),
+        bodyLarge  = bodyLarge.rtl(),
+        bodyMedium = bodyMedium.rtl(),
+        bodySmall  = bodySmall.rtl(),
+        labelLarge  = labelLarge.rtl(),
+        labelMedium = labelMedium.rtl(),
+        labelSmall  = labelSmall.rtl(),
     )
-    /* Other default text styles to override
-    titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp
-    ),
-    labelSmall = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
-    )
-    */
-)
+}
+
+private fun TextStyle.rtl(): TextStyle = copy(textDirection = TextDirection.Content)
