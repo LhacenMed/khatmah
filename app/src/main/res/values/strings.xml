@@ -9,4 +9,8 @@
     <string name="home_fragment">Home Fragment</string>
     <string name="notification_fragment">Notification Fragment</string>
     <!-- TODO: Remove or change this placeholder text -->
+    <string name="theme_settings">Theme</string>
+    <string name="theme_system">System Default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
 </resources>
