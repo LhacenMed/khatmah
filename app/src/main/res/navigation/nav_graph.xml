@@ -15,18 +15,10 @@
         android:label="@string/today">
         <action
             android:id="@+id/action_today_to_themeSettings"
-            app:destination="@id/themeSettings"
-            app:enterAnim="@anim/nav_enter"
-            app:exitAnim="@anim/nav_exit"
-            app:popEnterAnim="@anim/nav_pop_enter"
-            app:popExitAnim="@anim/nav_pop_exit"/>
+            app:destination="@id/themeSettings"/>
         <action
             android:id="@+id/action_today_to_language"
-            app:destination="@id/language"
-            app:enterAnim="@anim/nav_enter"
-            app:exitAnim="@anim/nav_exit"
-            app:popEnterAnim="@anim/nav_pop_enter"
-            app:popExitAnim="@anim/nav_pop_exit"/>
+            app:destination="@id/language"/>
     </fragment>
 
     <fragment
