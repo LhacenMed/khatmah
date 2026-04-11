@@ -1,25 +1,23 @@
 package com.lhacenmed.khatmah.ui.nav
 
-import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 
 /**
- * A sub-page navigation destination — a screen reachable from a tab or another sub-page.
+ * A sub-page navigation destination.
+ *
+ * Each NavPage is responsible for its own Scaffold + AppTopBar — it animates
+ * as a complete, self-contained screen alongside the main shell.
  *
  * Developer flow:
- *  1. Create a NavPage val in the appropriate ui/page/ subdirectory.
- *     Supply route (from Route.*), titleRes for the TopAppBar, and the content composable.
- *  2. Append it to the pages list in MainActivity's AppEntry.
+ *  1. Create a NavPage val; supply route (from Route.*) and a full-screen composable.
+ *  2. Append it to the pages list in AppEntry.
  *
- * NavHost registration and TopAppBar title resolution are both automatic from the list.
+ * NavHost registration is automatic from the list.
  *
- * @param route    Navigation route string; use Route.* constants.
- * @param titleRes String resource displayed in the TopAppBar when this page is active.
- * @param content  Screen composable; receives the Scaffold's inner PaddingValues.
+ * @param route   Navigation route string; use Route.* constants.
+ * @param content Full-screen composable; owns its Scaffold, TopAppBar, and back handling.
  */
 class NavPage(
     val route: String,
-    @StringRes val titleRes: Int,
-    val content: @Composable (PaddingValues) -> Unit,
+    val content: @Composable () -> Unit,
 )

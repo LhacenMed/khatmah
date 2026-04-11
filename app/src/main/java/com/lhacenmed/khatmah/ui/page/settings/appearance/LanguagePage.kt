@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -18,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.ui.common.Route
+import com.lhacenmed.khatmah.ui.component.AppTopBar
 import com.lhacenmed.khatmah.ui.component.SingleChoiceItem
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.ui.nav.NavPage
@@ -33,20 +35,30 @@ private val LANGUAGES = listOf(
 
 /**
  * Language settings sub-page.
- * Append LanguagePage to the pages list in MainActivity to register it.
- * Route, TopAppBar title, and NavHost entry are all derived automatically.
+ * Owns its Scaffold + AppTopBar; animates as a complete screen alongside the main shell.
+ * Append LanguagePage to the pages list in AppEntry to register it.
  */
-val LanguagePage = NavPage(
-    route    = Route.LANGUAGE,
-    titleRes = R.string.language_settings,
-) { padding -> LanguageContent(padding) }
+val LanguagePage = NavPage(route = Route.LANGUAGE) {
+    val nav = LocalNavController.current
+
+    Scaffold(
+        topBar = {
+            AppTopBar(
+                title      = stringResource(R.string.language_settings),
+                isTopLevel = false,
+                onBack     = { nav.popBackStack() },
+            )
+        },
+    ) { padding ->
+        LanguageContent(padding = padding, nav = nav)
+    }
+}
 
 @Composable
-private fun LanguageContent(padding: PaddingValues) {
+private fun LanguageContent(padding: PaddingValues, nav: androidx.navigation.NavHostController) {
     // Snapshot current selection; AppCompatDelegate recreates the activity on change,
     // so this state only needs to survive until the system-triggered recreate.
     var currentTag by remember { mutableStateOf(LocaleManager.getCurrentTag()) }
-    val nav = LocalNavController.current
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(

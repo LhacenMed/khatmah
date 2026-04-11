@@ -4,32 +4,39 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.ui.common.Route
-import com.lhacenmed.khatmah.ui.component.SingleChoiceItem
+import com.lhacenmed.khatmah.ui.component.AppTopBar
+import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.ui.nav.NavPage
-import com.lhacenmed.khatmah.util.LocaleManager
 
 /**
- * About settings sub-page.
- * Append AboutPage to the pages list in MainActivity to register it.
- * Route, TopAppBar title, and NavHost entry are all derived automatically.
+ * About sub-page.
+ * Owns its Scaffold + AppTopBar; animates as a complete screen alongside the main shell.
+ * Append AboutPage to the pages list in AppEntry to register it.
  */
-val AboutPage = NavPage(
-    route    = Route.ABOUT,
-    titleRes = R.string.about_page,
-) { padding -> AboutContent(padding) }
+val AboutPage = NavPage(route = Route.ABOUT) {
+    val nav = LocalNavController.current
+
+    Scaffold(
+        topBar = {
+            AppTopBar(
+                title      = stringResource(R.string.about_page),
+                isTopLevel = false,
+                onBack     = { nav.popBackStack() },
+            )
+        },
+    ) { padding ->
+        AboutContent(padding = padding)
+    }
+}
 
 @Composable
 private fun AboutContent(padding: PaddingValues) {

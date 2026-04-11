@@ -12,6 +12,11 @@ package com.lhacenmed.khatmah.ui.common
  */
 object Route {
 
+    // ── Shell ─────────────────────────────────────────────────────────────────
+    // Root destination that contains all tabs + chrome (TopAppBar + BottomNavBar).
+    // Animates as a single unit when navigating to/from sub-pages.
+    const val MAIN    = "main"
+
     // ── Tabs (bottom navigation) ──────────────────────────────────────────────
     const val TODAY   = "today"
     const val ATHKAR  = "athkar"

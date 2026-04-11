@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -14,25 +15,36 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.ui.common.Route
+import com.lhacenmed.khatmah.ui.component.AppTopBar
 import com.lhacenmed.khatmah.ui.component.SingleChoiceItem
+import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.ui.nav.NavPage
 import com.lhacenmed.khatmah.util.ThemeManager
 
 /**
  * Theme settings sub-page.
- * Append ThemeSettingsPage to the pages list in MainActivity to register it.
- * Route, TopAppBar title, and NavHost entry are all derived automatically.
+ * Owns its Scaffold + AppTopBar; animates as a complete screen alongside the main shell.
+ * Append ThemeSettingsPage to the pages list in AppEntry to register it.
  */
-val ThemeSettingsPage = NavPage(
-    route    = Route.THEME_SETTINGS,
-    titleRes = R.string.theme_settings,
-) { padding ->
+val ThemeSettingsPage = NavPage(route = Route.THEME_SETTINGS) {
+    val nav     = LocalNavController.current
     val context = LocalContext.current
-    ThemeSettingsContent(
-        padding        = padding,
-        currentMode    = ThemeManager.getMode(context),
-        onModeSelected = { ThemeManager.setMode(context, it) },
-    )
+
+    Scaffold(
+        topBar = {
+            AppTopBar(
+                title      = stringResource(R.string.theme_settings),
+                isTopLevel = false,
+                onBack     = { nav.popBackStack() },
+            )
+        },
+    ) { padding ->
+        ThemeSettingsContent(
+            padding        = padding,
+            currentMode    = ThemeManager.getMode(context),
+            onModeSelected = { ThemeManager.setMode(context, it) },
+        )
+    }
 }
 
 @Composable
