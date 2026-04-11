@@ -37,4 +37,41 @@
     <!-- Shared UI -->
     <string name="back">Back</string>
     <string name="navigate_up">Navigate up</string>
+
+    <!-- More tab — sections -->
+    <string name="more_support_us">Support Us</string>
+    <string name="more_current_khatmah">Current Khatmah</string>
+    <string name="more_quranic_sunnahs">Quranic Sunnahs</string>
+    <string name="more_settings">Settings</string>
+    <string name="more_prayer_times">Prayer Times</string>
+    <string name="more_athkar_alarms">Athkar Alarms</string>
+    <string name="more_sunnahs_alarms">Sunnahs Alarms</string>
+    <string name="more_khatmah_app">Khatmah App</string>
+
+    <!-- More tab — items -->
+    <string name="more_support_khatmah">Support Khatmah</string>
+    <string name="more_previous_sessions">Previous Sessions</string>
+    <string name="more_upcoming_sessions">Upcoming Sessions</string>
+    <string name="more_bookmark">Bookmark</string>
+    <string name="more_surat_kahf">Surat Al-Kahf</string>
+    <string name="more_surat_mulk">Surat Al-Mulk</string>
+    <string name="more_surat_baqarah">Surat Al-Baqarah</string>
+    <string name="more_daily_alarm">Daily Alarm</string>
+    <string name="more_start_new_khatmah">Start New Khatmah</string>
+    <string name="more_prayer_times_settings">Prayer Times Settings</string>
+    <string name="more_qibla_direction">Qibla Direction</string>
+    <string name="more_day_athkar_alarm">Day Athkar Alarm</string>
+    <string name="more_day_athkar_time">Day Athkar Time</string>
+    <string name="more_night_athkar_alarm">Night Athkar Alarm</string>
+    <string name="more_night_athkar_time">Night Athkar Time</string>
+    <string name="more_al_mulk_alarm">Al-Mulk Alarm</string>
+    <string name="more_al_mulk_time">Al-Mulk Time</string>
+    <string name="more_al_baqarah_alarm">Al-Baqarah Alarm</string>
+    <string name="more_al_baqarah_time">Al-Baqarah Time</string>
+    <string name="more_language">Language</string>
+    <string name="more_contact_us">Contact Us</string>
+    <string name="more_twitter">Follow Us on Twitter</string>
+    <string name="more_instagram">Follow Us on Instagram</string>
+    <string name="more_share_app">Share App</string>
+    <string name="more_rate_khatmah">Rate Khatmah</string>
 </resources>

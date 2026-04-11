@@ -37,4 +37,41 @@
     <!-- Shared UI -->
     <string name="back">رجوع</string>
     <string name="navigate_up">رجوع</string>
+
+    <!-- More tab — sections -->
+    <string name="more_support_us">ادعمنا</string>
+    <string name="more_current_khatmah">الختمة الحالية</string>
+    <string name="more_quranic_sunnahs">السنن القرآنية</string>
+    <string name="more_settings">الإعدادات</string>
+    <string name="more_prayer_times">أوقات الصلاة</string>
+    <string name="more_athkar_alarms">تنبيهات الأذكار</string>
+    <string name="more_sunnahs_alarms">تنبيهات السنن</string>
+    <string name="more_khatmah_app">تطبيق ختمة</string>
+
+    <!-- More tab — items -->
+    <string name="more_support_khatmah">دعم ختمة</string>
+    <string name="more_previous_sessions">الجلسات السابقة</string>
+    <string name="more_upcoming_sessions">الجلسات القادمة</string>
+    <string name="more_bookmark">الإشارة المرجعية</string>
+    <string name="more_surat_kahf">سورة الكهف</string>
+    <string name="more_surat_mulk">سورة الملك</string>
+    <string name="more_surat_baqarah">سورة البقرة</string>
+    <string name="more_daily_alarm">التنبيه اليومي</string>
+    <string name="more_start_new_khatmah">بدء ختمة جديدة</string>
+    <string name="more_prayer_times_settings">إعدادات أوقات الصلاة</string>
+    <string name="more_qibla_direction">اتجاه القبلة</string>
+    <string name="more_day_athkar_alarm">تنبيه أذكار الصباح</string>
+    <string name="more_day_athkar_time">وقت أذكار الصباح</string>
+    <string name="more_night_athkar_alarm">تنبيه أذكار المساء</string>
+    <string name="more_night_athkar_time">وقت أذكار المساء</string>
+    <string name="more_al_mulk_alarm">تنبيه سورة الملك</string>
+    <string name="more_al_mulk_time">وقت سورة الملك</string>
+    <string name="more_al_baqarah_alarm">تنبيه سورة البقرة</string>
+    <string name="more_al_baqarah_time">وقت سورة البقرة</string>
+    <string name="more_language">اللغة</string>
+    <string name="more_contact_us">تواصل معنا</string>
+    <string name="more_twitter">تابعنا على تويتر</string>
+    <string name="more_instagram">تابعنا على إنستغرام</string>
+    <string name="more_share_app">مشاركة التطبيق</string>
+    <string name="more_rate_khatmah">قيّم ختمة</string>
 </resources>
