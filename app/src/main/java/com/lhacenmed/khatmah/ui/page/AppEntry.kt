@@ -30,7 +30,7 @@ import com.lhacenmed.khatmah.ui.nav.BottomNavBar
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.ui.nav.NavPage
 import com.lhacenmed.khatmah.ui.nav.NavScreen
-import com.lhacenmed.khatmah.ui.page.about.AboutPage
+import com.lhacenmed.khatmah.ui.page.settings.about.AboutPage
 import com.lhacenmed.khatmah.ui.page.settings.appearance.LanguagePage
 import com.lhacenmed.khatmah.ui.page.settings.appearance.ThemeSettingsPage
 import com.lhacenmed.khatmah.ui.page.tabs.AthkarTab

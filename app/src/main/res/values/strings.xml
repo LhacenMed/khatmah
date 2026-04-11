@@ -21,8 +21,18 @@
     <string name="language_english">English</string>
     <string name="language_arabic">Arabic — العربية</string>
 
-    <!-- About Page -->
+    <!-- PreferenceSwitchWithDivider accessibility -->
+    <string name="open_settings">Open settings</string>
+
+    <!-- AboutPage -->
     <string name="about_page">About</string>
+    <string name="about_app">App</string>
+    <string name="about_links">Links</string>
+    <string name="version">Version</string>
+    <string name="about_translate">Translate</string>
+    <string name="about_translate_desc">Help translate Khatmah into your language</string>
+    <string name="about_source_code">Source Code</string>
+    <string name="about_source_code_desc">View the source code on GitHub</string>
 
     <!-- Shared UI -->
     <string name="back">Back</string>

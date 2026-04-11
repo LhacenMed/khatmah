@@ -21,8 +21,18 @@
     <string name="language_english">الإنجليزية — English</string>
     <string name="language_arabic">العربية</string>
 
-    <!-- About Page -->
+    <!-- PreferenceSwitchWithDivider accessibility -->
+    <string name="open_settings">فتح الإعدادات</string>
+
+    <!-- AboutPage -->
     <string name="about_page">عن المطور</string>
+    <string name="about_app">التطبيق</string>
+    <string name="about_links">روابط</string>
+    <string name="version">الإصدار</string>
+    <string name="about_translate">المساهمة في الترجمة</string>
+    <string name="about_translate_desc">ساهم في ترجمة تطبيق ختمة إلى لغتك</string>
+    <string name="about_source_code">الشفرة المصدرية</string>
+    <string name="about_source_code_desc">عرض الشفرة المصدرية على GitHub</string>
 
     <!-- Shared UI -->
     <string name="back">رجوع</string>
