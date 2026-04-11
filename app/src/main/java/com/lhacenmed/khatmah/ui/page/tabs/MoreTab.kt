@@ -45,6 +45,9 @@ import com.lhacenmed.khatmah.ui.component.PreferenceSwitch
 import com.lhacenmed.khatmah.ui.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.ui.nav.NavScreen
 
+// Items within this distance from the top animate directly; farther ones jump-then-animate.
+private const val SMOOTH_SCROLL_THRESHOLD = 4
+
 val MoreTab = NavScreen(
     route    = Route.MORE,
     iconRes  = R.drawable.ic_profile,
@@ -62,12 +65,17 @@ private fun MoreScreen(padding: PaddingValues) {
     var alMulkAlarmOn    by rememberSaveable { mutableStateOf(false) }
     var alBaqarahAlarmOn by rememberSaveable { mutableStateOf(false) }
 
-    val listState    = rememberLazyListState()
-    val scrollToTop  = LocalScrollToTop.current
+    val listState   = rememberLazyListState()
+    val scrollToTop = LocalScrollToTop.current
 
-    // Animate smoothly to the top when the More nav button is re-tapped.
+    // Two-phase scroll-to-top: instant jump to near the top, then smooth animation
+    // for the final items. This avoids the visual churn of animating through dozens
+    // of items when the list is scrolled far down.
     LaunchedEffect(scrollToTop) {
         scrollToTop.collect {
+            if (listState.firstVisibleItemIndex > SMOOTH_SCROLL_THRESHOLD) {
+                listState.scrollToItem(SMOOTH_SCROLL_THRESHOLD)
+            }
             listState.animateScrollToItem(0)
         }
     }

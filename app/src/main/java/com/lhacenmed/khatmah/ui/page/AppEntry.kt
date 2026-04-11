@@ -23,6 +23,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.zIndex
 import androidx.core.view.ViewCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
@@ -105,7 +106,12 @@ fun AppEntry() {
  *
  * All tabs stay composed at all times (alpha = 0 when not selected), so scroll state
  * and any rememberSaveable values survive tab switches without any manual caching.
- * Hidden tabs have touch events consumed so they never intercept user input.
+ *
+ * zIndex elevates the selected tab above all others so it always wins touch dispatch —
+ * without it, tabs stacked later in the Box would intercept touches meant for the visible tab.
+ *
+ * Hidden tabs have touch events consumed at the Initial pass as a safety net for any
+ * edge cases where zIndex alone doesn't fully isolate input.
  *
  * Re-tapping the active tab's nav button emits on that tab's [LocalScrollToTop] flow,
  * which the tab's content collects to animate its scroll state smoothly to the top.
@@ -151,17 +157,18 @@ private fun MainScreen(tabs: List<NavScreen>) {
         },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
-            // All tabs stay composed — visibility and touch pass-through toggle on selection.
+            // All tabs stay composed — visibility, touch, and Z-order toggle on selection.
             tabs.forEachIndexed { index, tab ->
                 val selected = index == selectedIndex
                 CompositionLocalProvider(LocalScrollToTop provides scrollToTopFlows[index]) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
+                            // Selected tab sits on top — wins all touch dispatch.
+                            .zIndex(if (selected) 1f else 0f)
                             .graphicsLayer { alpha = if (selected) 1f else 0f }
+                            // Safety net: hidden tabs consume residual pointer events.
                             .then(
-                                // Hidden tabs consume all pointer events so they never
-                                // intercept touches intended for the visible tab beneath.
                                 if (!selected) Modifier.pointerInput(Unit) {
                                     awaitPointerEventScope {
                                         while (true) {
