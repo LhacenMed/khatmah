@@ -23,4 +23,5 @@
 
     <!-- Shared UI -->
     <string name="back">Back</string>
+    <string name="navigate_up">Navigate up</string>
 </resources>

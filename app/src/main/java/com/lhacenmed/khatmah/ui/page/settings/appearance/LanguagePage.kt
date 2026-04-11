@@ -1,6 +1,7 @@
 package com.lhacenmed.khatmah.ui.page.settings.appearance
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
@@ -20,29 +21,33 @@ import com.lhacenmed.khatmah.util.LocaleManager
 private data class LangOption(val tag: String?, val labelRes: Int)
 
 private val LANGUAGES = listOf(
-    LangOption(null,  R.string.language_system_default),
-    LangOption("en",  R.string.language_english),
-    LangOption("ar",  R.string.language_arabic),
+    LangOption(null, R.string.language_system_default),
+    LangOption("en", R.string.language_english),
+    LangOption("ar", R.string.language_arabic),
 )
 
 @Composable
-fun LanguagePage() {
+fun LanguagePage(padding: PaddingValues) {
     // Snapshot current selection; AppCompatDelegate recreates the activity on change,
     // so this state only needs to survive until the system-triggered recreate.
     var currentTag by remember { mutableStateOf(LocaleManager.getCurrentTag()) }
 
     Surface(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(vertical = 8.dp),
+        ) {
             LANGUAGES.forEach { option ->
-                val selected = matchesTag(currentTag, option.tag)
                 SingleChoiceItem(
-                    label = stringResource(option.labelRes),
-                    selected = selected,
-                    onClick = {
+                    label    = stringResource(option.labelRes),
+                    selected = matchesTag(currentTag, option.tag),
+                    onClick  = {
                         currentTag = option.tag
                         LocaleManager.setLocale(option.tag)
                         // AppCompatDelegate.setApplicationLocales() triggers recreate automatically
-                    }
+                    },
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
             }
