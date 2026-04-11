@@ -21,6 +21,9 @@
     <string name="language_english">الإنجليزية — English</string>
     <string name="language_arabic">العربية</string>
 
+    <!-- About Page -->
+    <string name="about_page">عن المطور</string>
+
     <!-- Shared UI -->
     <string name="back">رجوع</string>
     <string name="navigate_up">رجوع</string>

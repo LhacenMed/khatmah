@@ -1,6 +1,8 @@
 package com.lhacenmed.khatmah
 
+import android.os.Bundle
 import android.view.View
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,7 +24,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -32,10 +33,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.nav.BottomNavBar
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
+import com.lhacenmed.khatmah.ui.nav.NavPage
 import com.lhacenmed.khatmah.ui.nav.NavScreen
+import com.lhacenmed.khatmah.ui.page.about.AboutPage
 import com.lhacenmed.khatmah.ui.page.settings.appearance.LanguagePage
 import com.lhacenmed.khatmah.ui.page.settings.appearance.ThemeSettingsPage
 import com.lhacenmed.khatmah.ui.page.tabs.AthkarTab
@@ -43,18 +45,15 @@ import com.lhacenmed.khatmah.ui.page.tabs.IndexTab
 import com.lhacenmed.khatmah.ui.page.tabs.MoreTab
 import com.lhacenmed.khatmah.ui.page.tabs.PrayersTab
 import com.lhacenmed.khatmah.ui.page.tabs.TodayTab
-import com.lhacenmed.khatmah.ui.theme.KhatmahTheme
-import com.lhacenmed.khatmah.util.ThemeManager
-import android.os.Bundle
-import androidx.activity.compose.setContent
+import com.lhacenmed.khatmah.ui.theme.Theme
 
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            KhatmahTheme {
-                KhatmahApp()
+            Theme {
+                AppEntry()
             }
         }
     }
@@ -63,13 +62,13 @@ class MainActivity : AppCompatActivity() {
 // ─── Root composable ──────────────────────────────────────────────────────────
 
 @Composable
-private fun KhatmahApp() {
+private fun AppEntry() {
 
-    // ── Tab list ───────────────────────────────────────────────────────────────
+    // ── Tab list ──────────────────────────────────────────────────────────────
     // To add a new tab:
-    //   1. Create a NavScreen val in ui/page/tabs/ (route from Route.*, icon, label, content).
+    //   1. Create a NavScreen val in ui/page/tabs/ with route, iconRes, labelRes, content.
     //   2. Append it here.
-    // NavHost registration, bottom bar, and route mapping are all automatic.
+    // Bottom bar wiring, NavHost registration, and top-level detection are all automatic.
     val tabs = listOf(
         TodayTab,
         AthkarTab,
@@ -78,41 +77,56 @@ private fun KhatmahApp() {
         MoreTab,
     )
 
-    val navController = rememberNavController()
-    val currentRoute  = navController.currentBackStackEntryAsState().value?.destination?.route
-    val isTopLevel    = currentRoute in Route.TABS
-
-    // ── Sub-page title map ─────────────────────────────────────────────────────
-    // Add an entry here whenever a new sub-page composable is registered below.
-    val subPageTitles = mapOf(
-        Route.THEME_SETTINGS to stringResource(R.string.theme_settings),
-        Route.LANGUAGE       to stringResource(R.string.language_settings),
+    // ── Sub-page list ─────────────────────────────────────────────────────────
+    // To add a new sub-page:
+    //   1. Create a NavPage val anywhere in ui/page/ with route, titleRes, content.
+    //   2. Append it here.
+    // NavHost registration and TopAppBar title resolution are both automatic.
+    val pages = listOf(
+        ThemeSettingsPage,
+        LanguagePage,
+        AboutPage
     )
 
+    val navController = rememberNavController()
+    val currentRoute  = navController.currentBackStackEntryAsState().value?.destination?.route
+
+    // Derive top-level detection from the tabs list — no separate Route.TABS set needed.
+    // currentRoute is null before the NavHost initialises on the very first composition;
+    // treating null as top-level prevents a back-arrow + app-name flash at startup.
+    val tabRoutes  = remember { tabs.map { it.route }.toHashSet() }
+    val isTopLevel = currentRoute == null || currentRoute in tabRoutes
+
+    // null  → pre-init: show first tab label immediately, no "Khatmah" flash.
+    // tab   → matching tab label.
+    // page  → titleRes declared in the NavPage val, co-located with the page content.
     val appBarTitle = when {
-        isTopLevel       -> tabs.find { it.route == currentRoute }
+        currentRoute == null -> stringResource(tabs.first().labelRes)
+        isTopLevel           -> tabs.find { it.route == currentRoute }
             ?.let { stringResource(it.labelRes) }
             ?: stringResource(R.string.app_name)
-        currentRoute != null -> subPageTitles[currentRoute] ?: stringResource(R.string.app_name)
-        else             -> stringResource(R.string.app_name)
+        else                 -> pages.find { it.route == currentRoute }
+            ?.let { stringResource(it.titleRes) }
+            ?: stringResource(R.string.app_name)
     }
 
     // Anchor views for tab long-press tooltips, indexed in the same order as tabs.
-    // Written once inside TooltipAnchorRow's factory; read lazily by NavButton at touch time.
+    // Populated by TooltipAnchorRow factory blocks; passed into BottomNavBar as a
+    // lambda so reads happen at touch time — never a stale snapshot of nulls.
     val anchorViews = remember { arrayOfNulls<View>(tabs.size) }
 
     CompositionLocalProvider(LocalNavController provides navController) {
         Scaffold(
             topBar = {
-                KhatmahTopBar(
+                AppTopBar(
                     title      = appBarTitle,
                     isTopLevel = isTopLevel,
                     onBack     = { navController.popBackStack() },
                 )
             },
             bottomBar = {
-                // Bottom bar is only part of the Scaffold when on a top-level tab so that
-                // Scaffold's innerPadding correctly reflects its absence on sub-pages.
+                // Excluded from Scaffold on sub-pages so innerPadding.bottom = 0
+                // and sub-page content fills the full screen without a nav bar offset.
                 if (isTopLevel) {
                     BottomNavBar(
                         screens      = tabs,
@@ -125,22 +139,27 @@ private fun KhatmahApp() {
                                 restoreState    = true
                             }
                         },
-                        anchorViews = anchorViews.toList(),
+                        // Lambda reads the live array value at touch time — guaranteed
+                        // to reflect whatever the most recent factory block wrote,
+                        // whether that was on first composition or after a back-navigation.
+                        anchorViewAt = { anchorViews[it] },
                     )
                 }
             },
         ) { innerPadding ->
             Box(modifier = Modifier.fillMaxSize()) {
-                KhatmahNavHost(
+                AppNavHost(
                     tabs          = tabs,
+                    pages         = pages,
                     navController = navController,
                     innerPadding  = innerPadding,
                 )
 
                 // ── Tooltip anchor strip ──────────────────────────────────────
-                // Invisible 1 dp row just above the nav bar. Each slot has the same
-                // weight(1f) width as its NavButton, so touch X is transferable.
-                // Only present when the nav bar is visible.
+                // Invisible 1 dp row just above the nav bar — one slot per tab,
+                // each weighted to match its NavButton width so touch X transfers.
+                // Present only when the nav bar is visible; factory blocks run on
+                // every re-entry so anchorViews always holds current View references.
                 if (isTopLevel) {
                     TooltipAnchorRow(
                         screens  = tabs,
@@ -160,12 +179,15 @@ private fun KhatmahApp() {
 
 /**
  * Adaptive top app bar:
- *  • Top-level tab  → title only, no navigation icon.
- *  • Sub-page       → back arrow + sub-page title.
+ *  • Top-level tab → title only, no navigation icon.
+ *  • Sub-page      → back arrow + sub-page title.
+ *
+ * Colors follow MaterialTheme.colorScheme (surfaceContainer / onSurface) so
+ * dynamic color and dark/light mode are applied automatically.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun KhatmahTopBar(
+private fun AppTopBar(
     title: String,
     isTopLevel: Boolean,
     onBack: () -> Unit,
@@ -188,22 +210,19 @@ private fun KhatmahTopBar(
 // ─── Navigation host ──────────────────────────────────────────────────────────
 
 /**
- * Builds the NavHost from [tabs] automatically, then registers sub-pages explicitly.
- * The start destination is always the first tab in the list.
+ * Builds the NavHost entirely from [tabs] and [pages] — no manual composable() calls.
+ * The start destination is always the first entry in [tabs].
  *
- * To add a new sub-page:
- *  1. Add a Route.* constant in Route.kt.
- *  2. Add it to MainActivity's subPageTitles map.
- *  3. Register a composable() block here.
+ * To add a tab   : append a NavScreen to the tabs list in AppEntry.
+ * To add a page  : append a NavPage  to the pages list in AppEntry.
  */
 @Composable
-private fun KhatmahNavHost(
+private fun AppNavHost(
     tabs: List<NavScreen>,
+    pages: List<NavPage>,
     navController: NavHostController,
     innerPadding: PaddingValues,
 ) {
-    val context = LocalContext.current
-
     NavHost(
         navController    = navController,
         startDestination = tabs.first().route,
@@ -214,16 +233,9 @@ private fun KhatmahNavHost(
             composable(screen.route) { screen.content(innerPadding) }
         }
 
-        // ── Sub-pages ──────────────────────────────────────────────────────────
-        composable(Route.THEME_SETTINGS) {
-            ThemeSettingsPage(
-                padding        = innerPadding,
-                currentMode    = ThemeManager.getMode(context),
-                onModeSelected = { ThemeManager.setMode(context, it) },
-            )
-        }
-        composable(Route.LANGUAGE) {
-            LanguagePage(padding = innerPadding)
+        // ── Sub-pages: auto-registered from the pages list ─────────────────────
+        pages.forEach { page ->
+            composable(page.route) { page.content(innerPadding) }
         }
     }
 }
@@ -232,9 +244,12 @@ private fun KhatmahNavHost(
 
 /**
  * An invisible 1 dp row of Views — one per tab — positioned just above the nav bar.
- * Each view carries a tooltip text; NavButton forwards long-press events here so the
- * system tooltip fires above the bar. Visibility is INVISIBLE so the strip never
- * intercepts real touches from the user.
+ * Each view carries tooltip text; NavButton forwards long-press MotionEvents here so
+ * the system tooltip fires above the bar. INVISIBLE so the strip never intercepts real
+ * touches from the user.
+ *
+ * The factory block runs each time this composable enters composition, refreshing the
+ * anchorViews array with current (window-attached) View references.
  */
 @Composable
 private fun TooltipAnchorRow(

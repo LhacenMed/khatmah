@@ -9,13 +9,34 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.component.SingleChoiceItem
+import com.lhacenmed.khatmah.ui.nav.NavPage
+import com.lhacenmed.khatmah.util.ThemeManager
+
+/**
+ * Theme settings sub-page.
+ * Append ThemeSettingsPage to the pages list in MainActivity to register it.
+ * Route, TopAppBar title, and NavHost entry are all derived automatically.
+ */
+val ThemeSettingsPage = NavPage(
+    route    = Route.THEME_SETTINGS,
+    titleRes = R.string.theme_settings,
+) { padding ->
+    val context = LocalContext.current
+    ThemeSettingsContent(
+        padding        = padding,
+        currentMode    = ThemeManager.getMode(context),
+        onModeSelected = { ThemeManager.setMode(context, it) },
+    )
+}
 
 @Composable
-fun ThemeSettingsPage(
+private fun ThemeSettingsContent(
     padding: PaddingValues,
     currentMode: Int,
     onModeSelected: (Int) -> Unit,

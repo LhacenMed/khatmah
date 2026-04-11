@@ -21,6 +21,9 @@
     <string name="language_english">English</string>
     <string name="language_arabic">Arabic — العربية</string>
 
+    <!-- About Page -->
+    <string name="about_page">About</string>
+
     <!-- Shared UI -->
     <string name="back">Back</string>
     <string name="navigate_up">Navigate up</string>

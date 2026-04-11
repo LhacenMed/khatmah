@@ -31,7 +31,9 @@ import androidx.compose.ui.unit.dp
  * @param screens      Ordered tab list; left→right order matches the list order.
  * @param currentRoute Active NavHost route; determines which tab appears selected.
  * @param onNavigate   Called with the destination route when a tab is tapped.
- * @param anchorViews  Invisible tooltip-anchor views, indexed in tabs order.
+ * @param anchorViewAt Lazily resolves the invisible tooltip-anchor View for a tab index.
+ *                     Evaluated at touch time — always reads the live post-layout value
+ *                     rather than a snapshot taken before factory blocks have run.
  * @param circleScale  Ripple radius as a fraction of slot width.
  * @param modifier     Optional outer modifier.
  */
@@ -40,7 +42,7 @@ fun BottomNavBar(
     screens: List<NavScreen>,
     currentRoute: String?,
     onNavigate: (String) -> Unit,
-    anchorViews: List<View?> = emptyList(),
+    anchorViewAt: (Int) -> View? = { null },
     circleScale: Float = 1.2f,
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
 ) {
@@ -72,7 +74,9 @@ fun BottomNavBar(
                     unselectedColor = unselectedColor,
                     rippleColor     = rippleColor,
                     circleScale     = circleScale,
-                    anchorProvider  = { anchorViews.getOrNull(index) },
+                    // Lambda reads directly from the live array at touch time —
+                    // never a stale list snapshot that would return null permanently.
+                    anchorProvider  = { anchorViewAt(index) },
                     modifier        = Modifier.weight(1f),
                     onClick         = { onNavigate(screen.route) },
                 )

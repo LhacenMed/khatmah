@@ -3,8 +3,12 @@ package com.lhacenmed.khatmah.ui.common
 /**
  * Single source of truth for all navigation route strings.
  *
- * Tab NavScreen vals in ui/page/tabs/ reference these constants so the route
- * declared here and the route registered in NavHost are always the same string.
+ * Tab NavScreen vals in ui/page/tabs/ and sub-page NavPage vals in ui/page/
+ * both reference these constants so every callsite uses the same string.
+ *
+ * Whether a route is top-level (tab) or a sub-page is determined at runtime by
+ * whether it appears in the tabs list declared in MainActivity — no separate set
+ * to maintain.
  */
 object Route {
 
@@ -15,14 +19,8 @@ object Route {
     const val INDEX   = "index"
     const val MORE    = "more"
 
-    /**
-     * Set of all top-level tab routes.
-     * Used to determine TopAppBar state (back arrow vs. none) and BottomNavBar
-     * visibility — any route absent from this set is treated as a sub-page.
-     */
-    val TABS = setOf(TODAY, ATHKAR, PRAYERS, INDEX, MORE)
-
     // ── Sub-pages ─────────────────────────────────────────────────────────────
     const val THEME_SETTINGS = "theme_settings"
     const val LANGUAGE       = "language"
+    const val ABOUT          = "about"
 }
