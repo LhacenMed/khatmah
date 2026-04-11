@@ -17,6 +17,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -28,6 +31,7 @@ import com.lhacenmed.khatmah.ui.common.animatedComposable
 import com.lhacenmed.khatmah.ui.component.AppTopBar
 import com.lhacenmed.khatmah.ui.nav.BottomNavBar
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
+import com.lhacenmed.khatmah.ui.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.ui.nav.NavPage
 import com.lhacenmed.khatmah.ui.nav.NavScreen
 import com.lhacenmed.khatmah.ui.page.settings.about.AboutPage
@@ -38,6 +42,7 @@ import com.lhacenmed.khatmah.ui.page.tabs.IndexTab
 import com.lhacenmed.khatmah.ui.page.tabs.MoreTab
 import com.lhacenmed.khatmah.ui.page.tabs.PrayersTab
 import com.lhacenmed.khatmah.ui.page.tabs.TodayTab
+import kotlinx.coroutines.flow.MutableSharedFlow
 
 // ─── Root composable ──────────────────────────────────────────────────────────
 
@@ -95,16 +100,25 @@ fun AppEntry() {
 // ─── Main shell ───────────────────────────────────────────────────────────────
 
 /**
- * Tab host screen — top bar, bottom nav bar, and active tab content in one composable.
+ * Tab host screen — top bar, bottom nav bar, and all tab composables rendered simultaneously.
  * Animates as a single unit when navigating to/from sub-pages.
  *
- * Tab switching is instant (no NavHost, no animation): [selectedIndex] drives a plain
- * when-expression that recomposes with the new tab. No back-stack is built for tabs.
+ * All tabs stay composed at all times (alpha = 0 when not selected), so scroll state
+ * and any rememberSaveable values survive tab switches without any manual caching.
+ * Hidden tabs have touch events consumed so they never intercept user input.
+ *
+ * Re-tapping the active tab's nav button emits on that tab's [LocalScrollToTop] flow,
+ * which the tab's content collects to animate its scroll state smoothly to the top.
  */
 @Composable
 private fun MainScreen(tabs: List<NavScreen>) {
     var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
     val currentTab    = tabs[selectedIndex]
+
+    // One SharedFlow per tab — emits Unit when the active tab's nav button is re-tapped.
+    val scrollToTopFlows = remember {
+        Array(tabs.size) { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
+    }
 
     // Anchor views for tab long-press tooltips, indexed in the same order as tabs.
     val anchorViews = remember { arrayOfNulls<View>(tabs.size) }
@@ -123,15 +137,45 @@ private fun MainScreen(tabs: List<NavScreen>) {
                 currentRoute = currentTab.route,
                 onNavigate   = { route ->
                     val idx = tabs.indexOfFirst { it.route == route }
-                    if (idx >= 0) selectedIndex = idx
+                    if (idx >= 0) {
+                        if (idx == selectedIndex) {
+                            // Re-tap: signal the active tab to scroll back to top.
+                            scrollToTopFlows[idx].tryEmit(Unit)
+                        } else {
+                            selectedIndex = idx
+                        }
+                    }
                 },
                 anchorViewAt = { anchorViews[it] },
             )
         },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
-            // Instant tab swap — no transition animation between tabs.
-            currentTab.content(innerPadding)
+            // All tabs stay composed — visibility and touch pass-through toggle on selection.
+            tabs.forEachIndexed { index, tab ->
+                val selected = index == selectedIndex
+                CompositionLocalProvider(LocalScrollToTop provides scrollToTopFlows[index]) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer { alpha = if (selected) 1f else 0f }
+                            .then(
+                                // Hidden tabs consume all pointer events so they never
+                                // intercept touches intended for the visible tab beneath.
+                                if (!selected) Modifier.pointerInput(Unit) {
+                                    awaitPointerEventScope {
+                                        while (true) {
+                                            awaitPointerEvent(PointerEventPass.Initial)
+                                                .changes.forEach { it.consume() }
+                                        }
+                                    }
+                                } else Modifier
+                            ),
+                    ) {
+                        tab.content(innerPadding)
+                    }
+                }
+            }
 
             // ── Tooltip anchor strip ──────────────────────────────────────────
             // Invisible 1 dp row just above the nav bar — one slot per tab.

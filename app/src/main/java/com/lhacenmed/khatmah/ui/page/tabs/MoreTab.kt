@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AlternateEmail
@@ -15,7 +16,6 @@ import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.MenuBook
-//import androidx.compose.material.icons.outlined.MosqueOutlined
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Schedule
@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -41,6 +42,7 @@ import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.component.PreferenceItem
 import com.lhacenmed.khatmah.ui.component.PreferenceSubtitle
 import com.lhacenmed.khatmah.ui.component.PreferenceSwitch
+import com.lhacenmed.khatmah.ui.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.ui.nav.NavScreen
 
 val MoreTab = NavScreen(
@@ -55,12 +57,23 @@ val MoreTab = NavScreen(
 private fun MoreScreen(padding: PaddingValues) {
     // ── Alarm switch states ────────────────────────────────────────────────────
     // Persisted across recompositions; drives enabled state on paired time items.
-    var dayAthkarOn     by rememberSaveable { mutableStateOf(true) }
-    var nightAthkarOn   by rememberSaveable { mutableStateOf(true) }
-    var alMulkAlarmOn   by rememberSaveable { mutableStateOf(false) }
+    var dayAthkarOn      by rememberSaveable { mutableStateOf(true) }
+    var nightAthkarOn    by rememberSaveable { mutableStateOf(true) }
+    var alMulkAlarmOn    by rememberSaveable { mutableStateOf(false) }
     var alBaqarahAlarmOn by rememberSaveable { mutableStateOf(false) }
 
+    val listState    = rememberLazyListState()
+    val scrollToTop  = LocalScrollToTop.current
+
+    // Animate smoothly to the top when the More nav button is re-tapped.
+    LaunchedEffect(scrollToTop) {
+        scrollToTop.collect {
+            listState.animateScrollToItem(0)
+        }
+    }
+
     LazyColumn(
+        state          = listState,
         modifier       = Modifier
             .fillMaxSize()
             .padding(padding),
@@ -273,11 +286,11 @@ private fun CountBadge(count: Int) {
         color = MaterialTheme.colorScheme.primaryContainer,
     ) {
         Text(
-            text     = count.toString(),
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-            style    = MaterialTheme.typography.labelMedium,
+            text       = count.toString(),
+            modifier   = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            style      = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
-            color    = MaterialTheme.colorScheme.onPrimaryContainer,
+            color      = MaterialTheme.colorScheme.onPrimaryContainer,
         )
     }
 }
