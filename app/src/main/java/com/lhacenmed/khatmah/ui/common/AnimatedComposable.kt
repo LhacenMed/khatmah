@@ -1,6 +1,7 @@
 package com.lhacenmed.khatmah.ui.common
 
 import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.spring
@@ -20,9 +21,13 @@ import androidx.navigation.NavDeepLink
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.lhacenmed.khatmah.ui.common.motion.emphasizeEasing
-import com.lhacenmed.khatmah.ui.common.motion.materialSharedAxisXIn
-import com.lhacenmed.khatmah.ui.common.motion.materialSharedAxisXOut
 
+// ── Cascade-style parallax transition constants ───────────────────────────────
+// Matches HeightAnimatableViewFlipper: 350 ms, FastOutSlowIn, 25% parallax offset.
+private const val DURATION_CASCADE  = 400
+private const val PARALLAX_FRACTION = 0.25f
+
+// ── Legacy variant constants (used by non-primary composable helpers) ─────────
 const val DURATION_ENTER = 400
 const val DURATION_EXIT  = 200
 const val initialOffset  = 0.10f
@@ -37,9 +42,17 @@ val springSpec = spring(
 )
 
 /**
- * Primary page transition — horizontal shared axis slide + fade.
- * Uses AnimatedContentScope (Navigation 2.8+) instead of the deprecated
- * AnimatedVisibilityScope which silently ignores transition parameters.
+ * Primary page transition — cascade-style parallax slide.
+ *
+ * Forward: entering screen slides in from the right (full width) and overlays
+ * the exiting screen, which drifts left at [PARALLAX_FRACTION] speed — creating
+ * the layered depth effect used in saket/cascade's HeightAnimatableViewFlipper.
+ *
+ * Back: mirrored; the exiting screen slides out to the right while the returning
+ * screen eases back from its parked parallax position.
+ *
+ * No fade — NavHost's AnimatedContent draws the entering composable on top,
+ * so the overlay is handled naturally by z-order without any alpha change.
  */
 fun NavGraphBuilder.animatedComposable(
     route: String,
@@ -50,11 +63,35 @@ fun NavGraphBuilder.animatedComposable(
     route              = route,
     arguments          = arguments,
     deepLinks          = deepLinks,
-    enterTransition    = { materialSharedAxisXIn(initialOffsetX  = {  (it * initialOffset).toInt() }) },
-    exitTransition     = { materialSharedAxisXOut(targetOffsetX  = { -(it * initialOffset).toInt() }) },
-    popEnterTransition = { materialSharedAxisXIn(initialOffsetX  = { -(it * initialOffset).toInt() }) },
-    popExitTransition  = { materialSharedAxisXOut(targetOffsetX  = {  (it * initialOffset).toInt() }) },
-    content            = content
+    // New screen: slides in from the right, full width.
+    enterTransition    = {
+        slideInHorizontally(
+            animationSpec  = tween(DURATION_CASCADE, easing = FastOutSlowInEasing),
+            initialOffsetX = { it },
+        )
+    },
+    // Current screen: drifts left at PARALLAX_FRACTION — stays mostly visible under the new screen.
+    exitTransition     = {
+        slideOutHorizontally(
+            animationSpec = tween(DURATION_CASCADE, easing = FastOutSlowInEasing),
+            targetOffsetX = { -(it * PARALLAX_FRACTION).toInt() },
+        )
+    },
+    // Returning screen: eases in from its parked parallax position back to 0.
+    popEnterTransition = {
+        slideInHorizontally(
+            animationSpec  = tween(DURATION_CASCADE, easing = FastOutSlowInEasing),
+            initialOffsetX = { -(it * PARALLAX_FRACTION).toInt() },
+        )
+    },
+    // Dismissed screen: slides out to the right, full width.
+    popExitTransition  = {
+        slideOutHorizontally(
+            animationSpec = tween(DURATION_CASCADE, easing = FastOutSlowInEasing),
+            targetOffsetX = { it },
+        )
+    },
+    content            = content,
 )
 
 /** Fade-through variant — scale + fade in, fade out. */
