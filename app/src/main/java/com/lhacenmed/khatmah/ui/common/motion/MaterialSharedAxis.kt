@@ -37,8 +37,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 
+
+/**
+ * Returns the provided [Dp] as an [Int] value by the [LocalDensity].
+ *
+ * @param slideDistance Value to the slide distance dimension, 30dp by default.
+ */
 @Composable
-fun rememberSlideDistance(
+public fun rememberSlideDistance(
     slideDistance: Dp = MotionConstants.DefaultSlideDistance,
 ): Int {
     val density = LocalDensity.current
@@ -55,7 +61,11 @@ private val Int.ForOutgoing: Int
 private val Int.ForIncoming: Int
     get() = this - this.ForOutgoing
 
-fun materialSharedAxisX(
+/**
+ * [materialSharedAxisX] allows to switch a layout with shared X-axis transition.
+ *
+ */
+public fun materialSharedAxisX(
     initialOffsetX: (fullWidth: Int) -> Int,
     targetOffsetX: (fullWidth: Int) -> Int,
     durationMillis: Int = MotionConstants.DefaultMotionDuration,
@@ -67,11 +77,17 @@ fun materialSharedAxisX(
     durationMillis = durationMillis
 )
 
-fun materialSharedAxisXIn(
+/**
+ * [materialSharedAxisXIn] allows to switch a layout with shared X-axis enter transition.
+ */
+public fun materialSharedAxisXIn(
     initialOffsetX: (fullWidth: Int) -> Int,
     durationMillis: Int = MotionConstants.DefaultMotionDuration,
 ): EnterTransition = slideInHorizontally(
-    animationSpec = tween(durationMillis = durationMillis, easing = FastOutSlowInEasing),
+    animationSpec = tween(
+        durationMillis = durationMillis,
+        easing = FastOutSlowInEasing
+    ),
     initialOffsetX = initialOffsetX
 ) + fadeIn(
     animationSpec = tween(
@@ -81,11 +97,18 @@ fun materialSharedAxisXIn(
     )
 )
 
-fun materialSharedAxisXOut(
+/**
+ * [materialSharedAxisXOut] allows to switch a layout with shared X-axis exit transition.
+ *
+ */
+public fun materialSharedAxisXOut(
     targetOffsetX: (fullWidth: Int) -> Int,
     durationMillis: Int = MotionConstants.DefaultMotionDuration,
 ): ExitTransition = slideOutHorizontally(
-    animationSpec = tween(durationMillis = durationMillis, easing = FastOutSlowInEasing),
+    animationSpec = tween(
+        durationMillis = durationMillis,
+        easing = FastOutSlowInEasing
+    ),
     targetOffsetX = targetOffsetX
 ) + fadeOut(
     animationSpec = tween(
@@ -95,7 +118,11 @@ fun materialSharedAxisXOut(
     )
 )
 
-fun materialSharedAxisY(
+/**
+ * [materialSharedAxisY] allows to switch a layout with shared Y-axis transition.
+ *
+ */
+public fun materialSharedAxisY(
     initialOffsetX: (fullWidth: Int) -> Int,
     targetOffsetY: (fullWidth: Int) -> Int,
     durationMillis: Int = MotionConstants.DefaultMotionDuration,
@@ -107,11 +134,18 @@ fun materialSharedAxisY(
     durationMillis = durationMillis
 )
 
-fun materialSharedAxisYIn(
+/**
+ * [materialSharedAxisYIn] allows to switch a layout with shared Y-axis enter transition.
+ *
+ */
+public fun materialSharedAxisYIn(
     initialOffsetX: (fullWidth: Int) -> Int,
     durationMillis: Int = MotionConstants.DefaultMotionDuration,
 ): EnterTransition = slideInVertically(
-    animationSpec = tween(durationMillis = durationMillis, easing = FastOutSlowInEasing),
+    animationSpec = tween(
+        durationMillis = durationMillis,
+        easing = FastOutSlowInEasing
+    ),
     initialOffsetY = initialOffsetX
 ) + fadeIn(
     animationSpec = tween(
@@ -121,11 +155,18 @@ fun materialSharedAxisYIn(
     )
 )
 
-fun materialSharedAxisYOut(
+/**
+ * [materialSharedAxisYOut] allows to switch a layout with shared Y-axis exit transition.
+ *
+ */
+public fun materialSharedAxisYOut(
     targetOffsetY: (fullWidth: Int) -> Int,
     durationMillis: Int = MotionConstants.DefaultMotionDuration,
 ): ExitTransition = slideOutVertically(
-    animationSpec = tween(durationMillis = durationMillis, easing = FastOutSlowInEasing),
+    animationSpec = tween(
+        durationMillis = durationMillis,
+        easing = FastOutSlowInEasing
+    ),
     targetOffsetY = targetOffsetY
 ) + fadeOut(
     animationSpec = tween(
@@ -135,7 +176,13 @@ fun materialSharedAxisYOut(
     )
 )
 
-fun materialSharedAxisZ(
+/**
+ * [materialSharedAxisZ] allows to switch a layout with shared Z-axis transition.
+ *
+ * @param forward whether the direction of the animation is forward.
+ * @param durationMillis the duration of transition.
+ */
+public fun materialSharedAxisZ(
     forward: Boolean,
     durationMillis: Int = MotionConstants.DefaultMotionDuration,
 ): ContentTransform = materialSharedAxisZIn(
@@ -146,7 +193,13 @@ fun materialSharedAxisZ(
     durationMillis = durationMillis
 )
 
-fun materialSharedAxisZIn(
+/**
+ * [materialSharedAxisZIn] allows to switch a layout with shared Z-axis enter transition.
+ *
+ * @param forward whether the direction of the animation is forward.
+ * @param durationMillis the duration of the enter transition.
+ */
+public fun materialSharedAxisZIn(
     forward: Boolean,
     durationMillis: Int = MotionConstants.DefaultMotionDuration,
 ): EnterTransition = fadeIn(
@@ -156,11 +209,20 @@ fun materialSharedAxisZIn(
         easing = LinearOutSlowInEasing
     )
 ) + scaleIn(
-    animationSpec = tween(durationMillis = durationMillis, easing = FastOutSlowInEasing),
+    animationSpec = tween(
+        durationMillis = durationMillis,
+        easing = FastOutSlowInEasing
+    ),
     initialScale = if (forward) 0.8f else 1.1f
 )
 
-fun materialSharedAxisZOut(
+/**
+ * [materialSharedAxisZOut] allows to switch a layout with shared Z-axis exit transition.
+ *
+ * @param forward whether the direction of the animation is forward.
+ * @param durationMillis the duration of the exit transition.
+ */
+public fun materialSharedAxisZOut(
     forward: Boolean,
     durationMillis: Int = MotionConstants.DefaultMotionDuration,
 ): ExitTransition = fadeOut(
@@ -170,6 +232,9 @@ fun materialSharedAxisZOut(
         easing = FastOutLinearInEasing
     )
 ) + scaleOut(
-    animationSpec = tween(durationMillis = durationMillis, easing = FastOutSlowInEasing),
+    animationSpec = tween(
+        durationMillis = durationMillis,
+        easing = FastOutSlowInEasing
+    ),
     targetScale = if (forward) 1.1f else 0.8f
 )
