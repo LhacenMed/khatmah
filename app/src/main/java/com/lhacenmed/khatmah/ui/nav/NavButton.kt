@@ -75,7 +75,7 @@ fun NavButton(
     unselectedColor: Color,
     rippleColor: Color,
     modifier: Modifier = Modifier,
-    iconSize: Dp = 24.dp,
+    iconSize: Dp = 26.dp,
     circleScale: Float = 1.1f,
     anchorProvider: (() -> View?)? = null,
     onClick: () -> Unit,

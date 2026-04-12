@@ -15,7 +15,7 @@ import com.lhacenmed.khatmah.ui.nav.NavScreen
 
 val PrayersTab = NavScreen(
     route    = Route.PRAYERS,
-    iconRes  = R.drawable.ic_home,
+    iconRes  = R.drawable.ic_mosque,
     labelRes = R.string.prayers,
 ) { padding -> PrayersScreen(padding) }
 
