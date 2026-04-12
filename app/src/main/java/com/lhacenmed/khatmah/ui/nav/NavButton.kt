@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -27,10 +28,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.MutableSharedFlow
 
 /**
  * Pressable tab button that fills its allocated slot width.
@@ -46,6 +50,9 @@ import androidx.compose.ui.unit.dp
  *    view above the nav bar; the system tooltip fires there, always above the bar.
  *  • NoOpHapticFeedback — suppresses combinedClickable's duplicate long-press haptic;
  *    the system tooltip on the anchor already fires its own at 500 ms.
+ *  • Out-of-bounds cancel — a pointerInput on the touch target monitors Final-pass
+ *    events; if the pressed pointer exits the button's layout bounds, a
+ *    PressInteraction.Cancel is emitted so the ripple disappears immediately.
  *
  * @param icon            Tab icon painter.
  * @param label           Tab label shown below the icon.
@@ -77,14 +84,31 @@ fun NavButton(
     val interactionSource = remember { MutableInteractionSource() }
     val latestAnchor      by rememberUpdatedState(anchorProvider)
 
-    // ── Tooltip forwarding ────────────────────────────────────────────────────
+    // ── Active press tracking ─────────────────────────────────────────────────
+    // Mirrors MenuFlipper's scrimTarget pattern: track exactly which PressInteraction
+    // is live so we can emit a matching Cancel when the pointer exits bounds.
+    // cancelRequest bridges the non-suspend awaitPointerEventScope to the suspend
+    // interactionSource.emit — tryEmit enqueues, LaunchedEffect drains and cancels.
+    val activePress   = remember { mutableStateOf<PressInteraction.Press?>(null) }
+    val cancelRequest = remember { MutableSharedFlow<PressInteraction.Press>(extraBufferCapacity = 1) }
+
+    // ── Tooltip forwarding + press state tracking ─────────────────────────────
     // Relay press lifecycle as synthetic MotionEvents to the invisible anchor view.
     // The system tooltip fires on the anchor, always appearing above the nav bar.
     // PressInteraction.Press is emitted synchronously with ACTION_DOWN, so the
     // anchor's long-press timer starts at exactly the same moment as the finger.
+    // activePress is updated here so the pointerInput bounds-check always has
+    // a reference to the exact interaction object needed for Cancel.
     LaunchedEffect(interactionSource) {
         var downTime = 0L
         interactionSource.interactions.collect { interaction ->
+            // Track active press for out-of-bounds cancel.
+            when (interaction) {
+                is PressInteraction.Press   -> activePress.value = interaction
+                is PressInteraction.Release,
+                is PressInteraction.Cancel  -> activePress.value = null
+            }
+            // Tooltip forwarding.
             val anchor = latestAnchor?.invoke() ?: return@collect
             when (interaction) {
                 is PressInteraction.Press -> {
@@ -106,6 +130,14 @@ fun NavButton(
         }
     }
 
+    // Drain cancelRequest and emit the Cancel to the interactionSource.
+    // Runs on the main coroutine — safe to call interactionSource.emit (suspend).
+    LaunchedEffect(cancelRequest) {
+        cancelRequest.collect { press ->
+            interactionSource.emit(PressInteraction.Cancel(press))
+        }
+    }
+
     // ── Layout ────────────────────────────────────────────────────────────────
     // BoxWithConstraints exposes maxWidth (= slot width) so the ripple radius is
     // computed at composition time — no measurement callback or extra state needed.
@@ -120,6 +152,11 @@ fun NavButton(
         // handler exists, so onClick is suppressed on the UP after 500 ms. Without
         // it, onClick fires on every UP regardless of press duration — selecting the
         // tab unintentionally after a tooltip press.
+        //
+        // pointerInput (Final pass) watches for the pressed pointer leaving the
+        // button's layout bounds and enqueues a Cancel via cancelRequest so the
+        // ripple disappears immediately — combinedClickable alone does not emit
+        // Cancel on out-of-bounds drag after a long-press.
         CompositionLocalProvider(LocalHapticFeedback provides NoOpHapticFeedback) {
             Box(
                 modifier = Modifier
@@ -133,7 +170,24 @@ fun NavButton(
                         ),
                         onLongClick = {},
                         onClick     = onClick,
-                    ),
+                    )
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                awaitPointerEvent(PointerEventPass.Final).changes.forEach { change ->
+                                    val press = activePress.value
+                                    if (press != null && change.pressed) {
+                                        val p = change.position
+                                        if (p.x < 0f || p.x > size.width ||
+                                            p.y < 0f || p.y > size.height) {
+                                            cancelRequest.tryEmit(press)
+                                            activePress.value = null
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
             )
         }
 
@@ -143,10 +197,10 @@ fun NavButton(
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             Icon(
-                painter           = icon,
+                painter            = icon,
                 contentDescription = null,
-                tint              = contentColor,
-                modifier          = Modifier.size(iconSize),
+                tint               = contentColor,
+                modifier           = Modifier.size(iconSize),
             )
             Text(
                 text  = label,

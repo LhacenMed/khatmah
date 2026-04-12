@@ -1,6 +1,7 @@
 package com.lhacenmed.khatmah.ui.page
 
 import android.view.View
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -115,11 +116,20 @@ fun AppEntry() {
  *
  * Re-tapping the active tab's nav button emits on that tab's [LocalScrollToTop] flow,
  * which the tab's content collects to animate its scroll state smoothly to the top.
+ *
+ * Back press while on a non-primary tab returns to the first tab (Today) rather than
+ * exiting the app, matching standard Android bottom-nav back behaviour.
  */
 @Composable
 private fun MainScreen(tabs: List<NavScreen>) {
     var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
     val currentTab    = tabs[selectedIndex]
+
+    // Intercept back press on any non-primary tab and return to tab 0 (Today).
+    // Disabled on tab 0 so the system back (NavHost exit / app dismiss) proceeds normally.
+    BackHandler(enabled = selectedIndex != 0) {
+        selectedIndex = 0
+    }
 
     // One SharedFlow per tab — emits Unit when the active tab's nav button is re-tapped.
     val scrollToTopFlows = remember {
