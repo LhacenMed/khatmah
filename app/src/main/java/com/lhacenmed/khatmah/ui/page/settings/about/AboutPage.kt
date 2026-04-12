@@ -10,7 +10,6 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -21,8 +20,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.ui.common.Route
+import com.lhacenmed.khatmah.ui.component.IconButton
 import com.lhacenmed.khatmah.ui.component.LargeTopAppBar
 import com.lhacenmed.khatmah.ui.component.PreferenceItem
 import com.lhacenmed.khatmah.ui.component.PreferenceSubtitle
@@ -46,15 +48,22 @@ val AboutPage = NavPage(route = Route.ABOUT) {
             .versionName ?: "—"
     }
 
+    // Tooltip anchor tracks the bar's actual height: 20 dp when fully expanded.
+    val tooltipAnchorBottom = lerp(20.dp, 55.dp, scrollBehavior.state.collapsedFraction)
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar   = {
             LargeTopAppBar(
                 title          = { Text(stringResource(R.string.about_page)) },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
+                    IconButton(
+                        onClick = { nav.popBackStack() },
+                        tooltipText = stringResource(R.string.navigate_up),
+                        anchorExtraBottom = tooltipAnchorBottom,
+                    ) {
                         Icon(
-                            imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.navigate_up),
                         )
                     }

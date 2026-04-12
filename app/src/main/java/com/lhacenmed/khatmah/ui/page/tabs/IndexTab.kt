@@ -15,7 +15,7 @@ import com.lhacenmed.khatmah.ui.nav.NavScreen
 
 val IndexTab = NavScreen(
     route    = Route.INDEX,
-    iconRes  = R.drawable.ic_settings,
+    iconRes  = R.drawable.ic_list,
     labelRes = R.string.index,
 ) { padding -> IndexScreen(padding) }
 

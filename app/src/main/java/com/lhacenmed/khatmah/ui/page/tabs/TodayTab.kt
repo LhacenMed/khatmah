@@ -20,7 +20,7 @@ import com.lhacenmed.khatmah.ui.nav.NavScreen
 
 val TodayTab = NavScreen(
     route    = Route.TODAY,
-    iconRes  = R.drawable.ic_home,
+    iconRes  = R.drawable.ic_book,
     labelRes = R.string.today,
 ) { padding -> TodayScreen(padding) }
 
