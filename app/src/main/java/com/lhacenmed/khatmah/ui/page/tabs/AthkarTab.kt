@@ -15,7 +15,7 @@ import com.lhacenmed.khatmah.ui.nav.NavScreen
 
 val AthkarTab = NavScreen(
     route    = Route.ATHKAR,
-    iconRes  = R.drawable.ic_settings,
+    iconRes  = R.drawable.ic_athkar,
     labelRes = R.string.athkar,
 ) { padding -> AthkarScreen(padding) }
 
