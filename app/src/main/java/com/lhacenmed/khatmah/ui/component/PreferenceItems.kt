@@ -699,3 +699,38 @@ fun SingleChoiceItem(
         RadioButton(selected = selected, onClick = onClick)
     }
 }
+
+/**
+ * A preference row that triggers an action — no selection state.
+ * Used for one-shot actions like sending a test notification.
+ */
+// ─── ActionItem ───────────────────────────────────────────────────────────
+@Composable
+fun ActionItem(
+    label: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick  = onClick,
+        modifier = modifier.fillMaxWidth(),
+        color    = Color.Transparent,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+        ) {
+            Text(
+                text  = label,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            if (subtitle != null) {
+                Text(
+                    text  = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
