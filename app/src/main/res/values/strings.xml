@@ -74,4 +74,11 @@
     <string name="more_instagram">Follow Us on Instagram</string>
     <string name="more_share_app">Share App</string>
     <string name="more_rate_khatmah">Rate Khatmah</string>
+
+    <!-- Notification test -->
+    <string name="notif_channel_test_name">Test</string>
+    <string name="notif_test_title">Test Notification</string>
+    <string name="notif_test_body">Notifications are working correctly.</string>
+    <string name="notif_test_action">Send Test Notification</string>
+    <string name="notif_test_action_subtitle">Verify that notifications are delivered</string>
 </resources>
