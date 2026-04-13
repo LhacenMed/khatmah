@@ -3,9 +3,9 @@
     <string name="app_name">ختمة</string>
 
     <!-- Bottom navigation -->
-    <string name="today">اليوم</string>
+    <string name="today">ورد اليوم</string>
     <string name="athkar">الأذكار</string>
-    <string name="prayers">الصلوات</string>
+    <string name="prayers">الصلاة</string>
     <string name="index">الفهرس</string>
     <string name="more">المزيد</string>
 
@@ -74,4 +74,11 @@
     <string name="more_instagram">تابعنا على إنستغرام</string>
     <string name="more_share_app">مشاركة التطبيق</string>
     <string name="more_rate_khatmah">قيّم ختمة</string>
+
+    <!-- Notification test -->
+    <string name="notif_channel_test_name">اختبار</string>
+    <string name="notif_test_title">إشعار تجريبي</string>
+    <string name="notif_test_body">الإشعارات تعمل بشكل صحيح.</string>
+    <string name="notif_test_action">إرسال إشعار تجريبي</string>
+    <string name="notif_test_action_subtitle">تحقق من وصول الإشعارات</string>
 </resources>
