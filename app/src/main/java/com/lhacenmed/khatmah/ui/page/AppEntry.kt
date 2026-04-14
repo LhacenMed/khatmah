@@ -1,5 +1,6 @@
 package com.lhacenmed.khatmah.ui.page
 
+//import android.R.attr.defaultValue
 import android.view.View
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
@@ -22,9 +23,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import androidx.core.view.ViewCompat
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.common.animatedComposable
 import com.lhacenmed.khatmah.ui.component.AppTopBar
@@ -68,7 +71,18 @@ fun AppEntry() {
             // Not animated — plain composable so they don't share-axis animate with main.
             composable(Route.ONBOARDING_NOTIFICATIONS)   { NotificationPermissionPage() }
             composable(Route.ONBOARDING_LOCATION)        { LocationPermissionPage()     }
-            composable(Route.ONBOARDING_MANUAL_LOCATION) { ManualLocationPage()         }
+            composable(Route.ONBOARDING_COUNTRY_SELECT) {
+                CountrySelectPage()
+            }
+            composable(
+                route     = Route.ONBOARDING_CITY_SELECT,
+                arguments = listOf(navArgument("country") {
+                    type         = NavType.StringType
+                    defaultValue = ""
+                }),
+            ) { backStack ->
+                CitySelectPage(country = backStack.arguments?.getString("country") ?: "")
+            }
 
             // ── App shell ─────────────────────────────────────────────────────
             animatedComposable(Route.MAIN) { MainScreen(tabs = tabs) }

@@ -102,6 +102,21 @@
     <string name="onboarding_location_not_found">تعذّر تحديد موقعك. حاول مجددًا أو اختر يدويًا.</string>
     <string name="onboarding_location_retry">إعادة المحاولة</string>
 
+    <string name="location_title">موقعك</string>
+    <string name="location_desc">اسمح بالوصول ليتم حساب أوقات الصلاة لمدينتك.</string>
+    <string name="location_denied_desc">تم رفض الوصول إلى الموقع. اختر مدينتك يدويًا بدلًا من ذلك.</string>
+    <string name="location_failed_desc">تعذر تحديد موقعك. اختر مدينتك يدويًا أو حاول مرة أخرى.</string>
+    <string name="location_grant">منح الإذن</string>
+    <string name="location_locating">جارٍ تحديد الموقع…</string>
+    <string name="location_choose_manually">اختيار يدوي</string>
+    <string name="select_country">اختر الدولة</string>
+    <string name="select_city">اختر المدينة</string>
+    <string name="search">بحث…</string>
+    <string name="no_results">لا توجد نتائج</string>
+    <string name="network_error">تعذر التحميل. تحقق من اتصالك.</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="geocode_error">تعذر تحديد الإحداثيات. حاول مرة أخرى.</string>
+
     <!-- Manual location -->
     <string name="manual_location_title">حدّد موقعك</string>
     <string name="manual_location_desc">أدخل اسم مدينتك لحساب مواقيت الصلاة الدقيقة.</string>
