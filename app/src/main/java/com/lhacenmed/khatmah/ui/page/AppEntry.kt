@@ -1,6 +1,5 @@
 package com.lhacenmed.khatmah.ui.page
 
-//import android.R.attr.defaultValue
 import android.view.View
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
@@ -25,7 +24,6 @@ import androidx.compose.ui.zIndex
 import androidx.core.view.ViewCompat
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.lhacenmed.khatmah.ui.common.Route
@@ -68,13 +66,14 @@ fun AppEntry() {
             modifier         = Modifier.fillMaxSize(),
         ) {
             // ── Onboarding ────────────────────────────────────────────────────
-            // Not animated — plain composable so they don't share-axis animate with main.
-            composable(Route.ONBOARDING_NOTIFICATIONS)   { NotificationPermissionPage() }
-            composable(Route.ONBOARDING_LOCATION)        { LocationPermissionPage()     }
-            composable(Route.ONBOARDING_COUNTRY_SELECT) {
+            // animatedComposable gives consistent shared-axis-X slides across all
+            // onboarding steps and into the main shell.
+            animatedComposable(Route.ONBOARDING_NOTIFICATIONS) { NotificationPermissionPage() }
+            animatedComposable(Route.ONBOARDING_LOCATION)      { LocationPermissionPage()     }
+            animatedComposable(Route.ONBOARDING_COUNTRY_SELECT) {
                 CountrySelectPage()
             }
-            composable(
+            animatedComposable(
                 route     = Route.ONBOARDING_CITY_SELECT,
                 arguments = listOf(navArgument("country") {
                     type         = NavType.StringType

@@ -15,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.data.location.CountriesApi
+import com.lhacenmed.khatmah.data.location.LocationCache
 import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.util.OnboardingPrefs
@@ -23,14 +24,16 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CitySelectPage(country: String) {
-    val nav              = LocalNavController.current
-    val context          = LocalContext.current
-    val scope            = rememberCoroutineScope()
-    val snackbarState    = remember { SnackbarHostState() }
+    val nav           = LocalNavController.current
+    val context       = LocalContext.current
+    val scope         = rememberCoroutineScope()
+    val snackbarState = remember { SnackbarHostState() }
 
-    var cities    by remember { mutableStateOf<List<String>?>(null) }
+    // Initialize directly from cache — no loading→loaded transition fires during
+    // the enter animation on back-navigation.
+    var cities    by remember { mutableStateOf(LocationCache.getCities(country)) }
     var query     by remember { mutableStateOf("") }
-    var loading   by remember { mutableStateOf(true) }
+    var loading   by remember { mutableStateOf(cities == null) }
     var error     by remember { mutableStateOf(false) }
     var geocoding by remember { mutableStateOf(false) }
 
@@ -41,12 +44,17 @@ fun CitySelectPage(country: String) {
         loading = true; error = false
         scope.launch {
             runCatching { CountriesApi.cities(country) }
-                .onSuccess  { cities = it; loading = false }
+                .onSuccess  { result ->
+                    LocationCache.putCities(country, result)  // populate cache for future visits
+                    cities = result
+                    loading = false
+                }
                 .onFailure  { loading = false; error = true }
         }
     }
 
-    LaunchedEffect(Unit) { load() }
+    // Only fetch when cache is empty — avoids state changes during enter animation on revisits.
+    LaunchedEffect(Unit) { if (cities == null) load() }
 
     val filtered = remember(cities, query) {
         cities?.let { list ->
