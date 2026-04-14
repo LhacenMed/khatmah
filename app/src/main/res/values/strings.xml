@@ -81,4 +81,75 @@
     <string name="notif_test_body">Notifications are working correctly.</string>
     <string name="notif_test_action">Send Test Notification</string>
     <string name="notif_test_action_subtitle">Verify that notifications are delivered</string>
+
+    <!-- Onboarding -->
+    <string name="skip">Skip</string>
+
+    <!-- Notifications permission -->
+    <string name="onboarding_notif_title">Stay on Track</string>
+    <string name="onboarding_notif_desc">Allow notifications so we can remind you to read your daily Quran portion and Athkar.</string>
+    <string name="onboarding_notif_denied">You can enable notifications later from your device settings.</string>
+    <string name="onboarding_notif_action">Allow Notifications</string>
+    <string name="onboarding_notif_skip">Continue Without Notifications</string>
+
+    <!-- Location permission -->
+    <string name="onboarding_location_title">Your Prayer Times</string>
+    <string name="onboarding_location_desc">Allow location access so we can calculate accurate prayer times for your city.</string>
+    <string name="onboarding_location_locating">Detecting your location…</string>
+    <string name="onboarding_location_denied">Location permission denied. Choose your city manually.</string>
+    <string name="onboarding_location_action">Use My Location</string>
+    <string name="onboarding_location_manual">Choose Manually</string>
+    <string name="onboarding_location_not_found">Couldn\'t detect your location. Try again or choose manually.</string>
+    <string name="onboarding_location_retry">Try Again</string>
+
+    <!-- Manual location -->
+    <string name="manual_location_title">Set Your Location</string>
+    <string name="manual_location_desc">Enter your city name to calculate accurate prayer times.</string>
+    <string name="manual_location_hint">City name…</string>
+    <string name="manual_location_search">Find</string>
+    <string name="manual_location_searching">Searching…</string>
+    <string name="manual_location_not_found">City not found. Try a different spelling or nearby city.</string>
+
+    <!-- Today tab -->
+    <string name="today_refresh_prayers">Refresh Prayer Times</string>
+    <string name="today_refreshing">Updating prayer times…</string>
+
+    <!-- Prayers tab screen -->
+    <string name="prayers_screen_title">Prayer Times</string>
+    <string name="prayers_till">Till %s</string>
+    <string name="prayers_city_unknown">Unknown Location</string>
+    <string name="prayers_settings">Prayer Settings</string>
+    <string name="prayers_qibla">Qibla Direction</string>
+    <string name="prayers_next_fajr">Next: Fajr Tomorrow</string>
+    <string name="prayers_alarm_on">Turn off alarm</string>
+    <string name="prayers_alarm_off">Turn on alarm</string>
+    <string name="prayers_today">Today</string>
+    <string name="prayers_prev_day">Previous day</string>
+    <string name="prayers_next_day">Next day</string>
+    <string name="prayers_requires_android_8">Prayer times require Android 8.0 or higher</string>
+
+    <!-- Individual prayer names -->
+    <string name="prayer_fajr">Fajr</string>
+    <string name="prayer_sunrise">Sunrise</string>
+    <string name="prayer_dhuhr">Dhuhr</string>
+    <string name="prayer_asr">Asr</string>
+    <string name="prayer_maghrib">Maghrib</string>
+    <string name="prayer_isha">Isha</string>
+
+    <!-- Hijri calendar -->
+    <string name="hijri_year_suffix">AH</string>
+    <string-array name="hijri_months">
+        <item>Muharram</item>
+        <item>Safar</item>
+        <item>Rabi\' al-Awwal</item>
+        <item>Rabi\' al-Thani</item>
+        <item>Jumada al-Awwal</item>
+        <item>Jumada al-Thani</item>
+        <item>Rajab</item>
+        <item>Sha\'ban</item>
+        <item>Ramadan</item>
+        <item>Shawwal</item>
+        <item>Dhu al-Qi\'dah</item>
+        <item>Dhu al-Hijjah</item>
+    </string-array>
 </resources>

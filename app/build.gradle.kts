@@ -19,36 +19,25 @@ sealed class Version(
     abstract fun toVersionName(): String
 
     class Alpha(
-        versionMajor: Int,
-        versionMinor: Int,
-        versionPatch: Int,
-        versionBuild: Int,
+        versionMajor: Int, versionMinor: Int, versionPatch: Int, versionBuild: Int,
     ) : Version(versionMajor, versionMinor, versionPatch, versionBuild) {
         override fun toVersionName() = "$versionMajor.$versionMinor.$versionPatch-alpha.$versionBuild"
     }
 
     class Beta(
-        versionMajor: Int,
-        versionMinor: Int,
-        versionPatch: Int,
-        versionBuild: Int,
+        versionMajor: Int, versionMinor: Int, versionPatch: Int, versionBuild: Int,
     ) : Version(versionMajor, versionMinor, versionPatch, versionBuild) {
         override fun toVersionName() = "$versionMajor.$versionMinor.$versionPatch-beta.$versionBuild"
     }
 
     class Stable(
-        versionMajor: Int,
-        versionMinor: Int,
-        versionPatch: Int,
+        versionMajor: Int, versionMinor: Int, versionPatch: Int,
     ) : Version(versionMajor, versionMinor, versionPatch) {
         override fun toVersionName() = "$versionMajor.$versionMinor.$versionPatch"
     }
 
     class ReleaseCandidate(
-        versionMajor: Int,
-        versionMinor: Int,
-        versionPatch: Int,
-        versionBuild: Int,
+        versionMajor: Int, versionMinor: Int, versionPatch: Int, versionBuild: Int,
     ) : Version(versionMajor, versionMinor, versionPatch, versionBuild) {
         override fun toVersionName() = "$versionMajor.$versionMinor.$versionPatch-rc.$versionBuild"
     }
@@ -69,8 +58,7 @@ val abiFilterList = (properties["ABI_FILTERS"] as? String)
     ?: listOf("arm64-v8a")
 
 android {
-    namespace = "com.lhacenmed.khatmah"
-
+    namespace   = "com.lhacenmed.khatmah"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -81,12 +69,11 @@ android {
         val keystoreProperties = Properties().apply {
             load(FileInputStream(keystorePropertiesFile))
         }
-
         signingConfigs {
             create("releaseKey") {
-                keyAlias = keystoreProperties["keyAlias"].toString()
-                keyPassword = keystoreProperties["keyPassword"].toString()
-                storeFile = file(keystoreProperties["storeFile"]!!)
+                keyAlias      = keystoreProperties["keyAlias"].toString()
+                keyPassword   = keystoreProperties["keyPassword"].toString()
+                storeFile     = file(keystoreProperties["storeFile"]!!)
                 storePassword = keystoreProperties["storePassword"].toString()
             }
         }
@@ -94,12 +81,10 @@ android {
 
     defaultConfig {
         applicationId = "com.lhacenmed.khatmah"
-        minSdk = 24
-        targetSdk = 36
-        versionCode = currentVersion.run {
-            versionMajor * 10000 + versionMinor * 100 + versionPatch
-        }
-        versionName = currentVersion.toVersionName()
+        minSdk        = 24
+        targetSdk     = 36
+        versionCode   = currentVersion.run { versionMajor * 10000 + versionMinor * 100 + versionPatch }
+        versionName   = currentVersion.toVersionName()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         if (splitApks) {
@@ -112,35 +97,23 @@ android {
                 }
             }
         } else {
-            ndk {
-                abiFilters.addAll(abiFilterList)
-            }
+            ndk { abiFilters.addAll(abiFilterList) }
         }
     }
 
     buildTypes {
         debug {
-            isMinifyEnabled = false
-            isShrinkResources = false
-            applicationIdSuffix = ".debug"
-            versionNameSuffix = "-debug"
-
-            if (keystorePropertiesFile.exists()) {
-                signingConfig = signingConfigs.getByName("releaseKey")
-            }
+            isMinifyEnabled      = false
+            isShrinkResources    = false
+            applicationIdSuffix  = ".debug"
+            versionNameSuffix    = "-debug"
+            if (keystorePropertiesFile.exists()) signingConfig = signingConfigs.getByName("releaseKey")
         }
-
         release {
-            isMinifyEnabled = true
+            isMinifyEnabled   = true
             isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-
-            if (keystorePropertiesFile.exists()) {
-                signingConfig = signingConfigs.getByName("releaseKey")
-            }
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (keystorePropertiesFile.exists()) signingConfig = signingConfigs.getByName("releaseKey")
         }
     }
 
@@ -150,7 +123,7 @@ android {
     }
 
     buildFeatures {
-        compose = true
+        compose     = true
         buildConfig = true
         viewBinding = true
     }
@@ -162,20 +135,13 @@ android {
 
 androidComponents {
     onVariants { variant ->
-        val abiCodes = mapOf(
-            "armeabi-v7a" to 1,
-            "arm64-v8a" to 2,
-            "x86" to 3,
-            "x86_64" to 4,
-        )
-
+        val abiCodes = mapOf("armeabi-v7a" to 1, "arm64-v8a" to 2, "x86" to 3, "x86_64" to 4)
         variant.outputs.forEach { output ->
             val name = if (splitApks) {
                 output.filters.find { it.filterType == FilterConfiguration.FilterType.ABI }?.identifier
             } else {
                 abiFilterList.firstOrNull()
             }
-
             abiCodes[name]?.let { code ->
                 output.versionCode.set(code + (output.versionCode.get() ?: 0))
             }
@@ -192,8 +158,9 @@ kotlin {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
-
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -202,7 +169,6 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
-
     implementation(libs.androidx.constraintlayout)
     implementation(libs.material)
     implementation(libs.androidx.navigation.fragment.ktx)
