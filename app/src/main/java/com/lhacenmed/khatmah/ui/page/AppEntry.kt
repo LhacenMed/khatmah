@@ -3,95 +3,77 @@ package com.lhacenmed.khatmah.ui.page
 import android.view.View
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import androidx.core.view.ViewCompat
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.common.animatedComposable
 import com.lhacenmed.khatmah.ui.component.AppTopBar
-import com.lhacenmed.khatmah.ui.nav.BottomNavBar
-import com.lhacenmed.khatmah.ui.nav.LocalNavController
-import com.lhacenmed.khatmah.ui.nav.LocalScrollToTop
-import com.lhacenmed.khatmah.ui.nav.NavPage
-import com.lhacenmed.khatmah.ui.nav.NavScreen
+import com.lhacenmed.khatmah.ui.nav.*
+import com.lhacenmed.khatmah.ui.onboarding.*
 import com.lhacenmed.khatmah.ui.page.settings.about.AboutPage
 import com.lhacenmed.khatmah.ui.page.settings.appearance.LanguagePage
 import com.lhacenmed.khatmah.ui.page.settings.appearance.ThemeSettingsPage
-import com.lhacenmed.khatmah.ui.page.tabs.AthkarTab
-import com.lhacenmed.khatmah.ui.page.tabs.IndexTab
-import com.lhacenmed.khatmah.ui.page.tabs.MoreTab
-import com.lhacenmed.khatmah.ui.page.tabs.PrayersTab
-import com.lhacenmed.khatmah.ui.page.tabs.TodayTab
+import com.lhacenmed.khatmah.ui.page.tabs.*
+import com.lhacenmed.khatmah.util.OnboardingPrefs
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 // ─── Root composable ──────────────────────────────────────────────────────────
 
 @Composable
 fun AppEntry() {
+    val context = LocalContext.current
+
+    // Determine start destination once per composition — OnboardingPrefs read is fast
+    // (SharedPreferences in-process cache) so no need to defer behind a LaunchedEffect.
+    val start = remember {
+        if (OnboardingPrefs.isComplete(context)) Route.MAIN
+        else Route.ONBOARDING_NOTIFICATIONS
+    }
 
     // ── Tab list ──────────────────────────────────────────────────────────────
-    // To add a new tab:
-    //   1. Create a NavScreen val in ui/page/tabs/ with route, iconRes, labelRes, content.
-    //   2. Append it here.
-    val tabs = listOf(
-        TodayTab,
-        AthkarTab,
-        PrayersTab,
-        IndexTab,
-        MoreTab,
-    )
+    val tabs = listOf(TodayTab, AthkarTab, PrayersTab, IndexTab, MoreTab)
 
     // ── Sub-page list ─────────────────────────────────────────────────────────
-    // To add a new sub-page:
-    //   1. Create a NavPage val anywhere in ui/page/ with route and a self-contained composable.
-    //   2. Append it here.
-    val pages = listOf(
-        ThemeSettingsPage,
-        LanguagePage,
-        AboutPage,
-    )
+    val pages = listOf(ThemeSettingsPage, LanguagePage, AboutPage)
 
     val navController = rememberNavController()
 
-    // ── Navigation host ───────────────────────────────────────────────────────
-    // Flat NavHost — every route (shell + sub-pages) lives at the same level.
-    // When navigating to a sub-page, the entire MainScreen (top bar + bottom nav +
-    // content) slides out as one unit; the sub-page slides in with its own chrome.
-    // Tab switching happens inside MainScreen via plain state — no NavHost, no animation.
     CompositionLocalProvider(LocalNavController provides navController) {
         NavHost(
             navController    = navController,
-            startDestination = Route.MAIN,
+            startDestination = start,
             modifier         = Modifier.fillMaxSize(),
         ) {
-            // Shell: top bar + bottom nav + active tab content, animated as a unit.
-            animatedComposable(Route.MAIN) {
-                MainScreen(tabs = tabs)
-            }
+            // ── Onboarding ────────────────────────────────────────────────────
+            // Not animated — plain composable so they don't share-axis animate with main.
+            composable(Route.ONBOARDING_NOTIFICATIONS)   { NotificationPermissionPage() }
+            composable(Route.ONBOARDING_LOCATION)        { LocationPermissionPage()     }
+            composable(Route.ONBOARDING_MANUAL_LOCATION) { ManualLocationPage()         }
 
-            // Sub-pages: each owns its Scaffold + AppTopBar; animated with shared-axis X.
+            // ── App shell ─────────────────────────────────────────────────────
+            animatedComposable(Route.MAIN) { MainScreen(tabs = tabs) }
+
+            // ── Settings sub-pages ────────────────────────────────────────────
             pages.forEach { page ->
                 animatedComposable(page.route) { page.content() }
             }
@@ -127,14 +109,10 @@ private fun MainScreen(tabs: List<NavScreen>) {
 
     // Intercept back press on any non-primary tab and return to tab 0 (Today).
     // Disabled on tab 0 so the system back (NavHost exit / app dismiss) proceeds normally.
-    BackHandler(enabled = selectedIndex != 0) {
-        selectedIndex = 0
-    }
+    BackHandler(enabled = selectedIndex != 0) { selectedIndex = 0 }
 
     // One SharedFlow per tab — emits Unit when the active tab's nav button is re-tapped.
-    val scrollToTopFlows = remember {
-        Array(tabs.size) { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
-    }
+    val scrollToTopFlows = remember { Array(tabs.size) { MutableSharedFlow<Unit>(extraBufferCapacity = 1) } }
 
     // Anchor views for tab long-press tooltips, indexed in the same order as tabs.
     val anchorViews = remember { arrayOfNulls<View>(tabs.size) }
@@ -154,12 +132,8 @@ private fun MainScreen(tabs: List<NavScreen>) {
                 onNavigate   = { route ->
                     val idx = tabs.indexOfFirst { it.route == route }
                     if (idx >= 0) {
-                        if (idx == selectedIndex) {
-                            // Re-tap: signal the active tab to scroll back to top.
-                            scrollToTopFlows[idx].tryEmit(Unit)
-                        } else {
-                            selectedIndex = idx
-                        }
+                        if (idx == selectedIndex) scrollToTopFlows[idx].tryEmit(Unit)
+                        else selectedIndex = idx
                     }
                 },
                 anchorViewAt = { anchorViews[it] },
@@ -188,9 +162,7 @@ private fun MainScreen(tabs: List<NavScreen>) {
                                     }
                                 } else Modifier
                             ),
-                    ) {
-                        tab.content(innerPadding)
-                    }
+                    ) { tab.content(innerPadding) }
                 }
             }
 
