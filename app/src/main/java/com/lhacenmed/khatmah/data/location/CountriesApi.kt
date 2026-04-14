@@ -12,13 +12,18 @@ import java.net.URLEncoder
  * Two free, no-auth APIs:
  *  - CountriesNow (countriesnow.space) — country and city lists.
  *  - Nominatim / OSM — city → GPS coordinates.
+ *  - FlagCDN (flagcdn.com) — country flag SVGs via iso2 code.
  */
 object CountriesApi {
 
     private const val NOW       = "https://countriesnow.space/api/v0.1"
     private const val NOMINATIM = "https://nominatim.openstreetmap.org"
+    private const val FLAG_CDN  = "https://flagcdn.com"
 
-    data class Country(val name: String, val iso2: String)
+    data class Country(val name: String, val iso2: String) {
+        /** SVG flag URL — empty string when iso2 is unknown. */
+        val flagUrl: String = if (iso2.isNotEmpty()) "$FLAG_CDN/${iso2.lowercase()}.svg" else ""
+    }
 
     /** All countries sorted alphabetically. */
     suspend fun countries(): List<Country> = withContext(Dispatchers.IO) {

@@ -10,10 +10,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.data.location.CountriesApi
+import com.lhacenmed.khatmah.data.location.LocationCache
 import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import kotlinx.coroutines.launch
@@ -24,21 +30,29 @@ fun CountrySelectPage() {
     val nav   = LocalNavController.current
     val scope = rememberCoroutineScope()
 
-    var countries by remember { mutableStateOf<List<CountriesApi.Country>?>(null) }
+    // Initialize directly from cache — if data is present, loading never becomes true,
+    // so no recomposition fires during the enter animation on back-navigation.
+    var countries by remember { mutableStateOf(LocationCache.countries) }
     var query     by remember { mutableStateOf("") }
-    var loading   by remember { mutableStateOf(true) }
+    var loading   by remember { mutableStateOf(countries == null) }
     var error     by remember { mutableStateOf(false) }
 
     fun load() {
         loading = true; error = false
         scope.launch {
             runCatching { CountriesApi.countries() }
-                .onSuccess  { countries = it; loading = false }
+                .onSuccess  { result ->
+                    LocationCache.countries = result   // populate cache for future visits
+                    countries = result
+                    loading = false
+                }
                 .onFailure  { loading = false; error = true }
         }
     }
 
-    LaunchedEffect(Unit) { load() }
+    // Only fetch when cache is empty — avoids any state change during enter animation
+    // on revisits, which is what caused the jank.
+    LaunchedEffect(Unit) { if (countries == null) load() }
 
     val filtered = remember(countries, query) {
         countries?.let { list ->
@@ -92,11 +106,9 @@ fun CountrySelectPage() {
                 }
                 else -> LazyColumn {
                     items(filtered, key = { it.iso2.ifEmpty { it.name } }) { country ->
-                        ListItem(
-                            headlineContent = { Text(country.name) },
-                            modifier = Modifier.clickable {
-                                nav.navigate(Route.citySelect(country.name))
-                            },
+                        CountryItem(
+                            country  = country,
+                            onClick  = { nav.navigate(Route.citySelect(country.name)) },
                         )
                         HorizontalDivider()
                     }
@@ -104,4 +116,33 @@ fun CountrySelectPage() {
             }
         }
     }
+}
+
+// ─── Country list item ────────────────────────────────────────────────────────
+
+@Composable
+private fun CountryItem(
+    country: CountriesApi.Country,
+    onClick: () -> Unit,
+) {
+    ListItem(
+        headlineContent = { Text(country.name) },
+        leadingContent  = {
+            if (country.flagUrl.isNotEmpty()) {
+                val context = LocalContext.current
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(country.flagUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = country.name,
+                    contentScale       = ContentScale.Crop,
+                    modifier           = Modifier
+                        .size(width = 32.dp, height = 24.dp)
+                        .clip(MaterialTheme.shapes.extraSmall),
+                )
+            }
+        },
+        modifier = Modifier.clickable { onClick() },
+    )
 }
