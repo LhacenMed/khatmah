@@ -81,4 +81,75 @@
     <string name="notif_test_body">الإشعارات تعمل بشكل صحيح.</string>
     <string name="notif_test_action">إرسال إشعار تجريبي</string>
     <string name="notif_test_action_subtitle">تحقق من وصول الإشعارات</string>
+
+    <!-- Onboarding -->
+    <string name="skip">تخطى</string>
+
+    <!-- Notifications permission -->
+    <string name="onboarding_notif_title">ابقَ على المسار</string>
+    <string name="onboarding_notif_desc">اسمح بالإشعارات حتى نتمكن من تذكيرك بقراءة وردك اليومي وأذكارك.</string>
+    <string name="onboarding_notif_denied">يمكنك تفعيل الإشعارات لاحقاً من إعدادات جهازك.</string>
+    <string name="onboarding_notif_action">السماح بالإشعارات</string>
+    <string name="onboarding_notif_skip">المتابعة بدون إشعارات</string>
+
+    <!-- Location permission -->
+    <string name="onboarding_location_title">أوقات صلاتك</string>
+    <string name="onboarding_location_desc">اسمح بالوصول إلى موقعك لكي نحسب مواقيت الصلاة الدقيقة لمدينتك.</string>
+    <string name="onboarding_location_locating">جارٍ تحديد موقعك…</string>
+    <string name="onboarding_location_denied">تم رفض إذن الموقع. اختر مدينتك يدوياً.</string>
+    <string name="onboarding_location_action">استخدام موقعي</string>
+    <string name="onboarding_location_manual">الاختيار يدوياً</string>
+    <string name="onboarding_location_not_found">تعذّر تحديد موقعك. حاول مجددًا أو اختر يدويًا.</string>
+    <string name="onboarding_location_retry">إعادة المحاولة</string>
+
+    <!-- Manual location -->
+    <string name="manual_location_title">حدّد موقعك</string>
+    <string name="manual_location_desc">أدخل اسم مدينتك لحساب مواقيت الصلاة الدقيقة.</string>
+    <string name="manual_location_hint">اسم المدينة…</string>
+    <string name="manual_location_search">بحث</string>
+    <string name="manual_location_searching">جارٍ البحث…</string>
+    <string name="manual_location_not_found">لم يتم العثور على المدينة. جرب كتابة مختلفة أو مدينة مجاورة.</string>
+
+    <!-- Today tab -->
+    <string name="today_refresh_prayers">تحديث أوقات الصلاة</string>
+    <string name="today_refreshing">جارٍ تحديث أوقات الصلاة…</string>
+
+    <!-- Prayers tab screen -->
+    <string name="prayers_screen_title">أوقات الصلاة</string>
+    <string name="prayers_till">حتى %s</string>
+    <string name="prayers_city_unknown">موقع غير معروف</string>
+    <string name="prayers_settings">إعدادات الصلاة</string>
+    <string name="prayers_qibla">اتجاه القبلة</string>
+    <string name="prayers_next_fajr">التالي: فجر الغد</string>
+    <string name="prayers_alarm_on">إيقاف المنبه</string>
+    <string name="prayers_alarm_off">تشغيل المنبه</string>
+    <string name="prayers_today">اليوم</string>
+    <string name="prayers_prev_day">اليوم السابق</string>
+    <string name="prayers_next_day">اليوم التالي</string>
+    <string name="prayers_requires_android_8">أوقات الصلاة تتطلب أندرويد 8.0 أو أعلى</string>
+
+    <!-- Individual prayer names -->
+    <string name="prayer_fajr">الفجر</string>
+    <string name="prayer_sunrise">الشروق</string>
+    <string name="prayer_dhuhr">الظهر</string>
+    <string name="prayer_asr">العصر</string>
+    <string name="prayer_maghrib">المغرب</string>
+    <string name="prayer_isha">العشاء</string>
+
+    <!-- Hijri calendar -->
+    <string name="hijri_year_suffix">هـ</string>
+    <string-array name="hijri_months">
+        <item>محرم</item>
+        <item>صفر</item>
+        <item>ربيع الأول</item>
+        <item>ربيع الثاني</item>
+        <item>جمادى الأولى</item>
+        <item>جمادى الثانية</item>
+        <item>رجب</item>
+        <item>شعبان</item>
+        <item>رمضان</item>
+        <item>شوال</item>
+        <item>ذو القعدة</item>
+        <item>ذو الحجة</item>
+    </string-array>
 </resources>

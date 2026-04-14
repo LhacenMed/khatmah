@@ -7,15 +7,12 @@ package com.lhacenmed.khatmah.ui.common
  * both reference these constants so every callsite uses the same string.
  *
  * Whether a route is top-level (tab) or a sub-page is determined at runtime by
- * whether it appears in the tabs list declared in MainActivity — no separate set
- * to maintain.
+ * whether it appears in the tabs list declared in AppEntry — no separate set to maintain.
  */
 object Route {
 
     // ── Shell ─────────────────────────────────────────────────────────────────
-    // Root destination that contains all tabs + chrome (TopAppBar + BottomNavBar).
-    // Animates as a single unit when navigating to/from sub-pages.
-    const val MAIN    = "main"
+    const val MAIN = "main"
 
     // ── Tabs (bottom navigation) ──────────────────────────────────────────────
     const val TODAY   = "today"
@@ -24,8 +21,14 @@ object Route {
     const val INDEX   = "index"
     const val MORE    = "more"
 
-    // ── Sub-pages ─────────────────────────────────────────────────────────────
+    // ── Settings sub-pages ────────────────────────────────────────────────────
     const val THEME_SETTINGS = "theme_settings"
     const val LANGUAGE       = "language"
     const val ABOUT          = "about"
+
+    // ── Onboarding ────────────────────────────────────────────────────────────
+    // Flow order is defined by each page's navigation call, not by this object.
+    const val ONBOARDING_NOTIFICATIONS    = "onboarding_notifications"
+    const val ONBOARDING_LOCATION         = "onboarding_location"
+    const val ONBOARDING_MANUAL_LOCATION  = "onboarding_manual_location"
 }
