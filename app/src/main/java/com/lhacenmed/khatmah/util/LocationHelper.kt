@@ -1,144 +1,122 @@
 package com.lhacenmed.khatmah.util
 
-import android.Manifest.permission.ACCESS_FINE_LOCATION
+import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
-import android.os.Bundle
 import android.os.Looper
-import androidx.annotation.RequiresApi
-import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.Locale
 import kotlin.coroutines.resume
 
 /**
- * Thin wrapper around [LocationManager] for coroutine-friendly GPS access.
- * No Google Play Services dependency — uses only platform APIs.
+ * GPS acquisition and reverse geocoding.
+ *
+ * Acquisition order:
+ *  1. Recent last-known fix from any enabled provider (instant).
+ *  2. Fresh fix from NETWORK_PROVIDER (seconds) before falling back to GPS (minutes).
+ *
+ * Reverse geocoding order:
+ *  1. Android [Geocoder] (if GMS is present).
+ *  2. Nominatim / OSM (no GMS dependency).
  */
 object LocationHelper {
 
-    /**
-     * Returns the device's best available [Location], or null if:
-     *  - Permission is not granted.
-     *  - No enabled provider exists (airplane mode, GPS off, etc.).
-     *  - No fix is obtained within 20 seconds.
-     */
-    suspend fun getCurrent(context: Context): Location? {
-        if (!hasPermission(context)) return null
-        val lm       = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val provider = bestProvider(lm) ?: return null
+    private const val FRESH_MS   = 3 * 60 * 1000L  // last-known freshness window
+    private const val TIMEOUT_MS = 12_000L          // max wait for fresh fix
 
-        // Last-known is instant — accept it when reasonably fresh (< 2 minutes old).
-        @Suppress("MissingPermission")
-        lm.getLastKnownLocation(provider)
-            ?.takeIf { System.currentTimeMillis() - it.time < 120_000L }
-            ?.let { return it }
+    @SuppressLint("MissingPermission")
+    suspend fun getCurrent(context: Context): Location? = withContext(Dispatchers.IO) {
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+            ?: return@withContext null
 
-        // Request a fresh fix with a hard timeout.
-        return withTimeoutOrNull(20_000L) { freshFix(lm, provider, context) }
+        recentKnown(lm)?.let { return@withContext it }
+
+        val provider = when {
+            lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
+            lm.isProviderEnabled(LocationManager.GPS_PROVIDER)     -> LocationManager.GPS_PROVIDER
+            else -> return@withContext null
+        }
+
+        withTimeoutOrNull(TIMEOUT_MS) { freshFix(lm, provider) }
     }
 
     /**
-     * Reverse-geocodes [lat]/[lng] to the nearest city name using the platform Geocoder.
-     * Returns an empty string when Geocoder is unavailable or the address has no locality.
+     * Reverse-geocodes [lat]/[lng] to a city name.
+     * Falls back to Nominatim if Android Geocoder is unavailable.
      */
     suspend fun cityName(context: Context, lat: Double, lng: Double): String =
         withContext(Dispatchers.IO) {
-            if (!Geocoder.isPresent()) return@withContext ""
-            runCatching {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    cityNameAsync(context, lat, lng)
-                } else {
-                    @Suppress("DEPRECATION")
-                    Geocoder(context)
-                        .getFromLocation(lat, lng, 1)
-                        ?.firstOrNull()
-                        ?.locality
-                        .orEmpty()
-                }
-            }.getOrDefault("")
-        }
-
-    /**
-     * Forward-geocodes [query] (city name / address) to coordinates.
-     * Returns null when nothing is found or Geocoder is unavailable.
-     */
-    suspend fun coordsForName(context: Context, query: String): Location? =
-        withContext(Dispatchers.IO) {
-            if (!Geocoder.isPresent()) return@withContext null
-            runCatching {
-                @Suppress("DEPRECATION")
-                Geocoder(context)
-                    .getFromLocationName(query.trim(), 1)
-                    ?.firstOrNull()
-                    ?.let { addr ->
-                        Location(LocationManager.GPS_PROVIDER).apply {
-                            latitude  = addr.latitude
-                            longitude = addr.longitude
-                        }
-                    }
-            }.getOrNull()
+            geocoderCity(context, lat, lng) ?: nominatimCity(lat, lng) ?: ""
         }
 
     // ── Private ───────────────────────────────────────────────────────────────
 
-    private fun hasPermission(context: Context) =
-        ContextCompat.checkSelfPermission(context, ACCESS_FINE_LOCATION) ==
-                PackageManager.PERMISSION_GRANTED
+    @SuppressLint("MissingPermission")
+    private fun recentKnown(lm: LocationManager): Location? =
+        listOf(
+            LocationManager.NETWORK_PROVIDER,
+            LocationManager.GPS_PROVIDER,
+            LocationManager.PASSIVE_PROVIDER,
+        ).filter { lm.isProviderEnabled(it) }
+            .mapNotNull { runCatching { lm.getLastKnownLocation(it) }.getOrNull() }
+            .filter { System.currentTimeMillis() - it.time < FRESH_MS }
+            .minByOrNull { it.accuracy }   // lower value = more accurate
 
-    private fun bestProvider(lm: LocationManager): String? = when {
-        lm.isProviderEnabled(LocationManager.GPS_PROVIDER)     -> LocationManager.GPS_PROVIDER
-        lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
-        else                                                    -> null
-    }
-
-    private suspend fun freshFix(lm: LocationManager, provider: String, context: Context): Location? =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            freshFixApiR(lm, provider, context)
-        } else {
-            freshFixLegacy(lm, provider)
-        }
-
-    @RequiresApi(Build.VERSION_CODES.R)
-    private suspend fun freshFixApiR(lm: LocationManager, provider: String, context: Context): Location? =
-        suspendCancellableCoroutine { cont ->
-            val cts = android.os.CancellationSignal()
-            cont.invokeOnCancellation { cts.cancel() }
-            @Suppress("MissingPermission")
-            lm.getCurrentLocation(provider, cts, context.mainExecutor) { loc ->
-                if (cont.isActive) cont.resume(loc)
-            }
-        }
-
-    @Suppress("DEPRECATION")
-    private suspend fun freshFixLegacy(lm: LocationManager, provider: String): Location? =
+    @SuppressLint("MissingPermission")
+    private suspend fun freshFix(lm: LocationManager, provider: String): Location? =
         suspendCancellableCoroutine { cont ->
             val listener = object : LocationListener {
                 override fun onLocationChanged(loc: Location) {
                     lm.removeUpdates(this)
                     if (cont.isActive) cont.resume(loc)
                 }
-                override fun onStatusChanged(p: String?, s: Int, e: Bundle?) = Unit
-                override fun onProviderEnabled(p: String)  = Unit
-                override fun onProviderDisabled(p: String) = Unit
+                override fun onProviderDisabled(p: String) {
+                    lm.removeUpdates(this)
+                    if (cont.isActive) cont.resume(null)
+                }
             }
-            @Suppress("MissingPermission")
-            lm.requestSingleUpdate(provider, listener, Looper.getMainLooper())
-            cont.invokeOnCancellation { lm.removeUpdates(listener) }
+            runCatching {
+                lm.requestLocationUpdates(provider, 0L, 0f, listener, Looper.getMainLooper())
+            }.onFailure { if (cont.isActive) cont.resume(null) }
+            cont.invokeOnCancellation { runCatching { lm.removeUpdates(listener) } }
         }
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private suspend fun cityNameAsync(context: Context, lat: Double, lng: Double): String =
-        suspendCancellableCoroutine { cont ->
-            Geocoder(context).getFromLocation(lat, lng, 1) { addresses ->
-                if (cont.isActive) cont.resume(addresses.firstOrNull()?.locality.orEmpty())
+    private suspend fun geocoderCity(context: Context, lat: Double, lng: Double): String? =
+        runCatching {
+            if (!Geocoder.isPresent()) return@runCatching null
+            val geo = Geocoder(context, Locale.getDefault())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                suspendCancellableCoroutine { cont ->
+                    geo.getFromLocation(lat, lng, 1) { addresses ->
+                        cont.resume(addresses.firstOrNull()?.locality)
+                    }
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                geo.getFromLocation(lat, lng, 1)?.firstOrNull()?.locality
             }
-        }
+        }.getOrNull()
+
+    private suspend fun nominatimCity(lat: Double, lng: Double): String? =
+        runCatching {
+            val conn = URL(
+                "https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json"
+            ).openConnection() as HttpURLConnection
+            conn.setRequestProperty("User-Agent", "KhatmahApp/1.0")
+            val json = try { conn.inputStream.bufferedReader().readText() } finally { conn.disconnect() }
+            val addr = JSONObject(json).optJSONObject("address") ?: return@runCatching null
+            addr.optString("city").ifEmpty { null }
+                ?: addr.optString("town").ifEmpty { null }
+                ?: addr.optString("village").ifEmpty { null }
+        }.getOrNull()
 }

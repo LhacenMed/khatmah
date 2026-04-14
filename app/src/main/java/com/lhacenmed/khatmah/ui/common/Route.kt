@@ -1,13 +1,9 @@
 package com.lhacenmed.khatmah.ui.common
 
+import android.net.Uri
+
 /**
  * Single source of truth for all navigation route strings.
- *
- * Tab NavScreen vals in ui/page/tabs/ and sub-page NavPage vals in ui/page/
- * both reference these constants so every callsite uses the same string.
- *
- * Whether a route is top-level (tab) or a sub-page is determined at runtime by
- * whether it appears in the tabs list declared in AppEntry — no separate set to maintain.
  */
 object Route {
 
@@ -27,8 +23,12 @@ object Route {
     const val ABOUT          = "about"
 
     // ── Onboarding ────────────────────────────────────────────────────────────
-    // Flow order is defined by each page's navigation call, not by this object.
-    const val ONBOARDING_NOTIFICATIONS    = "onboarding_notifications"
-    const val ONBOARDING_LOCATION         = "onboarding_location"
-    const val ONBOARDING_MANUAL_LOCATION  = "onboarding_manual_location"
+    const val ONBOARDING_NOTIFICATIONS  = "onboarding_notifications"
+    const val ONBOARDING_LOCATION       = "onboarding_location"
+    const val ONBOARDING_COUNTRY_SELECT = "onboarding_country_select"
+    const val ONBOARDING_CITY_SELECT    = "onboarding_city_select?country={country}"
+
+    /** Builds the city-select route for [country], URL-encoding the name. */
+    fun citySelect(country: String) =
+        "onboarding_city_select?country=${Uri.encode(country)}"
 }

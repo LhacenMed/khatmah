@@ -102,6 +102,21 @@
     <string name="onboarding_location_not_found">Couldn\'t detect your location. Try again or choose manually.</string>
     <string name="onboarding_location_retry">Try Again</string>
 
+    <string name="location_title">Your Location</string>
+    <string name="location_desc">Allow access so prayer times are calculated for your city.</string>
+    <string name="location_denied_desc">Location access was denied. Choose your city manually instead.</string>
+    <string name="location_failed_desc">Could not detect your location. Choose your city manually or try again.</string>
+    <string name="location_grant">Grant Access</string>
+    <string name="location_locating">Detecting location…</string>
+    <string name="location_choose_manually">Choose Manually</string>
+    <string name="select_country">Select Country</string>
+    <string name="select_city">Select City</string>
+    <string name="search">Search…</string>
+    <string name="no_results">No results</string>
+    <string name="network_error">Couldn\'t load. Check your connection.</string>
+    <string name="retry">Retry</string>
+    <string name="geocode_error">Couldn\'t determine coordinates. Try again.</string>
+
     <!-- Manual location -->
     <string name="manual_location_title">Set Your Location</string>
     <string name="manual_location_desc">Enter your city name to calculate accurate prayer times.</string>
