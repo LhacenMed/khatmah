@@ -78,8 +78,10 @@ private fun PrayersScreenContent(padding: PaddingValues) {
     }
 
     // Reload when the selected date changes.
-    LaunchedEffect(selectedDate) {
-        prayers = repo.getForDate(selectedDate)
+    LaunchedEffect(selectedDate, cityName) {
+        if (cityName.isNotBlank()) {
+            prayers = repo.getForDate(selectedDate)
+        }
     }
 
     // Tick every second for the countdown.

@@ -109,7 +109,10 @@ fun CountrySelectPage() {
                         CountryItem(
                             country = country,
                             // Pass iso2 so CitySelectPage can store the country code
-                            onClick = { nav.navigate(Route.citySelect(country.name, country.iso2)) },
+                            onClick = {
+                                val fromSettings = nav.currentBackStackEntry?.arguments?.getBoolean("fromSettings") ?: false
+                                nav.navigate(Route.citySelect(country.name, country.iso2, fromSettings))
+                            },
                         )
                         HorizontalDivider()
                     }

@@ -40,6 +40,16 @@ object LocationHelper {
      */
     data class GeoInfo(val city: String, val countryCode: String)
 
+    /**
+     * Checks if at least one location provider (GPS or Network) is enabled.
+     */
+    fun isEnabled(context: Context): Boolean {
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+            ?: return false
+        return lm.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    }
+
     @SuppressLint("MissingPermission")
     suspend fun getCurrent(context: Context): Location? = withContext(Dispatchers.IO) {
         val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager

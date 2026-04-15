@@ -36,6 +36,7 @@
 
     <!-- Shared UI -->
     <string name="back">Back</string>
+    <string name="next">Next</string>
     <string name="navigate_up">Navigate up</string>
 
     <!-- More tab — sections -->
@@ -84,6 +85,8 @@
 
     <!-- Onboarding -->
     <string name="skip">Skip</string>
+    <string name="onboarding_lang_title">Language</string>
+    <string name="onboarding_lang_desc">Select your preferred language for the app.</string>
 
     <!-- Notifications permission -->
     <string name="onboarding_notif_title">Stay on Track</string>
@@ -100,6 +103,8 @@
     <string name="onboarding_location_action">Use My Location</string>
     <string name="onboarding_location_manual">Choose Manually</string>
     <string name="onboarding_location_not_found">Couldn\'t detect your location. Try again or choose manually.</string>
+    <string name="onboarding_location_disabled_desc">Location services are turned off. Please turn them on to calculate accurate prayer times.</string>
+    <string name="onboarding_location_enable_gps">Enable Location Services</string>
     <string name="onboarding_location_retry">Try Again</string>
 
     <string name="location_title">Your Location</string>
@@ -139,6 +144,9 @@
     <string name="prayers_alarm_on">Turn off alarm</string>
     <string name="prayers_alarm_off">Turn on alarm</string>
     <string name="prayers_today">Today</string>
+    <string name="prayers_location_disabled">Location Services Disabled</string>
+    <string name="prayers_location_permission_denied">Location Permission Denied</string>
+    <string name="prayers_enable_location">Enable Location</string>
     <string name="prayers_prev_day">Previous day</string>
     <string name="prayers_next_day">Next day</string>
     <string name="prayers_requires_android_8">Prayer times require Android 8.0 or higher</string>
@@ -173,6 +181,8 @@
     <!-- Main settings page -->
     <string name="prayer_settings_title">Prayer Times Settings</string>
     <string name="prayer_settings_location">Location</string>
+    <string name="prayer_settings_auto_location">Auto-detect Location</string>
+    <string name="prayer_settings_manual_location">Search Location Manually</string>
     <string name="prayer_settings_calc_section">Prayer Times Calculation</string>
     <string name="prayer_settings_auto">Automatic Settings</string>
     <string name="prayer_settings_calc_method">Calculation Method</string>

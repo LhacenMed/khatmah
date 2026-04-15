@@ -36,6 +36,7 @@
 
     <!-- Shared UI -->
     <string name="back">رجوع</string>
+    <string name="next">التالي</string>
     <string name="navigate_up">رجوع</string>
 
     <!-- More tab — sections -->

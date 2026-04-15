@@ -31,12 +31,13 @@ object Route {
     const val PRAYER_HIGHER_LAT         = "prayer_higher_lat"
 
     // ── Onboarding ────────────────────────────────────────────────────────────
+    const val ONBOARDING_LANGUAGE       = "onboarding_language"
     const val ONBOARDING_NOTIFICATIONS  = "onboarding_notifications"
     const val ONBOARDING_LOCATION       = "onboarding_location"
-    const val ONBOARDING_COUNTRY_SELECT = "onboarding_country_select"
-    const val ONBOARDING_CITY_SELECT    = "onboarding_city_select?country={country}&iso2={iso2}"
+    const val ONBOARDING_COUNTRY_SELECT = "onboarding_country_select?fromSettings={fromSettings}"
+    const val ONBOARDING_CITY_SELECT    = "onboarding_city_select?country={country}&iso2={iso2}&fromSettings={fromSettings}"
 
     /** Builds the city-select route for [country] + [iso2], URL-encoding both. */
-    fun citySelect(country: String, iso2: String) =
-        "onboarding_city_select?country=${Uri.encode(country)}&iso2=${Uri.encode(iso2)}"
+    fun citySelect(country: String, iso2: String, fromSettings: Boolean = false) =
+        "onboarding_city_select?country=${Uri.encode(country)}&iso2=${Uri.encode(iso2)}&fromSettings=$fromSettings"
 }
