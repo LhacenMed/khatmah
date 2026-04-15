@@ -127,7 +127,7 @@ private fun CountryItem(
 ) {
     ListItem(
         headlineContent = { Text(country.name) },
-        leadingContent  = {
+        leadingContent = {
             if (country.flagUrl.isNotEmpty()) {
                 val context = LocalContext.current
                 AsyncImage(
@@ -136,8 +136,8 @@ private fun CountryItem(
                         .crossfade(true)
                         .build(),
                     contentDescription = country.name,
-                    contentScale       = ContentScale.Crop,
-                    modifier           = Modifier
+                    contentScale = ContentScale.FillBounds,
+                    modifier = Modifier
                         .size(width = 32.dp, height = 24.dp)
                         .clip(MaterialTheme.shapes.extraSmall),
                 )
