@@ -8,18 +8,25 @@ import java.time.ZoneId
 import kotlin.math.*
 
 /**
- * On-device Islamic prayer time calculator using the USNO solar position algorithm.
+ * On-device Islamic prayer time calculator (USNO solar position algorithm).
  *
- * All intermediate calculations are in UTC decimal hours. The final step converts to
- * the device's local timezone via [ZoneId.systemDefault], which is correct for users
- * whose system clock is set to their current location — the standard case.
+ * All intermediate calculations are in UTC decimal hours.
+ * The final step converts to the device's local timezone via [ZoneId.systemDefault].
+ *
+ * Supports:
+ *  - 29 calculation methods (angle-based and fixed-minutes Isha)
+ *  - Shafi/Maliki/Hanbali and Hanafi Asr
+ *  - Automatic / ±1 h DST override
+ *  - Manual per-prayer minute corrections
+ *  - None / Middle-of-night / 1/7-of-night / Angle-based high-latitude fallbacks
  *
  * Returns Fajr · Sunrise · Dhuhr · Asr · Maghrib · Isha in that order.
- * Returns an empty list when the sun never rises/sets (extreme latitudes).
+ * Returns an empty list only when the sun never rises or sets (polar night/day)
+ * and no high-latitude fallback is configured.
  *
- * Default angles follow the Muslim World League convention (Fajr 18°, Isha 17°).
- *
- * References: US Naval Observatory simplified algorithm; praytimes.org v2.3.
+ * References:
+ *   US Naval Observatory simplified solar algorithm
+ *   praytimes.org v2.3
  */
 @RequiresApi(Build.VERSION_CODES.O)
 object PrayerEngine {
@@ -27,46 +34,92 @@ object PrayerEngine {
     private val NAMES = arrayOf("Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha")
 
     /**
-     * @param lat        Latitude in decimal degrees.
-     * @param lng        Longitude in decimal degrees.
-     * @param date       Gregorian date for which to compute times.
-     * @param fajrAngle  Sun depression angle for Fajr (degrees below horizon). Default: 18°.
-     * @param ishaAngle  Sun depression angle for Isha (degrees below horizon). Default: 17°.
-     * @param madhab     Asr shadow multiplier — 1 = Shafi/Maliki/Hanbali, 2 = Hanafi.
+     * Compute prayer times for [lat]/[lng] on [date] using fully-resolved [settings].
+     * Call [PrayerCalcSettings.resolve] before passing settings here.
      */
     fun calculate(
-        lat: Double,
-        lng: Double,
-        date: LocalDate,
-        fajrAngle: Double = 18.0,
-        ishaAngle: Double = 17.0,
-        madhab: Int = 1,
+        lat:      Double,
+        lng:      Double,
+        date:     LocalDate,
+        settings: PrayerCalcSettings,
     ): List<PrayerTime> {
+        val method      = settings.method
+        val madhab      = settings.juristic.madhab
+        val higherLat   = settings.higherLatMode
+        val corrections = settings.corrections
+
         val jd   = julianDay(date.year, date.monthValue, date.dayOfMonth)
         val decl = sunDeclination(jd)
         val eot  = equationOfTime(jd)
+        val noon = 12.0 - lng / 15.0 - eot   // UTC decimal hours of solar noon
 
-        // UTC decimal hours of solar noon at this longitude.
-        val noon = 12.0 - lng / 15.0 - eot
+        // Horizon hour angle — needed for sunrise/sunset and night-duration fallbacks.
+        val haHorizon = hourAngle(lat, decl, 90.833)
+            ?: return emptyList()   // polar day/night — cannot proceed without a horizon
 
-        // Hour angles (decimal hours east/west of noon). null = sun never reaches that angle.
-        val haHorizon = hourAngle(lat, decl, 90.833) ?: return emptyList()
-        val haFajr    = hourAngle(lat, decl, 90.0 + fajrAngle) ?: return emptyList()
-        val haIsha    = hourAngle(lat, decl, 90.0 + ishaAngle) ?: return emptyList()
-        val haAsr     = asrHourAngle(lat, decl, madhab) ?: return emptyList()
+        val sunrise  = noon - haHorizon
+        val sunset   = noon + haHorizon
+        val nightDur = ((24.0 - sunset + sunrise).let { if (it < 0) it + 24.0 else it })
 
-        val utcHours = doubleArrayOf(
-            noon - haFajr,      // Fajr
-            noon - haHorizon,   // Sunrise
-            noon,               // Dhuhr
-            noon + haAsr,       // Asr
-            noon + haHorizon,   // Maghrib
-            noon + haIsha,      // Isha
+        // Fajr
+        val fajrUtc: Double = hourAngle(lat, decl, 90.0 + method.fajrAngle)
+            ?.let { noon - it }
+            ?: highLatFallback(higherLat, sunrise, sunset, nightDur, isIsha = false, method.fajrAngle)
+            ?: return emptyList()
+
+        // Isha
+        val ishaUtc: Double = when (val mode = method.ishaMode) {
+            is IshaMode.FixedMinutes -> sunset + mode.minutes / 60.0
+            is IshaMode.Angle        -> hourAngle(lat, decl, 90.0 + mode.degrees)
+                ?.let { noon + it }
+                ?: highLatFallback(higherLat, sunrise, sunset, nightDur, isIsha = true, mode.degrees)
+                ?: return emptyList()
+        }
+
+        val haAsr = asrHourAngle(lat, decl, madhab) ?: return emptyList()
+
+        val dstExtra = when (settings.dstMode) {
+            DstMode.PLUS_ONE  ->  1.0
+            DstMode.MINUS_ONE -> -1.0
+            DstMode.AUTOMATIC ->  0.0
+        }
+        val zoneOff = zoneOffsetHours(date) + dstExtra
+
+        val utcTimes = doubleArrayOf(fajrUtc, sunrise, noon, noon + haAsr, sunset, ishaUtc)
+        val corrMins = intArrayOf(
+            corrections.fajr, corrections.sunrise, corrections.dhuhr,
+            corrections.asr,  corrections.maghrib, corrections.isha,
         )
 
-        val offsetHours = zoneOffsetHours(date)
-        return utcHours.mapIndexed { i, utc ->
-            PrayerTime(NAMES[i], toLocalTime(utc + offsetHours))
+        return utcTimes.mapIndexed { i, utc ->
+            PrayerTime(NAMES[i], toLocalTime(utc + zoneOff + corrMins[i] / 60.0))
+        }
+    }
+
+    // ── High-latitude fallback ────────────────────────────────────────────────
+
+    /**
+     * Returns a fallback UTC hour for Fajr/Isha when the sun never reaches the
+     * required depression angle. Returns null only for [HigherLatMode.NONE].
+     *
+     * Reference: praytimes.org — angle/60 as fraction of night duration.
+     */
+    private fun highLatFallback(
+        mode:     HigherLatMode,
+        sunrise:  Double,
+        sunset:   Double,
+        nightDur: Double,
+        isIsha:   Boolean,
+        angle:    Double,
+    ): Double? = when (mode) {
+        HigherLatMode.NONE             -> null
+        HigherLatMode.MIDDLE_OF_NIGHT  ->
+            if (isIsha) sunset + nightDur / 2.0 else sunrise - nightDur / 2.0
+        HigherLatMode.SEVENTH_OF_NIGHT ->
+            if (isIsha) sunset + nightDur / 7.0 else sunrise - nightDur / 7.0
+        HigherLatMode.ANGLE_BASED      -> {
+            val portion = (angle / 60.0) * nightDur
+            if (isIsha) sunset + portion else sunrise - portion
         }
     }
 
@@ -98,13 +151,13 @@ object PrayerEngine {
         val l  = rad(q + 1.915 * sin(g) + 0.020 * sin(2.0 * g))
         val e  = rad(23.439 - 0.00000036 * d)
         var ra = deg(atan2(cos(e) * sin(l), cos(l))) / 15.0
-        ra -= floor(ra / 24.0 + 0.5) * 24.0    // normalize to [-12, 12]
+        ra -= floor(ra / 24.0 + 0.5) * 24.0
         return q / 15.0 - ra
     }
 
     /**
-     * Hour angle (decimal hours) for a given zenith angle in degrees.
-     * Returns null when |cos| > 1, i.e. the sun never reaches that zenith.
+     * Hour angle (decimal hours) for a given zenith angle.
+     * Returns null when the sun never reaches that zenith.
      */
     private fun hourAngle(lat: Double, decl: Double, zenith: Double): Double? {
         val cosT = (cos(rad(zenith)) - sin(rad(lat)) * sin(decl)) /
@@ -113,8 +166,8 @@ object PrayerEngine {
     }
 
     /**
-     * Hour angle for Asr based on the madhab shadow multiplier.
-     * madhab = 1 → Shafi/Maliki/Hanbali (shadow = 1× object); 2 → Hanafi (2×).
+     * Hour angle for Asr based on madhab shadow multiplier.
+     * [madhab] = 1 → Shafi/Maliki/Hanbali; 2 → Hanafi.
      */
     private fun asrHourAngle(lat: Double, decl: Double, madhab: Int): Double? {
         val target = atan(1.0 / (madhab + tan(abs(rad(lat) - decl))))
@@ -130,9 +183,9 @@ object PrayerEngine {
 
     /** Converts a local decimal hour (possibly outside [0, 24)) to [LocalTime]. */
     private fun toLocalTime(localHour: Double): LocalTime {
-        val normalized = ((localHour % 24) + 24) % 24
-        val h = normalized.toInt()
-        val m = ((normalized - h) * 60).roundToInt().coerceIn(0, 59)
+        val norm = ((localHour % 24) + 24) % 24
+        val h    = norm.toInt()
+        val m    = ((norm - h) * 60).roundToInt().coerceIn(0, 59)
         return LocalTime.of(h.coerceIn(0, 23), m)
     }
 

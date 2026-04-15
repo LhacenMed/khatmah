@@ -34,6 +34,7 @@ import com.lhacenmed.khatmah.ui.onboarding.*
 import com.lhacenmed.khatmah.ui.page.settings.about.AboutPage
 import com.lhacenmed.khatmah.ui.page.settings.appearance.LanguagePage
 import com.lhacenmed.khatmah.ui.page.settings.appearance.ThemeSettingsPage
+import com.lhacenmed.khatmah.ui.page.settings.prayers.*
 import com.lhacenmed.khatmah.ui.page.tabs.*
 import com.lhacenmed.khatmah.util.OnboardingPrefs
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -54,7 +55,7 @@ fun AppEntry() {
     // ── Tab list ──────────────────────────────────────────────────────────────
     val tabs = listOf(TodayTab, AthkarTab, PrayersTab, IndexTab, MoreTab)
 
-    // ── Sub-page list ─────────────────────────────────────────────────────────
+    // ── General settings sub-pages ────────────────────────────────────────────
     val pages = listOf(ThemeSettingsPage, LanguagePage, AboutPage)
 
     val navController = rememberNavController()
@@ -66,30 +67,37 @@ fun AppEntry() {
             modifier         = Modifier.fillMaxSize(),
         ) {
             // ── Onboarding ────────────────────────────────────────────────────
-            // animatedComposable gives consistent shared-axis-X slides across all
-            // onboarding steps and into the main shell.
             animatedComposable(Route.ONBOARDING_NOTIFICATIONS) { NotificationPermissionPage() }
             animatedComposable(Route.ONBOARDING_LOCATION)      { LocationPermissionPage()     }
-            animatedComposable(Route.ONBOARDING_COUNTRY_SELECT) {
-                CountrySelectPage()
-            }
+            animatedComposable(Route.ONBOARDING_COUNTRY_SELECT) { CountrySelectPage() }
             animatedComposable(
                 route     = Route.ONBOARDING_CITY_SELECT,
-                arguments = listOf(navArgument("country") {
-                    type         = NavType.StringType
-                    defaultValue = ""
-                }),
+                arguments = listOf(
+                    navArgument("country") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("iso2")    { type = NavType.StringType; defaultValue = "" },
+                ),
             ) { backStack ->
-                CitySelectPage(country = backStack.arguments?.getString("country") ?: "")
+                CitySelectPage(
+                    country = backStack.arguments?.getString("country") ?: "",
+                    iso2    = backStack.arguments?.getString("iso2") ?: "",
+                )
             }
 
             // ── App shell ─────────────────────────────────────────────────────
             animatedComposable(Route.MAIN) { MainScreen(tabs = tabs) }
 
-            // ── Settings sub-pages ────────────────────────────────────────────
+            // ── General settings sub-pages ────────────────────────────────────
             pages.forEach { page ->
                 animatedComposable(page.route) { page.content() }
             }
+
+            // ── Prayer settings sub-pages ─────────────────────────────────────
+            animatedComposable(Route.PRAYER_SETTINGS)           { PrayerSettingsContent()     }
+            animatedComposable(Route.PRAYER_CALC_METHOD)        { CalcMethodContent()         }
+            animatedComposable(Route.PRAYER_JURISTIC)           { JuristicContent()           }
+            animatedComposable(Route.PRAYER_DST)                { DstContent()                }
+            animatedComposable(Route.PRAYER_MANUAL_CORRECTIONS) { ManualCorrectionsContent()  }
+            animatedComposable(Route.PRAYER_HIGHER_LAT)         { HigherLatContent()          }
         }
     }
 }

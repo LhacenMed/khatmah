@@ -33,7 +33,7 @@ fun LocationPermissionPage() {
 
     var state by remember { mutableStateOf(LocState.Idle) }
 
-    fun toMain()         = nav.navigate(Route.MAIN) { popUpTo(0) { inclusive = true } }
+    fun toMain()          = nav.navigate(Route.MAIN) { popUpTo(0) { inclusive = true } }
     fun toCountrySelect() = nav.navigate(Route.ONBOARDING_COUNTRY_SELECT)
 
     fun locateAndSave() {
@@ -41,8 +41,9 @@ fun LocationPermissionPage() {
         scope.launch {
             val loc = LocationHelper.getCurrent(context)
             if (loc != null) {
-                val city = LocationHelper.cityName(context, loc.latitude, loc.longitude)
-                OnboardingPrefs.complete(context, city, loc.latitude, loc.longitude)
+                // Single Nominatim call returns both city and country code.
+                val info = LocationHelper.geoInfo(context, loc.latitude, loc.longitude)
+                OnboardingPrefs.complete(context, info.city, loc.latitude, loc.longitude, info.countryCode)
                 toMain()
             } else {
                 state = LocState.Failed

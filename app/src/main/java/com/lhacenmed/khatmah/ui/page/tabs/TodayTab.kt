@@ -48,7 +48,8 @@ private fun TodayScreen(padding: PaddingValues) {
     var refreshing by remember { mutableStateOf(false) }
 
     /**
-     * 1. Attempts a fresh GPS fix and updates [OnboardingPrefs] when successful.
+     * 1. Attempts a fresh GPS fix and updates [OnboardingPrefs] when successful,
+     *    including the ISO country code so auto prayer settings resolve correctly.
      * 2. Wipes the prayer cache and recomputes today — using new coords if available,
      *    or the previously stored coords if GPS is unavailable.
      */
@@ -57,9 +58,9 @@ private fun TodayScreen(padding: PaddingValues) {
             refreshing = true
             val loc = LocationHelper.getCurrent(context)
             if (loc != null) {
-                val city = LocationHelper.cityName(context, loc.latitude, loc.longitude)
-                    .ifBlank { OnboardingPrefs.location(context)?.cityName.orEmpty() }
-                OnboardingPrefs.complete(context, city, loc.latitude, loc.longitude)
+                val info = LocationHelper.geoInfo(context, loc.latitude, loc.longitude)
+                val city = info.city.ifBlank { OnboardingPrefs.location(context)?.cityName.orEmpty() }
+                OnboardingPrefs.complete(context, city, loc.latitude, loc.longitude, info.countryCode)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 repo?.refresh()
@@ -85,7 +86,6 @@ private fun TodayScreen(padding: PaddingValues) {
             TextButton(onClick = { nav.navigate(Route.LANGUAGE) }) {
                 Text(stringResource(R.string.language_settings))
             }
-
             Spacer(Modifier.height(24.dp))
 
             if (refreshing) {
