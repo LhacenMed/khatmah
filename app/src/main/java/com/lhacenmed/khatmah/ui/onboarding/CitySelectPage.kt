@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CitySelectPage(country: String) {
+fun CitySelectPage(country: String, iso2: String) {
     val nav           = LocalNavController.current
     val context       = LocalContext.current
     val scope         = rememberCoroutineScope()
@@ -69,7 +69,7 @@ fun CitySelectPage(country: String) {
             val coords = CountriesApi.geocode(city, country)
             geocoding = false
             if (coords != null) {
-                OnboardingPrefs.complete(context, city, coords.first, coords.second)
+                OnboardingPrefs.complete(context, city, coords.first, coords.second, iso2)
                 nav.navigate(Route.MAIN) { popUpTo(0) { inclusive = true } }
             } else {
                 snackbarState.showSnackbar(geocodeErrorMsg)

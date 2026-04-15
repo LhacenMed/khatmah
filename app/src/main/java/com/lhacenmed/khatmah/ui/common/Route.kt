@@ -17,18 +17,26 @@ object Route {
     const val INDEX   = "index"
     const val MORE    = "more"
 
-    // ── Settings sub-pages ────────────────────────────────────────────────────
+    // ── General settings sub-pages ────────────────────────────────────────────
     const val THEME_SETTINGS = "theme_settings"
     const val LANGUAGE       = "language"
     const val ABOUT          = "about"
+
+    // ── Prayer settings sub-pages ─────────────────────────────────────────────
+    const val PRAYER_SETTINGS           = "prayer_settings"
+    const val PRAYER_CALC_METHOD        = "prayer_calc_method"
+    const val PRAYER_JURISTIC           = "prayer_juristic"
+    const val PRAYER_DST                = "prayer_dst"
+    const val PRAYER_MANUAL_CORRECTIONS = "prayer_manual_corrections"
+    const val PRAYER_HIGHER_LAT         = "prayer_higher_lat"
 
     // ── Onboarding ────────────────────────────────────────────────────────────
     const val ONBOARDING_NOTIFICATIONS  = "onboarding_notifications"
     const val ONBOARDING_LOCATION       = "onboarding_location"
     const val ONBOARDING_COUNTRY_SELECT = "onboarding_country_select"
-    const val ONBOARDING_CITY_SELECT    = "onboarding_city_select?country={country}"
+    const val ONBOARDING_CITY_SELECT    = "onboarding_city_select?country={country}&iso2={iso2}"
 
-    /** Builds the city-select route for [country], URL-encoding the name. */
-    fun citySelect(country: String) =
-        "onboarding_city_select?country=${Uri.encode(country)}"
+    /** Builds the city-select route for [country] + [iso2], URL-encoding both. */
+    fun citySelect(country: String, iso2: String) =
+        "onboarding_city_select?country=${Uri.encode(country)}&iso2=${Uri.encode(iso2)}"
 }

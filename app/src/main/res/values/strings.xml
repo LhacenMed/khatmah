@@ -167,4 +167,44 @@
         <item>Dhu al-Qi\'dah</item>
         <item>Dhu al-Hijjah</item>
     </string-array>
+
+    <!-- Prayer settings — main page -->
+    <string name="prayer_settings_title">Prayer Settings</string>
+    <string name="prayer_settings_location">Location</string>
+    <string name="prayer_settings_calc_section">Prayer Times Calculation</string>
+    <string name="prayer_settings_auto">Automatic Settings</string>
+    <string name="prayer_settings_calc_method">Calculation Method</string>
+    <string name="prayer_settings_juristic">Juristic Method</string>
+    <string name="prayer_settings_dst">Daylight Saving Time</string>
+    <string name="prayer_settings_corrections">Manual Corrections</string>
+    <string name="prayer_settings_higher_lat">Higher Latitude</string>
+
+    <!-- Juristic method options -->
+    <string name="juristic_shafi">Shafi, Maliki, Hanbali</string>
+    <string name="juristic_hanafi">Hanafi</string>
+
+    <!-- DST options -->
+    <string name="dst_automatic">Automatic</string>
+    <string name="dst_plus_one">+1 Hour</string>
+    <string name="dst_minus_one">−1 Hour</string>
+
+    <!-- Higher latitude options -->
+    <string name="higher_lat_none">None</string>
+    <string name="higher_lat_middle">Middle of the Night</string>
+    <string name="higher_lat_seventh">1/7 of the Night</string>
+    <string name="higher_lat_angle">Angle-Based Method</string>
+
+    <!-- Manual corrections -->
+    <string name="corrections_all_default">All default</string>
+    <string name="corrections_customized">Customized</string>
+    <string name="corrections_reset">Reset All</string>
+    <string name="corrections_mins">min</string>
+
+    <!-- Calc method subtitle format -->
+    <!-- %1$.1f = Fajr angle, %2$s = Isha description -->
+    <string name="calc_method_subtitle">Fajr: %1$.1f° / Isha: %2$s</string>
+    <!-- %1$.1f = Isha angle -->
+    <string name="calc_method_isha_angle">%1$.1f°</string>
+    <!-- %1$d = minutes -->
+    <string name="calc_method_isha_mins">%1$d min after Maghrib</string>
 </resources>

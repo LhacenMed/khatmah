@@ -107,8 +107,9 @@ fun CountrySelectPage() {
                 else -> LazyColumn {
                     items(filtered, key = { it.iso2.ifEmpty { it.name } }) { country ->
                         CountryItem(
-                            country  = country,
-                            onClick  = { nav.navigate(Route.citySelect(country.name)) },
+                            country = country,
+                            // Pass iso2 so CitySelectPage can store the country code
+                            onClick = { nav.navigate(Route.citySelect(country.name, country.iso2)) },
                         )
                         HorizontalDivider()
                     }
@@ -127,7 +128,7 @@ private fun CountryItem(
 ) {
     ListItem(
         headlineContent = { Text(country.name) },
-        leadingContent = {
+        leadingContent  = {
             if (country.flagUrl.isNotEmpty()) {
                 val context = LocalContext.current
                 AsyncImage(
@@ -136,8 +137,8 @@ private fun CountryItem(
                         .crossfade(true)
                         .build(),
                     contentDescription = country.name,
-                    contentScale = ContentScale.FillBounds,
-                    modifier = Modifier
+                    contentScale       = ContentScale.FillBounds,
+                    modifier           = Modifier
                         .size(width = 32.dp, height = 24.dp)
                         .clip(MaterialTheme.shapes.extraSmall),
                 )

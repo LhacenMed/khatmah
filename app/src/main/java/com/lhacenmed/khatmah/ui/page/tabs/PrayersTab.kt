@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.data.prayer.PrayerRepository
 import com.lhacenmed.khatmah.data.prayer.PrayerTime
+import com.lhacenmed.khatmah.data.prayer.toAmPm
 import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.ui.nav.NavScreen
@@ -69,7 +70,7 @@ private fun PrayersScreenContent(padding: PaddingValues) {
     var prayers      by remember { mutableStateOf<List<PrayerTime>>(emptyList()) }
     var now          by remember { mutableStateOf(LocalTime.now()) }
 
-    // alarm state per prayer index — Sunrise (index 1) is off by default.
+    // Alarm state per prayer index — Sunrise (index 1) is off by default.
     var alarmOn by remember { mutableStateOf(List(6) { i -> i != 1 }) }
 
     val cityName = remember {
@@ -121,7 +122,8 @@ private fun PrayersScreenContent(padding: PaddingValues) {
             nextPrayer      = nextIdx?.let { prayers[it] },
             countdownSecs   = countdownSecs,
             onQiblaClick    = { /* TODO: Qibla screen */ },
-            onSettingsClick = { nav.navigate(Route.THEME_SETTINGS) },
+            // Navigate to the dedicated prayer settings page.
+            onSettingsClick = { nav.navigate(Route.PRAYER_SETTINGS) },
         )
 
         PrayerDateNav(
@@ -389,8 +391,3 @@ private fun localizedPrayerName(name: String): String = when (name.lowercase(Loc
     "isha"    -> stringResource(R.string.prayer_isha)
     else      -> name
 }
-
-/** 12-hour AM/PM format; always uses English locale so "AM/PM" is language-neutral. */
-@RequiresApi(Build.VERSION_CODES.O)
-private fun LocalTime.toAmPm(): String =
-    DateTimeFormatter.ofPattern("hh:mm a", Locale.ENGLISH).format(this)

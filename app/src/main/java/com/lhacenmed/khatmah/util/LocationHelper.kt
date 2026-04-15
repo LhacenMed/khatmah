@@ -34,6 +34,12 @@ object LocationHelper {
     private const val FRESH_MS   = 3 * 60 * 1000L  // last-known freshness window
     private const val TIMEOUT_MS = 12_000L          // max wait for fresh fix
 
+    /**
+     * Resolved geographic information from a single Nominatim call.
+     * [countryCode] is ISO 3166-1 alpha-2, uppercase, e.g. "MA". Empty if unknown.
+     */
+    data class GeoInfo(val city: String, val countryCode: String)
+
     @SuppressLint("MissingPermission")
     suspend fun getCurrent(context: Context): Location? = withContext(Dispatchers.IO) {
         val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
@@ -56,7 +62,18 @@ object LocationHelper {
      */
     suspend fun cityName(context: Context, lat: Double, lng: Double): String =
         withContext(Dispatchers.IO) {
-            geocoderCity(context, lat, lng) ?: nominatimCity(lat, lng) ?: ""
+            geocoderCity(context, lat, lng) ?: nominatimInfo(lat, lng).city
+        }
+
+    /**
+     * Reverse-geocodes [lat]/[lng] and returns both city name and ISO 3166-1 alpha-2
+     * country code in a single Nominatim call (Geocoder for city, Nominatim for both).
+     */
+    suspend fun geoInfo(context: Context, lat: Double, lng: Double): GeoInfo =
+        withContext(Dispatchers.IO) {
+            val nominatim = nominatimInfo(lat, lng)
+            val city = geocoderCity(context, lat, lng) ?: nominatim.city
+            GeoInfo(city = city, countryCode = nominatim.countryCode)
         }
 
     // ── Private ───────────────────────────────────────────────────────────────
@@ -107,16 +124,20 @@ object LocationHelper {
             }
         }.getOrNull()
 
-    private suspend fun nominatimCity(lat: Double, lng: Double): String? =
+    /** Single Nominatim call returning both city name and ISO 3166-1 alpha-2 country code. */
+    private suspend fun nominatimInfo(lat: Double, lng: Double): GeoInfo =
         runCatching {
             val conn = URL(
                 "https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json"
             ).openConnection() as HttpURLConnection
             conn.setRequestProperty("User-Agent", "KhatmahApp/1.0")
             val json = try { conn.inputStream.bufferedReader().readText() } finally { conn.disconnect() }
-            val addr = JSONObject(json).optJSONObject("address") ?: return@runCatching null
-            addr.optString("city").ifEmpty { null }
+            val addr = JSONObject(json).optJSONObject("address") ?: return@runCatching GeoInfo("", "")
+            val city = addr.optString("city").ifEmpty { null }
                 ?: addr.optString("town").ifEmpty { null }
                 ?: addr.optString("village").ifEmpty { null }
-        }.getOrNull()
+                ?: ""
+            val cc = addr.optString("country_code").uppercase()
+            GeoInfo(city = city, countryCode = cc)
+        }.getOrDefault(GeoInfo("", ""))
 }
