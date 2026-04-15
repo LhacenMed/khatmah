@@ -13,10 +13,15 @@ import kotlin.math.*
  * All intermediate calculations are in UTC decimal hours.
  * The final step converts to the device's local timezone via [ZoneId.systemDefault].
  *
+ * Correction layering (applied in order after the astronomical result):
+ *  1. [MethodOffsets]     — authority-defined, baked into each [CalcMethod].
+ *  2. [ManualCorrections] — user-configurable, stored in [PrayerCalcSettings].
+ *
  * Supports:
  *  - 29 calculation methods (angle-based and fixed-minutes Isha)
  *  - Shafi/Maliki/Hanbali and Hanafi Asr
  *  - Automatic / ±1 h DST override
+ *  - Method baked-in offsets extracted from the original Khatmah source
  *  - Manual per-prayer minute corrections
  *  - None / Middle-of-night / 1/7-of-night / Angle-based high-latitude fallbacks
  *
@@ -46,6 +51,7 @@ object PrayerEngine {
         val method      = settings.method
         val madhab      = settings.juristic.madhab
         val higherLat   = settings.higherLatMode
+        val offsets     = method.offsets
         val corrections = settings.corrections
 
         val jd   = julianDay(date.year, date.monthValue, date.dayOfMonth)
@@ -59,7 +65,7 @@ object PrayerEngine {
 
         val sunrise  = noon - haHorizon
         val sunset   = noon + haHorizon
-        val nightDur = ((24.0 - sunset + sunrise).let { if (it < 0) it + 24.0 else it })
+        val nightDur = (24.0 - sunset + sunrise).let { if (it < 0) it + 24.0 else it }
 
         // Fajr
         val fajrUtc: Double = hourAngle(lat, decl, 90.0 + method.fajrAngle)
@@ -86,13 +92,20 @@ object PrayerEngine {
         val zoneOff = zoneOffsetHours(date) + dstExtra
 
         val utcTimes = doubleArrayOf(fajrUtc, sunrise, noon, noon + haAsr, sunset, ishaUtc)
-        val corrMins = intArrayOf(
-            corrections.fajr, corrections.sunrise, corrections.dhuhr,
-            corrections.asr,  corrections.maghrib, corrections.isha,
+
+        // Layer 1: method's authority-defined offsets (baked in per CalcMethod).
+        // Layer 2: user's manual corrections on top.
+        val totalMins = intArrayOf(
+            offsets.fajr    + corrections.fajr,
+            offsets.sunrise + corrections.sunrise,
+            offsets.dhuhr   + corrections.dhuhr,
+            offsets.asr     + corrections.asr,
+            offsets.maghrib + corrections.maghrib,
+            offsets.isha    + corrections.isha,
         )
 
         return utcTimes.mapIndexed { i, utc ->
-            PrayerTime(NAMES[i], toLocalTime(utc + zoneOff + corrMins[i] / 60.0))
+            PrayerTime(NAMES[i], toLocalTime(utc + zoneOff + totalMins[i] / 60.0))
         }
     }
 

@@ -168,8 +168,10 @@
         <item>Dhu al-Hijjah</item>
     </string-array>
 
-    <!-- Prayer settings — main page -->
-    <string name="prayer_settings_title">Prayer Settings</string>
+    <!-- ── Prayer Settings ────────────────────────────────────────────────── -->
+
+    <!-- Main settings page -->
+    <string name="prayer_settings_title">Prayer Times Settings</string>
     <string name="prayer_settings_location">Location</string>
     <string name="prayer_settings_calc_section">Prayer Times Calculation</string>
     <string name="prayer_settings_auto">Automatic Settings</string>
@@ -186,7 +188,7 @@
     <!-- DST options -->
     <string name="dst_automatic">Automatic</string>
     <string name="dst_plus_one">+1 Hour</string>
-    <string name="dst_minus_one">−1 Hour</string>
+    <string name="dst_minus_one">-1 Hour</string>
 
     <!-- Higher latitude options -->
     <string name="higher_lat_none">None</string>
@@ -194,17 +196,17 @@
     <string name="higher_lat_seventh">1/7 of the Night</string>
     <string name="higher_lat_angle">Angle-Based Method</string>
 
-    <!-- Manual corrections -->
+    <!-- Manual corrections page -->
     <string name="corrections_all_default">All default</string>
     <string name="corrections_customized">Customized</string>
     <string name="corrections_reset">Reset All</string>
     <string name="corrections_mins">min</string>
 
-    <!-- Calc method subtitle format -->
-    <!-- %1$.1f = Fajr angle, %2$s = Isha description -->
+    <!-- Calculation method list item subtitle -->
+    <!-- %1$.1f° = Fajr angle, %2$s = Isha description -->
     <string name="calc_method_subtitle">Fajr: %1$.1f° / Isha: %2$s</string>
-    <!-- %1$.1f = Isha angle -->
+    <!-- %1$.1f° = Isha angle -->
     <string name="calc_method_isha_angle">%1$.1f°</string>
-    <!-- %1$d = minutes -->
+    <!-- %1$d = minutes after Maghrib -->
     <string name="calc_method_isha_mins">%1$d min after Maghrib</string>
 </resources>

@@ -11,21 +11,21 @@
 
     <!-- Theme settings -->
     <string name="theme_settings">المظهر</string>
-    <string name="theme_system">افتراضي النظام</string>
+    <string name="theme_system">إعداد النظام</string>
     <string name="theme_light">فاتح</string>
     <string name="theme_dark">داكن</string>
 
     <!-- Language settings -->
     <string name="language_settings">اللغة</string>
-    <string name="language_system_default">افتراضي النظام</string>
-    <string name="language_english">الإنجليزية — English</string>
+    <string name="language_system_default">إعداد النظام</string>
+    <string name="language_english">English — الإنجليزية</string>
     <string name="language_arabic">العربية</string>
 
     <!-- PreferenceSwitchWithDivider accessibility -->
     <string name="open_settings">فتح الإعدادات</string>
 
     <!-- AboutPage -->
-    <string name="about_page">عن المطور</string>
+    <string name="about_page">حول</string>
     <string name="about_app">التطبيق</string>
     <string name="about_links">روابط</string>
     <string name="version">الإصدار</string>
@@ -94,12 +94,12 @@
 
     <!-- Location permission -->
     <string name="onboarding_location_title">أوقات صلاتك</string>
-    <string name="onboarding_location_desc">اسمح بالوصول إلى موقعك لكي نحسب مواقيت الصلاة الدقيقة لمدينتك.</string>
+    <string name="onboarding_location_desc">اسمح بالوصول إلى الموقع لحساب أوقات الصلاة الدقيقة لمدينتك.</string>
     <string name="onboarding_location_locating">جارٍ تحديد موقعك…</string>
     <string name="onboarding_location_denied">تم رفض إذن الموقع. اختر مدينتك يدوياً.</string>
     <string name="onboarding_location_action">استخدام موقعي</string>
-    <string name="onboarding_location_manual">الاختيار يدوياً</string>
-    <string name="onboarding_location_not_found">تعذّر تحديد موقعك. حاول مجددًا أو اختر يدويًا.</string>
+    <string name="onboarding_location_manual">اختيار يدوي</string>
+    <string name="onboarding_location_not_found">تعذّر تحديد موقعك. حاول مرة أخرى أو اختر يدوياً.</string>
     <string name="onboarding_location_retry">إعادة المحاولة</string>
 
     <string name="location_title">موقعك</string>
@@ -109,13 +109,13 @@
     <string name="location_grant">منح الإذن</string>
     <string name="location_locating">جارٍ تحديد الموقع…</string>
     <string name="location_choose_manually">اختيار يدوي</string>
-    <string name="select_country">اختر الدولة</string>
+    <string name="select_country">اختر البلد</string>
     <string name="select_city">اختر المدينة</string>
     <string name="search">بحث…</string>
     <string name="no_results">لا توجد نتائج</string>
-    <string name="network_error">تعذر التحميل. تحقق من اتصالك.</string>
+    <string name="network_error">تعذّر التحميل. تحقق من اتصالك.</string>
     <string name="retry">إعادة المحاولة</string>
-    <string name="geocode_error">تعذر تحديد الإحداثيات. حاول مرة أخرى.</string>
+    <string name="geocode_error">تعذّر تحديد الإحداثيات. حاول مرة أخرى.</string>
 
     <!-- Manual location -->
     <string name="manual_location_title">حدّد موقعك</string>
@@ -141,7 +141,7 @@
     <string name="prayers_today">اليوم</string>
     <string name="prayers_prev_day">اليوم السابق</string>
     <string name="prayers_next_day">اليوم التالي</string>
-    <string name="prayers_requires_android_8">أوقات الصلاة تتطلب أندرويد 8.0 أو أعلى</string>
+    <string name="prayers_requires_android_8">أوقات الصلاة تتطلب Android 8.0 أو أعلى</string>
 
     <!-- Individual prayer names -->
     <string name="prayer_fajr">الفجر</string>
@@ -167,4 +167,43 @@
         <item>ذو القعدة</item>
         <item>ذو الحجة</item>
     </string-array>
+
+    <!-- ── Prayer Settings ────────────────────────────────────────────────── -->
+
+    <!-- Main settings page -->
+    <string name="prayer_settings_title">إعدادات أوقات الصلاة</string>
+    <string name="prayer_settings_location">الموقع</string>
+    <string name="prayer_settings_calc_section">حساب أوقات الصلاة</string>
+    <string name="prayer_settings_auto">الإعدادات التلقائية</string>
+    <string name="prayer_settings_calc_method">طريقة الحساب</string>
+    <string name="prayer_settings_juristic">المذهب الفقهي</string>
+    <string name="prayer_settings_dst">التوقيت الصيفي</string>
+    <string name="prayer_settings_corrections">التصحيحات اليدوية</string>
+    <string name="prayer_settings_higher_lat">خطوط العرض العالية</string>
+
+    <!-- Juristic method options -->
+    <string name="juristic_shafi">شافعي، مالكي، حنبلي</string>
+    <string name="juristic_hanafi">حنفي</string>
+
+    <!-- DST options -->
+    <string name="dst_automatic">تلقائي</string>
+    <string name="dst_plus_one">‎+1 ساعة</string>
+    <string name="dst_minus_one">‎-1 ساعة</string>
+
+    <!-- Higher latitude options -->
+    <string name="higher_lat_none">لا شيء</string>
+    <string name="higher_lat_middle">منتصف الليل</string>
+    <string name="higher_lat_seventh">سُبع الليل</string>
+    <string name="higher_lat_angle">الطريقة الزاوية</string>
+
+    <!-- Manual corrections page -->
+    <string name="corrections_all_default">الافتراضي</string>
+    <string name="corrections_customized">مخصص</string>
+    <string name="corrections_reset">إعادة الضبط</string>
+    <string name="corrections_mins">د</string>
+
+    <!-- Calculation method list item subtitle -->
+    <string name="calc_method_subtitle">الفجر: %1$.1f° / العشاء: %2$s</string>
+    <string name="calc_method_isha_angle">%1$.1f°</string>
+    <string name="calc_method_isha_mins">%1$d دقيقة بعد المغرب</string>
 </resources>
