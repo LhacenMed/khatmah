@@ -23,7 +23,7 @@ import com.lhacenmed.khatmah.util.LocationHelper
 import com.lhacenmed.khatmah.util.OnboardingPrefs
 import kotlinx.coroutines.launch
 
-private enum class LocState { Idle, Locating, Failed, Denied }
+private enum class LocState { Idle, Locating, Failed, Denied, Disabled }
 
 @Composable
 fun LocationPermissionPage() {
@@ -37,6 +37,11 @@ fun LocationPermissionPage() {
     fun toCountrySelect() = nav.navigate(Route.ONBOARDING_COUNTRY_SELECT)
 
     fun locateAndSave() {
+        if (!LocationHelper.isEnabled(context)) {
+            state = LocState.Disabled
+            return
+        }
+
         state = LocState.Locating
         scope.launch {
             val loc = LocationHelper.getCurrent(context)
@@ -68,24 +73,27 @@ fun LocationPermissionPage() {
         }
     }
 
-    val showManual = state == LocState.Failed || state == LocState.Denied
+    val showManual = state == LocState.Failed || state == LocState.Denied || state == LocState.Disabled
 
     OnboardingPage(
         icon        = Icons.Outlined.LocationOn,
         title       = stringResource(R.string.location_title),
         description = when (state) {
-            LocState.Denied -> stringResource(R.string.location_denied_desc)
-            LocState.Failed -> stringResource(R.string.location_failed_desc)
-            else            -> stringResource(R.string.location_desc)
+            LocState.Denied   -> stringResource(R.string.location_denied_desc)
+            LocState.Failed   -> stringResource(R.string.location_failed_desc)
+            LocState.Disabled -> stringResource(R.string.onboarding_location_disabled_desc)
+            else              -> stringResource(R.string.location_desc)
         },
         actionLabel = when (state) {
             LocState.Locating -> stringResource(R.string.location_locating)
             LocState.Failed   -> stringResource(R.string.retry)
+            LocState.Disabled -> stringResource(R.string.onboarding_location_retry)
             else              -> stringResource(R.string.location_grant)
         },
         onAction = {
             when (state) {
                 LocState.Failed   -> locateAndSave()
+                LocState.Disabled -> locateAndSave()
                 LocState.Locating -> Unit
                 else -> permLauncher.launch(
                     arrayOf(

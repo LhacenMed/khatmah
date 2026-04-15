@@ -74,6 +74,26 @@ fun PrayerSettingsContent() {
                 ListItem(headlineContent = { Text(stringResource(R.string.prayers_city_unknown)) })
             }
 
+            // Auto-detect Location
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.prayer_settings_auto_location)) },
+                modifier        = Modifier.clickable { nav.navigate(Route.ONBOARDING_LOCATION) },
+                trailingContent = {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
+                },
+            )
+
+            // Manual Search Location
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.prayer_settings_manual_location)) },
+                modifier        = Modifier.clickable {
+                    nav.navigate(Route.ONBOARDING_COUNTRY_SELECT.replace("{fromSettings}", "true"))
+                },
+                trailingContent = {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
+                },
+            )
+
             HorizontalDivider()
 
             // ── Prayer Times Calculation section ──────────────────────────────

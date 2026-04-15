@@ -49,7 +49,7 @@ fun AppEntry() {
     // (SharedPreferences in-process cache) so no need to defer behind a LaunchedEffect.
     val start = remember {
         if (OnboardingPrefs.isComplete(context)) Route.MAIN
-        else Route.ONBOARDING_NOTIFICATIONS
+        else Route.ONBOARDING_LANGUAGE
     }
 
     // ── Tab list ──────────────────────────────────────────────────────────────
@@ -67,19 +67,27 @@ fun AppEntry() {
             modifier         = Modifier.fillMaxSize(),
         ) {
             // ── Onboarding ────────────────────────────────────────────────────
+            animatedComposable(Route.ONBOARDING_LANGUAGE)      { LanguageOnboardingPage()     }
             animatedComposable(Route.ONBOARDING_NOTIFICATIONS) { NotificationPermissionPage() }
             animatedComposable(Route.ONBOARDING_LOCATION)      { LocationPermissionPage()     }
-            animatedComposable(Route.ONBOARDING_COUNTRY_SELECT) { CountrySelectPage() }
+            animatedComposable(
+                route     = Route.ONBOARDING_COUNTRY_SELECT,
+                arguments = listOf(
+                    navArgument("fromSettings") { type = NavType.BoolType; defaultValue = false },
+                ),
+            ) { CountrySelectPage() }
             animatedComposable(
                 route     = Route.ONBOARDING_CITY_SELECT,
                 arguments = listOf(
                     navArgument("country") { type = NavType.StringType; defaultValue = "" },
                     navArgument("iso2")    { type = NavType.StringType; defaultValue = "" },
+                    navArgument("fromSettings") { type = NavType.BoolType; defaultValue = false },
                 ),
             ) { backStack ->
                 CitySelectPage(
-                    country = backStack.arguments?.getString("country") ?: "",
-                    iso2    = backStack.arguments?.getString("iso2") ?: "",
+                    country      = backStack.arguments?.getString("country") ?: "",
+                    iso2         = backStack.arguments?.getString("iso2") ?: "",
+                    fromSettings = backStack.arguments?.getBoolean("fromSettings") ?: false,
                 )
             }
 
