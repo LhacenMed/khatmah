@@ -64,6 +64,42 @@ fun AppEntry() {
 
     val navController = rememberNavController()
 
+    // ── Tab selection state ───────────────────────────────────────────────────
+    // Intentionally hoisted here rather than inside MainScreen.
+    //
+    // MainScreen leaves the composition tree every time the user navigates to a
+    // sub-page (NavHost replaces the Route.MAIN composable with the destination
+    // composable). Any rememberSaveable inside MainScreen is therefore tied to a
+    // NavHost back-stack entry whose SaveableStateHolder can be cleared between
+    // the user going to another app and returning — causing a reset to tab 0.
+    //
+    // AppEntry itself is composed once for the entire Activity lifetime and never
+    // leaves the composition, so rememberSaveable here survives all sub-page
+    // navigation, app backgrounding, and configuration changes.
+    //
+    // Cold-start widget tap: the initializer reads the pending route synchronously
+    // and immediately consumes it so the very first frame renders the correct tab.
+    // Warm-start widget tap: handled by the LaunchedEffect below.
+    var selectedTabIndex by rememberSaveable {
+        mutableStateOf(
+            WidgetNavRequest.route.value
+                ?.let { r -> tabs.indexOfFirst { it.route == r }.takeIf { it >= 0 } }
+                ?.also { WidgetNavRequest.consume() }
+                ?: 0
+        )
+    }
+
+    // Handles widget taps while the app is already running (warm start).
+    // StateFlow replay-1 guarantees visibility even if the request was emitted in
+    // MainActivity.onCreate before this effect started collecting.
+    val widgetRoute by WidgetNavRequest.route.collectAsState()
+    LaunchedEffect(widgetRoute) {
+        val route = widgetRoute ?: return@LaunchedEffect
+        val idx = tabs.indexOfFirst { it.route == route }
+        if (idx >= 0) selectedTabIndex = idx
+        WidgetNavRequest.consume() // Reset so recomposition doesn't re-apply it.
+    }
+
     CompositionLocalProvider(LocalNavController provides navController) {
         NavHost(
             navController    = navController,
@@ -96,7 +132,13 @@ fun AppEntry() {
             }
 
             // ── App shell ─────────────────────────────────────────────────────
-            animatedComposable(Route.MAIN) { MainScreen(tabs = tabs) }
+            animatedComposable(Route.MAIN) {
+                MainScreen(
+                    tabs          = tabs,
+                    selectedIndex = selectedTabIndex,
+                    onSelect      = { selectedTabIndex = it },
+                )
+            }
 
             // ── General settings sub-pages ────────────────────────────────────
             pages.forEach { page ->
@@ -135,46 +177,25 @@ fun AppEntry() {
  * Back press while on a non-primary tab returns to the first tab (Today) rather than
  * exiting the app, matching standard Android bottom-nav back behaviour.
  *
- * Widget tap navigation: [WidgetNavRequest] carries the target route from [MainActivity]
- * into this composable. [selectedIndex] is seeded from [WidgetNavRequest.route] at
- * initialisation time so the very first frame already shows the correct tab — no
- * Today→Prayers flash on cold start. The [LaunchedEffect] below then consumes the
- * request and handles subsequent warm-start taps.
+ * Tab selection state is owned by [AppEntry] and passed in — see its kdoc for why.
  */
 @Composable
-private fun MainScreen(tabs: List<NavScreen>) {
-    // Seed from any pending widget request so the first rendered frame is already
-    // on the correct tab. rememberSaveable preserves the value across config changes;
-    // the initializer only runs once per composition lifetime.
-    var selectedIndex by rememberSaveable {
-        mutableIntStateOf(
-            WidgetNavRequest.route.value
-                ?.let { r -> tabs.indexOfFirst { it.route == r }.takeIf { it >= 0 } }
-                ?: 0
-        )
-    }
+private fun MainScreen(
+    tabs: List<NavScreen>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+) {
     val currentTab = tabs[selectedIndex]
 
     // Intercept back press on any non-primary tab and return to tab 0 (Today).
     // Disabled on tab 0 so the system back (NavHost exit / app dismiss) proceeds normally.
-    BackHandler(enabled = selectedIndex != 0) { selectedIndex = 0 }
+    BackHandler(enabled = selectedIndex != 0) { onSelect(0) }
 
     // One SharedFlow per tab — emits Unit when the active tab's nav button is re-tapped.
     val scrollToTopFlows = remember { Array(tabs.size) { MutableSharedFlow<Unit>(extraBufferCapacity = 1) } }
 
     // Anchor views for tab long-press tooltips, indexed in the same order as tabs.
     val anchorViews = remember { arrayOfNulls<View>(tabs.size) }
-
-    // ── Widget-tap navigation ─────────────────────────────────────────────────
-    // StateFlow replay-1 guarantees we see a request even if it was emitted in
-    // MainActivity.onCreate before this LaunchedEffect started collecting.
-    val widgetRoute by WidgetNavRequest.route.collectAsState()
-    LaunchedEffect(widgetRoute) {
-        val route = widgetRoute ?: return@LaunchedEffect
-        val idx = tabs.indexOfFirst { it.route == route }
-        if (idx >= 0) selectedIndex = idx
-        WidgetNavRequest.consume() // Reset so recomposition doesn't re-apply it.
-    }
 
     Scaffold(
         topBar = {
@@ -192,7 +213,7 @@ private fun MainScreen(tabs: List<NavScreen>) {
                     val idx = tabs.indexOfFirst { it.route == route }
                     if (idx >= 0) {
                         if (idx == selectedIndex) scrollToTopFlows[idx].tryEmit(Unit)
-                        else selectedIndex = idx
+                        else onSelect(idx)
                     }
                 },
                 anchorViewAt = { anchorViews[it] },
