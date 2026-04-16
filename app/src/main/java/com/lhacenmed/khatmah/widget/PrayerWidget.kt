@@ -2,11 +2,13 @@ package com.lhacenmed.khatmah.widget
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.SystemClock
 import android.widget.RemoteViews
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -15,8 +17,10 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.action.clickable
 import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -32,6 +36,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.lhacenmed.khatmah.MainActivity
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.data.prayer.PrayerEngine
 import com.lhacenmed.khatmah.data.prayer.PrayerSettings
@@ -70,14 +75,29 @@ class PrayerWidget : GlanceAppWidget() {
 
     @Composable
     private fun Content(prayers: List<PrayerTime>) {
+        val context = LocalContext.current
+
+        // Tapping anywhere on the widget opens the app directly on the Prayers tab.
+        // FLAG_ACTIVITY_SINGLE_TOP: reuses an existing MainActivity instead of stacking
+        // a new instance, so onNewIntent is called when the app is already open.
+        val openPrayersAction = remember {
+            actionStartActivity(
+                Intent(context, MainActivity::class.java).apply {
+                    action = WidgetAction.OPEN_PRAYERS
+                    flags  = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+            )
+        }
+
         if (prayers.isEmpty()) {
             Box(
                 modifier = GlanceModifier.fillMaxSize()
-                    .background(ImageProvider(R.drawable.widget_bg)),
+                    .background(ImageProvider(R.drawable.widget_bg))
+                    .clickable(openPrayersAction),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Open the app to set your location",
+                    text  = "Open the app to set your location",
                     style = TextStyle(color = ColorProvider(Color.White), fontSize = 30.sp)
                 )
             }
@@ -97,7 +117,8 @@ class PrayerWidget : GlanceAppWidget() {
         // Outer rounded container — the rounded drawable clips both child panels.
         Row(
             modifier = GlanceModifier.fillMaxSize()
-                .background(ImageProvider(R.drawable.widget_bg)),
+                .background(ImageProvider(R.drawable.widget_bg))
+                .clickable(openPrayersAction),
             verticalAlignment = Alignment.CenterVertically
         ) {
             val side = GlanceModifier.defaultWeight().fillMaxHeight()
@@ -187,8 +208,8 @@ class PrayerWidget : GlanceAppWidget() {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private fun rowStyle(color: Color, bold: Boolean) = TextStyle(
-        color = ColorProvider(color),
-        fontSize = 25.sp,
+        color      = ColorProvider(color),
+        fontSize   = 25.sp,
         fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal
     )
 

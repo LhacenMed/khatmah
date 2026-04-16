@@ -1,7 +1,9 @@
 package com.lhacenmed.khatmah.ui.page
 
+import android.os.Build
 import android.view.View
 import androidx.activity.compose.BackHandler
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,10 +39,12 @@ import com.lhacenmed.khatmah.ui.page.settings.appearance.ThemeSettingsPage
 import com.lhacenmed.khatmah.ui.page.settings.prayers.*
 import com.lhacenmed.khatmah.ui.page.tabs.*
 import com.lhacenmed.khatmah.util.OnboardingPrefs
+import com.lhacenmed.khatmah.widget.WidgetNavRequest
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 // ─── Root composable ──────────────────────────────────────────────────────────
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AppEntry() {
     val context = LocalContext.current
@@ -130,6 +134,10 @@ fun AppEntry() {
  *
  * Back press while on a non-primary tab returns to the first tab (Today) rather than
  * exiting the app, matching standard Android bottom-nav back behaviour.
+ *
+ * Widget tap navigation: [WidgetNavRequest] carries the target route from [MainActivity]
+ * into this composable. The [LaunchedEffect] below consumes it once and resets the
+ * request, so it isn't re-applied on recomposition or configuration change.
  */
 @Composable
 private fun MainScreen(tabs: List<NavScreen>) {
@@ -145,6 +153,17 @@ private fun MainScreen(tabs: List<NavScreen>) {
 
     // Anchor views for tab long-press tooltips, indexed in the same order as tabs.
     val anchorViews = remember { arrayOfNulls<View>(tabs.size) }
+
+    // ── Widget-tap navigation ─────────────────────────────────────────────────
+    // StateFlow replay-1 guarantees we see a request even if it was emitted in
+    // MainActivity.onCreate before this LaunchedEffect started collecting.
+    val widgetRoute by WidgetNavRequest.route.collectAsState()
+    LaunchedEffect(widgetRoute) {
+        val route = widgetRoute ?: return@LaunchedEffect
+        val idx = tabs.indexOfFirst { it.route == route }
+        if (idx >= 0) selectedIndex = idx
+        WidgetNavRequest.consume() // Reset so recomposition doesn't re-apply it.
+    }
 
     Scaffold(
         topBar = {
