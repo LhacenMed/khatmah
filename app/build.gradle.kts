@@ -157,6 +157,8 @@ kotlin {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.glance)
+    implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -187,4 +189,5 @@ dependencies {
 
     implementation(libs.coil.compose)
     implementation(libs.coil.svg)
+    implementation(libs.androidx.work.runtime.ktx)
 }

@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -45,6 +46,7 @@ import com.lhacenmed.khatmah.util.ThemeManager
  * Owns its Scaffold + LargeTopAppBar; animates as a complete screen alongside the main shell.
  * Append ThemeSettingsPage to the pages list in AppEntry to register it.
  */
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 val ThemeSettingsPage = NavPage(route = Route.THEME_SETTINGS) {
     val nav            = LocalNavController.current
