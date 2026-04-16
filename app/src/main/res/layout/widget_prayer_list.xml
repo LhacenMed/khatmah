@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Six-row prayer list panel rendered as RemoteViews.
+
+    NESTED-WEIGHT FIX: The outer LinearLayout uses layout_weight to divide height
+    equally among the six rows. Each row is a RelativeLayout whose children use
+    anchor rules (toStartOf / alignParentEnd) instead of layout_weight, so there
+    is no compounding double-measurement pass — the lint "NestedWeights" warning
+    no longer fires.
+
+    Row containers : prayer_row_0  … prayer_row_5
+    Left  TextViews: prayer_left_0 … prayer_left_5   (name LTR / time RTL)
+    Right TextViews: prayer_right_0 … prayer_right_5 (time LTR / name RTL)
+
+    Bold text for the highlighted prayer is applied programmatically in PrayerWidget
+    via SpannableString + StyleSpan(BOLD) — no extra style resources required.
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/prayer_list_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
+
+    <!-- Row 0 ─────────────────────────────────────────────────────────────── -->
+    <RelativeLayout
+        android:id="@+id/prayer_row_0"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <TextView
+            android:id="@+id/prayer_right_0"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:textSize="19sp"
+            android:textColor="#FFFFFF"
+            android:maxLines="1"/>
+        <TextView
+            android:id="@+id/prayer_left_0"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_toStartOf="@id/prayer_right_0"
+            android:layout_centerVertical="true"
+            android:textSize="19sp"
+            android:textColor="#FFFFFF"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+    </RelativeLayout>
+
+    <!-- Row 1 ─────────────────────────────────────────────────────────────── -->
+    <RelativeLayout
+        android:id="@+id/prayer_row_1"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <TextView
+            android:id="@+id/prayer_right_1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:textSize="19sp"
+            android:textColor="#FFFFFF"
+            android:maxLines="1"/>
+        <TextView
+            android:id="@+id/prayer_left_1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_toStartOf="@id/prayer_right_1"
+            android:layout_centerVertical="true"
+            android:textSize="19sp"
+            android:textColor="#FFFFFF"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+    </RelativeLayout>
+
+    <!-- Row 2 ─────────────────────────────────────────────────────────────── -->
+    <RelativeLayout
+        android:id="@+id/prayer_row_2"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <TextView
+            android:id="@+id/prayer_right_2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:textSize="19sp"
+            android:textColor="#FFFFFF"
+            android:maxLines="1"/>
+        <TextView
+            android:id="@+id/prayer_left_2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_toStartOf="@id/prayer_right_2"
+            android:layout_centerVertical="true"
+            android:textSize="19sp"
+            android:textColor="#FFFFFF"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+    </RelativeLayout>
+
+    <!-- Row 3 ─────────────────────────────────────────────────────────────── -->
+    <RelativeLayout
+        android:id="@+id/prayer_row_3"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <TextView
+            android:id="@+id/prayer_right_3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:textSize="19sp"
+            android:textColor="#FFFFFF"
+            android:maxLines="1"/>
+        <TextView
+            android:id="@+id/prayer_left_3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_toStartOf="@id/prayer_right_3"
+            android:layout_centerVertical="true"
+            android:textSize="19sp"
+            android:textColor="#FFFFFF"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+    </RelativeLayout>
+
+    <!-- Row 4 ─────────────────────────────────────────────────────────────── -->
+    <RelativeLayout
+        android:id="@+id/prayer_row_4"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <TextView
+            android:id="@+id/prayer_right_4"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:textSize="19sp"
+            android:textColor="#FFFFFF"
+            android:maxLines="1"/>
+        <TextView
+            android:id="@+id/prayer_left_4"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_toStartOf="@id/prayer_right_4"
+            android:layout_centerVertical="true"
+            android:textSize="19sp"
+            android:textColor="#FFFFFF"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+    </RelativeLayout>
+
+    <!-- Row 5 ─────────────────────────────────────────────────────────────── -->
+    <RelativeLayout
+        android:id="@+id/prayer_row_5"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <TextView
+            android:id="@+id/prayer_right_5"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:textSize="19sp"
+            android:textColor="#FFFFFF"
+            android:maxLines="1"/>
+        <TextView
+            android:id="@+id/prayer_left_5"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_toStartOf="@id/prayer_right_5"
+            android:layout_centerVertical="true"
+            android:textSize="19sp"
+            android:textColor="#FFFFFF"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+    </RelativeLayout>
+
+</LinearLayout>
