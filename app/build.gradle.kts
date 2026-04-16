@@ -50,7 +50,11 @@ val currentVersion: Version = Version.Stable(
 )
 
 val keystorePropertiesFile: File = rootProject.file("keystore.properties")
-val splitApks = !project.hasProperty("noSplits")
+
+// Default: single universal APK — sideloadable without picking the right ABI file.
+// Pass -Psplits to generate per-ABI APKs + universal for store distribution.
+val splitApks = project.hasProperty("splits")
+
 val abiFilterList = (properties["ABI_FILTERS"] as? String)
     ?.split(';')
     ?.map { it.trim() }
@@ -58,12 +62,8 @@ val abiFilterList = (properties["ABI_FILTERS"] as? String)
     ?: listOf("arm64-v8a")
 
 android {
-    namespace   = "com.lhacenmed.khatmah"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    namespace  = "com.lhacenmed.khatmah"
+    compileSdk = 36
 
     if (keystorePropertiesFile.exists()) {
         val keystoreProperties = Properties().apply {
@@ -86,18 +86,18 @@ android {
         versionCode   = currentVersion.run { versionMajor * 10000 + versionMinor * 100 + versionPatch }
         versionName   = currentVersion.toVersionName()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
 
-        if (splitApks) {
-            splits {
-                abi {
-                    isEnable = true
-                    reset()
-                    include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
-                    isUniversalApk = true
-                }
+    // ABI splits are opt-in (-Psplits). Without the flag every build produces a
+    // single APK filtered to abiFilterList, which can be sideloaded directly.
+    if (splitApks) {
+        splits {
+            abi {
+                isEnable = true
+                reset()
+                include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+                isUniversalApk = true
             }
-        } else {
-            ndk { abiFilters.addAll(abiFilterList) }
         }
     }
 
@@ -107,6 +107,7 @@ android {
             isShrinkResources    = false
             applicationIdSuffix  = ".debug"
             versionNameSuffix    = "-debug"
+            resValue("string", "app_name", "Khatmah Debug")
             if (keystorePropertiesFile.exists()) signingConfig = signingConfigs.getByName("releaseKey")
         }
         release {
@@ -126,6 +127,7 @@ android {
         compose     = true
         buildConfig = true
         viewBinding = true
+        resValues   = true  // required for resValue() in build types (AGP 8+)
     }
 
     packaging {
@@ -135,13 +137,13 @@ android {
 
 androidComponents {
     onVariants { variant ->
+        if (!splitApks) return@onVariants
         val abiCodes = mapOf("armeabi-v7a" to 1, "arm64-v8a" to 2, "x86" to 3, "x86_64" to 4)
         variant.outputs.forEach { output ->
-            val name = if (splitApks) {
-                output.filters.find { it.filterType == FilterConfiguration.FilterType.ABI }?.identifier
-            } else {
-                abiFilterList.firstOrNull()
-            }
+            val name = output.filters
+                .find { it.filterType == FilterConfiguration.FilterType.ABI }
+                ?.identifier
+                ?: abiFilterList.firstOrNull()
             abiCodes[name]?.let { code ->
                 output.versionCode.set(code + (output.versionCode.get() ?: 0))
             }

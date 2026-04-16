@@ -34,6 +34,7 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
+import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.lhacenmed.khatmah.MainActivity
@@ -94,11 +95,15 @@ class PrayerWidget : GlanceAppWidget() {
                 modifier = GlanceModifier.fillMaxSize()
                     .background(ImageProvider(R.drawable.widget_bg))
                     .clickable(openPrayersAction),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text  = "Open the app to set your location",
-                    style = TextStyle(color = ColorProvider(Color.White), fontSize = 30.sp)
+                    style = TextStyle(
+                        color     = ColorProvider(Color.White),
+                        fontSize  = 14.sp,
+                        textAlign = TextAlign.Center,
+                    ),
                 )
             }
             return

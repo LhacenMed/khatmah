@@ -136,13 +136,24 @@ fun AppEntry() {
  * exiting the app, matching standard Android bottom-nav back behaviour.
  *
  * Widget tap navigation: [WidgetNavRequest] carries the target route from [MainActivity]
- * into this composable. The [LaunchedEffect] below consumes it once and resets the
- * request, so it isn't re-applied on recomposition or configuration change.
+ * into this composable. [selectedIndex] is seeded from [WidgetNavRequest.route] at
+ * initialisation time so the very first frame already shows the correct tab — no
+ * Today→Prayers flash on cold start. The [LaunchedEffect] below then consumes the
+ * request and handles subsequent warm-start taps.
  */
 @Composable
 private fun MainScreen(tabs: List<NavScreen>) {
-    var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
-    val currentTab    = tabs[selectedIndex]
+    // Seed from any pending widget request so the first rendered frame is already
+    // on the correct tab. rememberSaveable preserves the value across config changes;
+    // the initializer only runs once per composition lifetime.
+    var selectedIndex by rememberSaveable {
+        mutableIntStateOf(
+            WidgetNavRequest.route.value
+                ?.let { r -> tabs.indexOfFirst { it.route == r }.takeIf { it >= 0 } }
+                ?: 0
+        )
+    }
+    val currentTab = tabs[selectedIndex]
 
     // Intercept back press on any non-primary tab and return to tab 0 (Today).
     // Disabled on tab 0 so the system back (NavHost exit / app dismiss) proceeds normally.

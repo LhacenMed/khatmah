@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Widget preview image:
+      • android:previewImage  — static PNG/drawable shown in the widget picker on all API levels.
+        Replace @mipmap/ic_launcher with a dedicated widget screenshot for best results
+        (e.g. a PNG you place in res/drawable-nodpi/widget_preview.png).
+      • android:previewLayout — (API 31+, see xml-v31/) live preview rendered from a layout file.
+-->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/app_name"
     android:minWidth="270dp"
@@ -6,4 +13,5 @@
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:updatePeriodMillis="0"
-    android:initialLayout="@layout/glance_default_layout" />
+    android:initialLayout="@layout/glance_default_layout"
+    android:previewImage="@drawable/widget_preview" />
