@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -48,8 +50,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -252,16 +257,33 @@ fun AdhkarDetailPage(categoryId: String) {
                 fraction = barFraction,
             )
 
-            // All pages stay composed; Compose pager manages lifecycle automatically.
-            HorizontalPager(
-                state    = pagerState,
-                modifier = Modifier.weight(1f),
-            ) { i ->
-                if (i < adhkar.size) {
-                    DhikrBody(dhikr = adhkar[i], fontSize = fontSize)
-                } else {
-                    CompletionBody(categoryName = categoryName)
+            Box(modifier = Modifier.weight(1f)) {
+                // All pages stay composed; Compose pager manages lifecycle automatically.
+                HorizontalPager(
+                    state    = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                ) { i ->
+                    if (i < adhkar.size) {
+                        DhikrBody(dhikr = adhkar[i], fontSize = fontSize)
+                    } else {
+                        CompletionBody(categoryName = categoryName)
+                    }
                 }
+
+                // Gradient scrim: fades body content into the bottom bar's surface color,
+                // removing the hard visual cut between the scroll area and the bottom bar.
+                val scrimColor = MaterialTheme.colorScheme.surface
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, scrimColor),
+                            )
+                        )
+                )
             }
         }
     }
@@ -306,10 +328,13 @@ private fun DhikrTopBar(
 // ── Progress header ───────────────────────────────────────────────────────────
 
 /**
- * Thin progress strip directly below the top bar.
+ * Single-row progress strip directly below the top bar.
  *
- * Counter format: "[total]/[current]" — of N total, currently on item #current.
- * [LinearProgressIndicator] fills as the user advances through the list.
+ * Counter and [LinearProgressIndicator] share the same horizontal line:
+ *   [total/current]  ──────────████████──  (bar fills the remaining width)
+ *
+ * [surfaceContainer] background visually separates this strip from the
+ * main reading area below it.
  */
 @Composable
 private fun DhikrProgressHeader(
@@ -317,23 +342,25 @@ private fun DhikrProgressHeader(
     total: Int,
     fraction: Float,
 ) {
-    Column(
-        modifier = Modifier
+    Row(
+        modifier              = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
             text  = "$total/$current",
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(4.dp))
         LinearProgressIndicator(
             progress   = { fraction },
             modifier   = Modifier
-                .fillMaxWidth()
-                .height(4.dp),
+                .weight(1f)
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp)),
             color      = MaterialTheme.colorScheme.primary,
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
         )
@@ -441,6 +468,10 @@ private fun CompletionBody(categoryName: String) {
  * Sticky bottom bar placed in Scaffold's bottomBar slot so M3 extends its
  * Surface background behind the navigation bar (edge-to-edge).
  *
+ * The soft fade between the scrollable body and this bar is handled externally
+ * by a gradient scrim Box positioned at the bottom of the content area, so
+ * this Surface presents no hard visual border at its top edge.
+ *
  * Regular dhikr page:
  *  • Rep label at logical-start, circle at absolute screen center, share at logical-end.
  *    Centering is achieved with a [Box] overlay (CenterStart / Center / CenterEnd)
@@ -449,7 +480,7 @@ private fun CompletionBody(categoryName: String) {
  *    any height shift as the user moves between dhikr with different rep counts.
  *
  * Completion page:
- *  • Rep row is hidden entirely; the primary button is disabled to signal finality.
+ *  • Rep row is hidden entirely.
  */
 @Composable
 private fun DhikrBottomBar(
