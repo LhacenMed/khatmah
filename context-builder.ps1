@@ -3,6 +3,9 @@
 #
 # Usage: .\context-builder.ps1 [-Path <dir>] [-Out <file.txt>] [-Hidden]
 # Keys : ENTER -> Generate   ESC -> Close
+#
+# Example:
+#   .\context-builder.ps1 -Path "C:\Users\lhacenmed\AndroidStudioProjects\Khatmah\app\src\main\"
 
 param (
     [string]$Path   = ".",
@@ -199,11 +202,16 @@ $btnBrowse.FlatAppearance.BorderColor = $CLR.Border
 $topBar.Controls.AddRange(@($lblOut, $txtOut, $btnBrowse))
 
 $layoutTop = {
-    $w            = $topBar.ClientSize.Width
-    $txtOut.Width = $w - 16 - 8 - $btnBrowse.Width - 16
-    $btnBrowse.Location = New-Object Drawing.Point($w - 16 - $btnBrowse.Width, 27)
+    [int]$w  = $topBar.ClientSize.Width
+    [int]$bw = $btnBrowse.Width
+    $txtOut.Width       = $w - 16 - 8 - $bw - 16
+    $btnBrowse.Location = New-Object Drawing.Point(($w - 16 - $bw), 27)
 }
-$topBar.Add_Resize({ & $layoutTop })
+# Guard: skip layout during premature resize events fired before the form's
+# Win32 handle is created (e.g. during Controls.AddRange). At that stage
+# WinForms control properties return Object[] instead of Int32, breaking
+# PowerShell arithmetic. IsHandleCreated becomes true right before Add_Shown.
+$topBar.Add_Resize({ if ($form.IsHandleCreated) { & $layoutTop } })
 
 # --- TreeView ----------------------------------------------------------------
 $tree = New-Object System.Windows.Forms.TreeView
@@ -277,12 +285,16 @@ $btnGen.FlatAppearance.BorderSize = 0
 $botBar.Controls.AddRange(@($lblStatus, $btnNone, $btnAll, $btnGen))
 
 $layoutBot = {
-    $w = $botBar.ClientSize.Width
-    $btnGen.Location  = New-Object Drawing.Point($w - 16 - $btnGen.Width, 10)
-    $btnAll.Location  = New-Object Drawing.Point($btnGen.Location.X - 8 - $btnAll.Width, 12)
-    $btnNone.Location = New-Object Drawing.Point($btnAll.Location.X - 8 - $btnNone.Width, 12)
+    [int]$w  = $botBar.ClientSize.Width
+    [int]$wG = $btnGen.Width
+    [int]$wA = $btnAll.Width
+    [int]$wN = $btnNone.Width
+    $btnGen.Location  = New-Object Drawing.Point(($w - 16 - $wG),                    10)
+    $btnAll.Location  = New-Object Drawing.Point(($w - 24 - $wG - $wA),              12)
+    $btnNone.Location = New-Object Drawing.Point(($w - 32 - $wG - $wA - $wN),        12)
 }
-$botBar.Add_Resize({ & $layoutBot })
+# Same guard as $layoutTop -- prevents premature-resize arithmetic failures.
+$botBar.Add_Resize({ if ($form.IsHandleCreated) { & $layoutBot } })
 
 # --- Status refresh ----------------------------------------------------------
 $refreshStatus = {
