@@ -234,8 +234,13 @@
     <!-- Action buttons -->
     <string name="dhikr_read">قراءة</string>
     <string name="dhikr_next">التالي</string>
+    <string name="dhikr_done">تم</string>
     <string name="dhikr_share">مشاركة الذكر</string>
     <string name="dhikr_font_size">حجم الخط</string>
+
+    <!-- Completion slide -->
+    <!-- %s is replaced with the category name e.g. "أذكار الصباح" -->
+    <string name="adhkar_completed">لقد أتممت قراءة\n%s</string>
 
     <!-- Repetition count labels -->
     <string name="rep_once">مرة واحدة</string>

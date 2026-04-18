@@ -237,8 +237,13 @@
     <!-- Action buttons -->
     <string name="dhikr_read">Read</string>
     <string name="dhikr_next">Next</string>
+    <string name="dhikr_done">Done</string>
     <string name="dhikr_share">Share dhikr</string>
     <string name="dhikr_font_size">Font size</string>
+
+    <!-- Completion slide -->
+    <!-- %s is replaced with the category name e.g. "Morning Adhkar" -->
+    <string name="adhkar_completed">You\'ve completed reading\n%s</string>
 
     <!-- Repetition count labels -->
     <string name="rep_once">Once</string>

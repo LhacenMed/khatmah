@@ -1,14 +1,15 @@
 package com.lhacenmed.khatmah.ui.page.tabs.adhkar
 
 import android.content.Intent
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,13 +17,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Button
@@ -45,13 +46,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -107,12 +108,21 @@ private fun repLabel(count: Int): String = when (count) {
 /**
  * Full-screen dhikr reader for a single [AdhkarCategory].
  *
- * Replaces the stub in [AdhkarDetailPage] and wires up:
- *  • Swipeable [HorizontalPager] — one page per [Dhikr] in the category.
- *  • Animated linear progress bar and position counter at the top.
- *  • Styled body that differentiates [DhikrParagraph] types visually.
- *  • Bottom bar with a repetition counter circle, rep-count label, share
- *    action, and a primary button that counts reads or advances to the next dhikr.
+ * Page count = adhkar.size + 1; the final page is a completion slide that shows
+ * once every dhikr in the category has been read.
+ *
+ * Key design decisions:
+ *  • [repCounts] is pre-filled with 0 for every page so there is never a null→value
+ *    transition that could cause a spurious arc animation on first composition.
+ *  • Arc uses [Animatable] rather than [animateFloatAsState]: [snapTo] on page
+ *    change ensures the arc resets instantly (no flash of the previous page's
+ *    progress), and [animateTo] fires only on actual count increments.
+ *  • Progress bar target = page / adhkar.size, so it starts at 0 and reaches 1
+ *    only on the completion page — the bar grows as each dhikr is finished.
+ *  • [DhikrBottomBar] is placed in Scaffold's bottomBar slot so Material3 extends
+ *    its Surface background behind the navigation bar automatically (edge-to-edge).
+ *  • The [RepCircle] is always composed; alpha = 0 when repetitions == 1, keeping
+ *    the bottom-bar height stable across all dhikr pages.
  */
 @Composable
 fun AdhkarDetailPage(categoryId: String) {
@@ -128,64 +138,104 @@ fun AdhkarDetailPage(categoryId: String) {
         return
     }
 
-    val pagerState = rememberPagerState { adhkar.size }
+    val totalPages = adhkar.size + 1        // last page is the completion slide
+    val pagerState = rememberPagerState { totalPages }
     val scope      = rememberCoroutineScope()
 
     // Font size persists across configuration changes but resets on new process.
     var fontSize by rememberSaveable { mutableStateOf(DhikrFontSize.MEDIUM) }
 
-    // Per-page repetition counts — keyed by page index, survive recomposition.
-    val repCounts: SnapshotStateMap<Int, Int> = remember { mutableStateMapOf() }
+    // Pre-fill all counters to 0 so there's never a null → value recompose flash.
+    val repCounts = remember(adhkar) {
+        mutableStateMapOf<Int, Int>().also { map -> repeat(adhkar.size) { map[it] = 0 } }
+    }
 
-    val page     = pagerState.currentPage
-    val dhikr    = adhkar[page]
-    val repCount = repCounts[page] ?: 0
-    // A dhikr with repetitions == 1 never shows a counter; its button is always "Next".
-    val allDone  = dhikr.repetitions <= 1 || repCount >= dhikr.repetitions
+    val page             = pagerState.currentPage
+    val isCompletionPage = page >= adhkar.size
+    val dhikr            = if (!isCompletionPage) adhkar[page] else null
+    val repCount         = repCounts[page] ?: 0
+    val allDone          = isCompletionPage ||
+            dhikr == null ||
+            dhikr.repetitions <= 1 ||
+            repCount >= dhikr.repetitions
 
-    // ── Animations ────────────────────────────────────────────────────────────
+    // On every page entry: snap arc to 0 (no animated carry-over from prior page)
+    // and reset that page's counter so revisiting always starts fresh.
+    val arcAnim = remember { Animatable(0f) }
+    LaunchedEffect(page) {
+        arcAnim.snapTo(0f)
+        if (!isCompletionPage) repCounts[page] = 0
+    }
 
+    // Animate arc only on genuine count increments (repCount > 0).
+    // The LaunchedEffect above resets repCount to 0, but the condition guard below
+    // prevents a redundant animateTo(0) from running after the snap.
+    LaunchedEffect(repCount) {
+        if (repCount > 0 && dhikr != null && dhikr.repetitions > 1) {
+            arcAnim.animateTo(
+                targetValue   = repCount.toFloat() / dhikr.repetitions,
+                animationSpec = tween(400, easing = FastOutSlowInEasing),
+            )
+        }
+    }
+
+    // Progress bar: 0 at the first dhikr, grows by 1/N per completed dhikr,
+    // reaches 1.0 only on the completion page.
     val barFraction by animateFloatAsState(
-        targetValue  = (page + 1).toFloat() / adhkar.size,
+        targetValue   = if (isCompletionPage) 1f else page.toFloat() / adhkar.size,
         animationSpec = tween(300),
-        label        = "dhikr_bar",
-    )
-    val arcFraction by animateFloatAsState(
-        targetValue  = if (dhikr.repetitions <= 1) 1f
-        else repCount.toFloat() / dhikr.repetitions,
-        animationSpec = tween(400, easing = FastOutSlowInEasing),
-        label        = "dhikr_arc",
+        label         = "dhikr_bar",
     )
 
     // ── Actions ───────────────────────────────────────────────────────────────
 
     fun goNext() = scope.launch {
-        if (page < adhkar.size - 1) pagerState.animateScrollToPage(page + 1)
+        if (page < totalPages - 1) pagerState.animateScrollToPage(page + 1)
         else nav.popBackStack()
     }
 
     fun countRead() {
-        if (repCount < dhikr.repetitions) repCounts[page] = repCount + 1
+        val reps = dhikr?.repetitions ?: return
+        if (repCount < reps) repCounts[page] = repCount + 1
     }
 
-    fun share() = context.startActivity(
-        Intent.createChooser(
-            Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, dhikr.shareText)
-            },
-            null,
+    fun share() {
+        dhikr ?: return
+        context.startActivity(
+            Intent.createChooser(
+                Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, dhikr.shareText)
+                },
+                null,
+            )
         )
-    )
+    }
+
+    val categoryName = category?.let { stringResource(it.titleRes) }.orEmpty()
 
     // ── UI ────────────────────────────────────────────────────────────────────
 
     Scaffold(
         topBar = {
             DhikrTopBar(
-                title    = category?.let { stringResource(it.titleRes) }.orEmpty(),
+                title    = categoryName,
                 onBack   = { nav.popBackStack() },
                 onResize = { fontSize = fontSize.next() },
+            )
+        },
+        // bottomBar slot: M3 Scaffold places this at the physical screen bottom
+        // and extends its background behind the navigation bar (edge-to-edge).
+        bottomBar = {
+            DhikrBottomBar(
+                dhikr            = dhikr,
+                repCount         = repCount,
+                arcFraction      = arcAnim.value,
+                allDone          = allDone,
+                isCompletionPage = isCompletionPage,
+                onBack           = { nav.popBackStack() },
+                onShare          = ::share,
+                onAction         = { if (allDone) goNext() else countRead() },
             )
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -196,7 +246,8 @@ fun AdhkarDetailPage(categoryId: String) {
                 .padding(padding),
         ) {
             DhikrProgressHeader(
-                current  = page + 1,
+                // Cap at adhkar.size so the counter reads "N/N" on the completion page.
+                current  = minOf(page + 1, adhkar.size),
                 total    = adhkar.size,
                 fraction = barFraction,
             )
@@ -206,17 +257,12 @@ fun AdhkarDetailPage(categoryId: String) {
                 state    = pagerState,
                 modifier = Modifier.weight(1f),
             ) { i ->
-                DhikrBody(dhikr = adhkar[i], fontSize = fontSize)
+                if (i < adhkar.size) {
+                    DhikrBody(dhikr = adhkar[i], fontSize = fontSize)
+                } else {
+                    CompletionBody(categoryName = categoryName)
+                }
             }
-
-            DhikrBottomBar(
-                dhikr       = dhikr,
-                repCount    = repCount,
-                arcFraction = arcFraction,
-                allDone     = allDone,
-                onShare     = ::share,
-                onAction    = { if (allDone) goNext() else countRead() },
-            )
         }
     }
 }
@@ -262,8 +308,7 @@ private fun DhikrTopBar(
 /**
  * Thin progress strip directly below the top bar.
  *
- * Counter format: "[total]/[current]" — matches the design in the screenshots
- * (e.g. "30/3" = 30 adhkar total, currently viewing #3).
+ * Counter format: "[total]/[current]" — of N total, currently on item #current.
  * [LinearProgressIndicator] fills as the user advances through the list.
  */
 @Composable
@@ -354,33 +399,69 @@ private fun DhikrBody(dhikr: Dhikr, fontSize: DhikrFontSize) {
     }
 }
 
+// ── Completion body ───────────────────────────────────────────────────────────
+
+/**
+ * Final slide shown after all adhkar have been read.
+ * No count label, no circular counter, no share button — just a confirmation
+ * message with the category name.
+ */
+@Composable
+private fun CompletionBody(categoryName: String) {
+    Box(
+        modifier         = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            Icon(
+                imageVector        = Icons.Outlined.CheckCircle,
+                contentDescription = null,
+                tint               = MaterialTheme.colorScheme.primary,
+                modifier           = Modifier.size(72.dp),
+            )
+            Text(
+                text      = stringResource(R.string.adhkar_completed, categoryName),
+                style     = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center,
+                color     = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+    }
+}
+
 // ── Bottom bar ────────────────────────────────────────────────────────────────
 
 /**
- * Sticky bottom bar with three elements:
+ * Sticky bottom bar placed in Scaffold's bottomBar slot so M3 extends its
+ * Surface background behind the navigation bar (edge-to-edge).
  *
- *  1. Repetition count label (logical start — physical right in RTL).
- *  2. Circular progress counter (only when [dhikr.repetitions] > 1, centered).
- *  3. Share icon (logical end — physical left in RTL).
- *  4. Full-width primary action button.
+ * Regular dhikr page:
+ *  • Rep label at logical-start, circle at absolute screen center, share at logical-end.
+ *    Centering is achieved with a [Box] overlay (CenterStart / Center / CenterEnd)
+ *    so the circle position is independent of label and button widths.
+ *  • [RepCircle] is always composed — alpha = 0 when repetitions == 1 — preventing
+ *    any height shift as the user moves between dhikr with different rep counts.
  *
- * The layout is direction-aware: Compose resolves "start" and "end" to the
- * correct physical side for both LTR and RTL locales automatically.
- *
- * Button label alternates between [R.string.dhikr_read] (counting mode) and
- * [R.string.dhikr_next] (advance mode) based on [allDone].
+ * Completion page:
+ *  • Rep row is hidden entirely; the primary button is disabled to signal finality.
  */
 @Composable
 private fun DhikrBottomBar(
-    dhikr: Dhikr,
+    dhikr: Dhikr?,
     repCount: Int,
     arcFraction: Float,
     allDone: Boolean,
+    isCompletionPage: Boolean,
+    onBack: () -> Unit,
     onShare: () -> Unit,
     onAction: () -> Unit,
 ) {
-    val showCircle = dhikr.repetitions > 1
-
     Surface(
         shadowElevation = 8.dp,
         color           = MaterialTheme.colorScheme.surface,
@@ -391,33 +472,45 @@ private fun DhikrBottomBar(
                 .navigationBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
-            // ── Rep row ───────────────────────────────────────────────────────
-            Row(
-                modifier          = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+            // ── Rep row ───────────────────────────────────────────────────
+            // Box overlay: rep label pinned to CenterStart, circle to Center,
+            // share button to CenterEnd — the circle is always at the exact
+            // horizontal midpoint of the screen regardless of sibling widths.
+            Box(
+                modifier          = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        alpha = if (isCompletionPage) 0f else 1f
+                    },
+                contentAlignment  = Alignment.Center,
             ) {
-                // Logical start (physical right in RTL): repetition label
+                // Repetition label — logical start (physical right in RTL).
                 Text(
-                    text       = repLabel(dhikr.repetitions),
-                    style      = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.Medium,
+                    text     = repLabel(dhikr?.repetitions ?: 1),
+                    style    = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.Bold,
                     ),
-                    color      = MaterialTheme.colorScheme.primary,
+                    color    = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.CenterStart),
                 )
 
-                Spacer(Modifier.weight(1f))
+                // Animated arc — always present; invisible when rep count is 1
+                // so the bar height never changes between dhikr pages.
+                RepCircle(
+                    fraction = arcFraction,
+                    count    = repCount,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .graphicsLayer {
+                            alpha = if ((dhikr?.repetitions ?: 1) > 1) 1f else 0f
+                        },
+                )
 
-                // Centre: animated arc counter (multi-rep dhikr only)
-                if (showCircle) {
-                    RepCircle(
-                        fraction = arcFraction,
-                        count    = repCount,
-                    )
-                    Spacer(Modifier.weight(1f))
-                }
-
-                // Logical end (physical left in RTL): share button
-                IconButton(onClick = onShare) {
+                // Share button — logical end (physical left in RTL).
+                IconButton(
+                    onClick  = onShare,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                ) {
                     Icon(
                         imageVector        = Icons.Outlined.Share,
                         contentDescription = stringResource(R.string.dhikr_share),
@@ -426,21 +519,31 @@ private fun DhikrBottomBar(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(20.dp))
 
             // ── Primary action ────────────────────────────────────────────────
             Button(
-                onClick  = onAction,
+                onClick  = (
+                        when {
+                            isCompletionPage -> onBack
+                            else             -> onAction
+                        }),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
-                shape    = MaterialTheme.shapes.medium,
+                    .height(45.dp),
+                shape    = MaterialTheme.shapes.extraSmall,
             ) {
                 Text(
                     text       = stringResource(
-                        if (allDone) R.string.dhikr_next else R.string.dhikr_read,
+                        when {
+                            isCompletionPage -> R.string.dhikr_done
+                            allDone          -> R.string.dhikr_next
+                            else             -> R.string.dhikr_read
+                        }
                     ),
-                    style      = MaterialTheme.typography.titleMedium,
+                    style      = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                    ),
                     fontWeight = FontWeight.Bold,
                 )
             }
@@ -454,8 +557,8 @@ private fun DhikrBottomBar(
  * Animated arc drawn with [Canvas].
  *
  * The arc starts at the 12-o'clock position (-90°) and sweeps clockwise.
- * [fraction] drives the sweep angle (0f → empty, 1f → full circle) and is
- * expected to be a pre-animated value supplied by the caller.
+ * [fraction] is a pre-animated value supplied by the caller; this composable
+ * is purely visual and performs no animation logic of its own.
  * [count] is the completed read count displayed in the centre.
  */
 @Composable
@@ -469,7 +572,7 @@ private fun RepCircle(
     val textColor = MaterialTheme.colorScheme.onSurface
 
     Box(
-        modifier         = modifier.size(56.dp),
+        modifier         = modifier.size(70.dp),
         contentAlignment = Alignment.Center,
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -502,9 +605,11 @@ private fun RepCircle(
             }
         }
         Text(
-            text       = count.toString(),
-            style      = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            color      = textColor,
+            text  = count.toString(),
+            style = MaterialTheme.typography.bodyLarge.copy(
+                fontWeight = FontWeight.Bold,
+            ),
+            color = textColor,
         )
     }
 }
