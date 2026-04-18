@@ -17,3 +17,5 @@ local.properties
 # Android build artifacts
 /app/release/
 
+.vscode/
+context.txt
