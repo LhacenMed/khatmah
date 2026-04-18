@@ -24,6 +24,7 @@ import com.lhacenmed.khatmah.data.prayer.PrayerRepository
 import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.ui.nav.NavScreen
+import com.lhacenmed.khatmah.ui.theme.OutfitFamily
 import com.lhacenmed.khatmah.util.LocationHelper
 import com.lhacenmed.khatmah.util.OnboardingPrefs
 import kotlinx.coroutines.launch
@@ -79,7 +80,7 @@ private fun TodayScreen(padding: PaddingValues) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(stringResource(R.string.today))
+            Text(stringResource(R.string.today), fontFamily = OutfitFamily)
             TextButton(onClick = { nav.navigate(Route.THEME_SETTINGS) }) {
                 Text(stringResource(R.string.theme_settings))
             }

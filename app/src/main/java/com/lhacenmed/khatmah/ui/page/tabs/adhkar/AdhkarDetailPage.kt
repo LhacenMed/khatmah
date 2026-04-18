@@ -69,6 +69,7 @@ import com.lhacenmed.khatmah.data.adhkar.AdhkarData
 import com.lhacenmed.khatmah.data.adhkar.Dhikr
 import com.lhacenmed.khatmah.data.adhkar.DhikrParagraph
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
+import com.lhacenmed.khatmah.ui.theme.WarshFamily
 import kotlinx.coroutines.launch
 
 // ── Font size cycle ───────────────────────────────────────────────────────────
@@ -374,8 +375,8 @@ private fun DhikrProgressHeader(
  *
  * Paragraph rendering by type:
  *  [DhikrParagraph.Body]  — standard body text, centered.
- *  [DhikrParagraph.Quran] — Quranic verse, slightly larger, preserving
- *                           in-text glyph markers (①②… etc.) as Unicode.
+ *  [DhikrParagraph.Quran] — Quranic verse rendered in [WarshFamily], slightly
+ *                           larger, preserving in-text glyph markers (①②… etc.) as Unicode.
  *  [DhikrParagraph.Note]  — small muted footnote in primary tint.
  *
  * Line heights are proportional to font size to keep Arabic diacritics legible
@@ -407,6 +408,7 @@ private fun DhikrBody(dhikr: Dhikr, fontSize: DhikrFontSize) {
                 )
                 is DhikrParagraph.Quran -> Text(
                     text       = paragraph.text,
+                    fontFamily = WarshFamily,
                     fontSize   = quranSp,
                     lineHeight = (quranSp.value * 2.0f).sp,
                     textAlign  = TextAlign.Center,

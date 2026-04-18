@@ -221,8 +221,8 @@
     <string name="adhkar_morning">أذكار الصباح</string>
     <string name="adhkar_evening">أذكار المساء</string>
     <string name="adhkar_sleep">أذكار النوم</string>
-    <string name="adhkar_after_prayer">بعد الصلاة</string>
-    <string name="adhkar_wakeup">الاستيقاظ</string>
+    <string name="adhkar_after_prayer">أذكار الصلاة</string>
+    <string name="adhkar_wakeup">أذكار الاستيقاظ</string>
     <string name="adhkar_mosque">أذكار المسجد</string>
     <string name="adhkar_maathura">أدعية مأثورة</string>
     <string name="adhkar_quran_duas">أدعية قرآنية</string>

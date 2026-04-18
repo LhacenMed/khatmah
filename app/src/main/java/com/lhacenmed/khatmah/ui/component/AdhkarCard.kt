@@ -50,17 +50,6 @@ fun AdhkarCard(
             .background(category.color)
             .clickable(onClick = onClick),
     ) {
-        // Scrim: transparent at top → dimmed at bottom for title legibility.
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color.Transparent, Color(0f, 0f, 0f, 0.3f))
-                    )
-                )
-        )
-
         // Icon — fills 68 % of card height with a locked 1:1 aspect ratio (≈ 109 dp).
         // CenterEnd → physical left in RTL · physical right in LTR.
         Icon(
@@ -72,6 +61,17 @@ fun AdhkarCard(
                 .fillMaxHeight(fraction = 1f)
                 .aspectRatio(ratio = 1f, matchHeightConstraintsFirst = true)
                 .padding(horizontal = 10.dp),
+        )
+
+        // Scrim: transparent at top → dimmed at bottom for title legibility.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color.Transparent, Color(0f, 0f, 0f, 0.3f))
+                    )
+                )
         )
 
         // Title — BottomStart → physical right in RTL · physical left in LTR.
