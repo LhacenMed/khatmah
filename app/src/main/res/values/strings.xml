@@ -231,4 +231,23 @@
     <string name="adhkar_quran_duas">Quranic Duas</string>
     <string name="adhkar_travel">Travel Dua</string>
     <string name="adhkar_ruqyah">Ruqyah</string>
+
+    <!-- ── Dhikr reader ────────────────────────────────────────────────────── -->
+
+    <!-- Action buttons -->
+    <string name="dhikr_read">Read</string>
+    <string name="dhikr_next">Next</string>
+    <string name="dhikr_share">Share dhikr</string>
+    <string name="dhikr_font_size">Font size</string>
+
+    <!-- Repetition count labels -->
+    <string name="rep_once">Once</string>
+    <string name="rep_twice">Twice</string>
+    <string name="rep_three">Three times</string>
+    <string name="rep_seven">Seven times</string>
+    <string name="rep_ten">Ten times</string>
+    <string name="rep_thirty_three">Thirty-three times</string>
+    <string name="rep_hundred">One hundred times</string>
+    <!-- Fallback: %d is replaced with the numeric count -->
+    <string name="rep_n_times">%d times</string>
 </resources>

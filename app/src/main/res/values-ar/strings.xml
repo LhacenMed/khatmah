@@ -85,6 +85,8 @@
 
     <!-- Onboarding -->
     <string name="skip">تخطى</string>
+    <string name="onboarding_lang_title">اللغة</string>
+    <string name="onboarding_lang_desc">اختر اللغة المفضلة للتطبيق.</string>
 
     <!-- Notifications permission -->
     <string name="onboarding_notif_title">ابقَ على المسار</string>
@@ -101,6 +103,8 @@
     <string name="onboarding_location_action">استخدام موقعي</string>
     <string name="onboarding_location_manual">اختيار يدوي</string>
     <string name="onboarding_location_not_found">تعذّر تحديد موقعك. حاول مرة أخرى أو اختر يدوياً.</string>
+    <string name="onboarding_location_disabled_desc">خدمات الموقع متوقفة. يرجى تفعيلها لحساب أوقات الصلاة بدقة.</string>
+    <string name="onboarding_location_enable_gps">تفعيل خدمات الموقع</string>
     <string name="onboarding_location_retry">إعادة المحاولة</string>
 
     <string name="location_title">موقعك</string>
@@ -140,6 +144,9 @@
     <string name="prayers_alarm_on">إيقاف المنبه</string>
     <string name="prayers_alarm_off">تشغيل المنبه</string>
     <string name="prayers_today">اليوم</string>
+    <string name="prayers_location_disabled">خدمات الموقع غير مفعلة</string>
+    <string name="prayers_location_permission_denied">تم رفض إذن الموقع</string>
+    <string name="prayers_enable_location">تفعيل الموقع</string>
     <string name="prayers_prev_day">اليوم السابق</string>
     <string name="prayers_next_day">اليوم التالي</string>
     <string name="prayers_requires_android_8">أوقات الصلاة تتطلب Android 8.0 أو أعلى</string>
@@ -174,6 +181,8 @@
     <!-- Main settings page -->
     <string name="prayer_settings_title">إعدادات أوقات الصلاة</string>
     <string name="prayer_settings_location">الموقع</string>
+    <string name="prayer_settings_auto_location">تحديد الموقع تلقائيًا</string>
+    <string name="prayer_settings_manual_location">البحث عن الموقع يدويًا</string>
     <string name="prayer_settings_calc_section">حساب أوقات الصلاة</string>
     <string name="prayer_settings_auto">الإعدادات التلقائية</string>
     <string name="prayer_settings_calc_method">طريقة الحساب</string>
@@ -219,4 +228,23 @@
     <string name="adhkar_quran_duas">أدعية قرآنية</string>
     <string name="adhkar_travel">دعاء السفر</string>
     <string name="adhkar_ruqyah">الرقية الشرعية</string>
+
+    <!-- ── Dhikr reader ────────────────────────────────────────────────────── -->
+
+    <!-- Action buttons -->
+    <string name="dhikr_read">قراءة</string>
+    <string name="dhikr_next">التالي</string>
+    <string name="dhikr_share">مشاركة الذكر</string>
+    <string name="dhikr_font_size">حجم الخط</string>
+
+    <!-- Repetition count labels -->
+    <string name="rep_once">مرة واحدة</string>
+    <string name="rep_twice">مرتان</string>
+    <string name="rep_three">ثلاث مرات</string>
+    <string name="rep_seven">سبع مرات</string>
+    <string name="rep_ten">عشر مرات</string>
+    <string name="rep_thirty_three">ثلاثًا وثلاثين مرة</string>
+    <string name="rep_hundred">مئة مرة</string>
+    <!-- Fallback: %d is replaced with the numeric count -->
+    <string name="rep_n_times">%d مرات</string>
 </resources>
