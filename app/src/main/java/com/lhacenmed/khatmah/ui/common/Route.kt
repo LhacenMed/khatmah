@@ -30,6 +30,12 @@ object Route {
     const val PRAYER_MANUAL_CORRECTIONS = "prayer_manual_corrections"
     const val PRAYER_HIGHER_LAT         = "prayer_higher_lat"
 
+    // ── Adhkar detail ────────────────────────────────────────────────────────────
+    const val ADHKAR_DETAIL = "adhkar_detail/{categoryId}"
+
+    /** Builds the Adhkar detail route for [categoryId]. */
+    fun adhkarDetail(categoryId: String) = "adhkar_detail/$categoryId"
+
     // ── Onboarding ────────────────────────────────────────────────────────────
     const val ONBOARDING_LANGUAGE       = "onboarding_language"
     const val ONBOARDING_NOTIFICATIONS  = "onboarding_notifications"

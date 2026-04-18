@@ -207,4 +207,16 @@
     <string name="calc_method_subtitle">الفجر: %1$.1f° / العشاء: %2$s</string>
     <string name="calc_method_isha_angle">%1$.1f°</string>
     <string name="calc_method_isha_mins">%1$d دقيقة بعد المغرب</string>
+
+    <!-- ── Adhkar categories ────────────────────────────────────────────────── -->
+    <string name="adhkar_morning">أذكار الصباح</string>
+    <string name="adhkar_evening">أذكار المساء</string>
+    <string name="adhkar_sleep">أذكار النوم</string>
+    <string name="adhkar_after_prayer">بعد الصلاة</string>
+    <string name="adhkar_wakeup">الاستيقاظ</string>
+    <string name="adhkar_mosque">أذكار المسجد</string>
+    <string name="adhkar_maathura">أدعية مأثورة</string>
+    <string name="adhkar_quran_duas">أدعية قرآنية</string>
+    <string name="adhkar_travel">دعاء السفر</string>
+    <string name="adhkar_ruqyah">الرقية الشرعية</string>
 </resources>

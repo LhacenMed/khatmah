@@ -219,4 +219,16 @@
     <string name="calc_method_isha_angle">%1$.1f°</string>
     <!-- %1$d = minutes after Maghrib -->
     <string name="calc_method_isha_mins">%1$d min after Maghrib</string>
+
+    <!-- ── Adhkar categories ────────────────────────────────────────────────── -->
+    <string name="adhkar_morning">Morning Adhkar</string>
+    <string name="adhkar_evening">Evening Adhkar</string>
+    <string name="adhkar_sleep">Sleep Adhkar</string>
+    <string name="adhkar_after_prayer">After Prayer</string>
+    <string name="adhkar_wakeup">Waking Up</string>
+    <string name="adhkar_mosque">Mosque Adhkar</string>
+    <string name="adhkar_maathura">Ma\'thura Duas</string>
+    <string name="adhkar_quran_duas">Quranic Duas</string>
+    <string name="adhkar_travel">Travel Dua</string>
+    <string name="adhkar_ruqyah">Ruqyah</string>
 </resources>

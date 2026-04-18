@@ -38,6 +38,7 @@ import com.lhacenmed.khatmah.ui.page.settings.appearance.LanguagePage
 import com.lhacenmed.khatmah.ui.page.settings.appearance.ThemeSettingsPage
 import com.lhacenmed.khatmah.ui.page.settings.prayers.*
 import com.lhacenmed.khatmah.ui.page.tabs.*
+import com.lhacenmed.khatmah.ui.page.tabs.adhkar.AdhkarDetailPage
 import com.lhacenmed.khatmah.util.OnboardingPrefs
 import com.lhacenmed.khatmah.widget.WidgetNavRequest
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -152,6 +153,18 @@ fun AppEntry() {
             animatedComposable(Route.PRAYER_DST)                { DstContent()                }
             animatedComposable(Route.PRAYER_MANUAL_CORRECTIONS) { ManualCorrectionsContent()  }
             animatedComposable(Route.PRAYER_HIGHER_LAT)         { HigherLatContent()          }
+
+            // ─── Adhkar detail ──────────────────────────────────────────────────────────
+            animatedComposable(
+                route     = Route.ADHKAR_DETAIL,
+                arguments = listOf(
+                    navArgument("categoryId") { type = NavType.StringType },
+                ),
+            ) { backStack ->
+                AdhkarDetailPage(
+                    categoryId = backStack.arguments?.getString("categoryId").orEmpty(),
+                )
+            }
         }
     }
 }
