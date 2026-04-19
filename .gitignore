@@ -19,3 +19,8 @@ local.properties
 
 .vscode/
 context.txt
+node_modules/
+package-lock.json
+
+khatmah-key-store.jks
+*.jks
