@@ -8,9 +8,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import com.lhacenmed.khatmah.R
 
+val OutfitFamily = FontFamily(Font(R.font.outfit_regular))
 val AmiriQuranFamily = FontFamily(Font(R.font.amiri_regular))
 val WarshFamily = FontFamily(Font(R.font.warsh_regular))
-val OutfitFamily = FontFamily(Font(R.font.outfit_regular))
+val AlmaghribiWarshFamily = FontFamily(Font(R.font.almaghribi_warsh))
+val UthmaniWarshFamily = FontFamily(Font(R.font.uthmani_warsh))
+val WarshTharwatEmaraFamily = FontFamily(Font(R.font.warsh_tharwat_emara))
+val KFGQPCFamily = FontFamily(
+    Font(R.font.kfgqpc_warsh_v2_regular, FontWeight.Normal),
+    Font(R.font.kfgqpc_warsh_v2_bold, FontWeight.Bold),
+)
 val DinNextLtFamily = FontFamily(
     Font(R.font.din_next_lt_ultra_light, FontWeight.ExtraLight),
     Font(R.font.din_next_lt_light,       FontWeight.Light),

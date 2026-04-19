@@ -1,71 +1,42 @@
 package com.lhacenmed.khatmah.ui.page.quran
 
-import com.lhacenmed.khatmah.data.quran.QuranAya
+import androidx.compose.ui.text.AnnotatedString
 
-// ── Item types ────────────────────────────────────────────────────────────────
-
-sealed class QuranPageItem {
-    /**
-     * "بِسْمِ اِ۬للَّهِ اِ۬لرَّحْمَٰنِ اِ۬لرَّحِيمِ" injected before each sura.
-     * Carries [suraNum] so keys are unique across the whole item list.
-     */
-    data class Basmala(val suraNum: Int)                          : QuranPageItem()
-    data class SuraHeader(val num: Int, val name: String)         : QuranPageItem()
-    data class Aya(val suraNum: Int, val ayaNum: Int, val text: String) : QuranPageItem()
-}
-
-// ── Page ──────────────────────────────────────────────────────────────────────
-
-data class QuranPage(
-    val number: Int,                    // 1-based display number
-    val items:  List<QuranPageItem>,
-)
-
-// ── Builder ───────────────────────────────────────────────────────────────────
-
-/** Number of Aya items per page; Basmala / SuraHeader entries don't count. */
-private const val AYAS_PER_PAGE = 12
+// ── Segment types ─────────────────────────────────────────────────────────────
 
 /**
- * Converts the flat aya list into display-ready pages.
+ * A single renderable block within a Quran display page.
  *
- * Layout rules injected at every sura boundary:
- *  - [QuranPageItem.Basmala]    — all suras except Al-Fatiha (1) and At-Tawbah (9).
- *  - [QuranPageItem.SuraHeader] — every sura, always.
- *
- * Paging: the buffer flushes once [AYAS_PER_PAGE] Aya items accumulate;
- * headers ride along for free and never trigger an early flush.
- *
- * Note: Sura 1 aya 1 IS the Basmala in the DB, so no duplicate header is added.
- * Sura 9 has no Basmala per Quranic tradition.
+ * [SuraHeader] — decorative centred row with the sura name and dividers.
+ * [Basmala]    — the opening Basmala line (omitted for suras 1 and 9).
+ * [AyaFlow]    — concatenated aya text with inline ornate aya-number spans,
+ *                rendered as a single justified [Text] so all ayas flow
+ *                continuously on the same line(s).
  */
-fun buildQuranPages(ayas: List<QuranAya>): List<QuranPage> {
-    if (ayas.isEmpty()) return emptyList()
-
-    // Step 1: build a flat, ordered display list with injected headers
-    val flat = ArrayList<QuranPageItem>(ayas.size + 250)
-    var lastSura = -1
-    for (q in ayas) {
-        if (q.suraNum != lastSura) {
-            if (q.suraNum != 1 && q.suraNum != 9) flat += QuranPageItem.Basmala(q.suraNum)
-            flat += QuranPageItem.SuraHeader(q.suraNum, q.sura)
-            lastSura = q.suraNum
-        }
-        flat += QuranPageItem.Aya(q.suraNum, q.ayaNum, q.aya)
-    }
-
-    // Step 2: chunk into pages (only Aya items count toward the limit)
-    return buildList {
-        val buf      = mutableListOf<QuranPageItem>()
-        var ayaCount = 0
-        for (item in flat) {
-            buf += item
-            if (item is QuranPageItem.Aya && ++ayaCount >= AYAS_PER_PAGE) {
-                add(QuranPage(size + 1, buf.toList()))
-                buf.clear()
-                ayaCount = 0
-            }
-        }
-        if (buf.isNotEmpty()) add(QuranPage(size + 1, buf.toList()))
-    }
+sealed class QuranSegment {
+    data class SuraHeader(val num: Int, val name: String) : QuranSegment()
+    data class Basmala(val suraNum: Int)                  : QuranSegment()
+    data class AyaFlow(
+        val suraNum:  Int,
+        val text:     AnnotatedString,
+        val firstAya: Int,
+        val lastAya:  Int,
+    ) : QuranSegment()
 }
+
+// ── Page model ────────────────────────────────────────────────────────────────
+
+/**
+ * A single display page in the Quran reader.
+ *
+ * [pageNum]  — 1-based sequential page number for the top bar.
+ * [suraName] — the dominant sura on this page (used in the top bar title).
+ * [juz]      — juz identifier taken from the first aya on this page.
+ * [segments] — ordered list of segments to render top-to-bottom.
+ */
+data class QuranPageData(
+    val pageNum:  Int,
+    val suraName: String,
+    val juz:      String,
+    val segments: List<QuranSegment>,
+)

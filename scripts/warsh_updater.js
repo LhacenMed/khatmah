@@ -14,7 +14,7 @@
  *   sura_num|ayah_text (1) ayah_text (2) ... ayah_text (n)
  *
  * Usage:
- *   node ./scripts/warsh_updater.js --db quran.db --src quran.txt [--dry-run]
+ *   node ./scripts/warsh_updater.js --db quran.db --src quran.txt --dry-run
  *
  * Install dependency once:
  *   npm install better-sqlite3

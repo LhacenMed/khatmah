@@ -40,8 +40,9 @@ object QuranPageBuilder {
         val wc = Constraints(maxWidth = pageWidth)
 
         // Pre-measure fixed-height items once
-        val basmalaH = measurer.measure(BASMALA, basmalaStyle, wc).size.height + gapPx
-        val headerH  = measurer.measure(HEADER_SAMPLE, headerStyle, wc).size.height + gapPx
+        // Fix: use named parameter `constraints =` — the 3rd positional arg is `overflow: TextOverflow`
+        val basmalaH = measurer.measure(BASMALA,       basmalaStyle, constraints = wc).size.height + gapPx
+        val headerH  = measurer.measure(HEADER_SAMPLE, headerStyle,  constraints = wc).size.height + gapPx
 
         // ── Page state ────────────────────────────────────────────────────────
         val result  = mutableListOf<QuranPageData>()
@@ -87,8 +88,8 @@ object QuranPageBuilder {
         fun fitCount(list: List<QuranAya>, availPx: Int): Int {
             var count = 0; var lo = 1; var hi = list.size
             while (lo <= hi) {
-                val mid  = (lo + hi) / 2
-                val h    = measurer.measure(ayaStr(list.take(mid)), ayaStyle, wc).size.height + gapPx
+                val mid = (lo + hi) / 2
+                val h   = measurer.measure(ayaStr(list.take(mid)), ayaStyle, constraints = wc).size.height + gapPx
                 if (h <= availPx) { count = mid; lo = mid + 1 } else hi = mid - 1
             }
             return count
@@ -117,7 +118,7 @@ object QuranPageBuilder {
                 }
                 val chunk    = remaining.take(fc)
                 val str      = ayaStr(chunk)
-                val strH     = measurer.measure(str, ayaStyle, wc).size.height + gapPx
+                val strH     = measurer.measure(str, ayaStyle, constraints = wc).size.height + gapPx
                 val chunkJuz = chunk.first().juz
                 addSeg(
                     QuranSegment.AyaFlow(suraNum, str, chunk.first().ayaNum, chunk.last().ayaNum),

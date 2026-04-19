@@ -30,7 +30,10 @@ object Route {
     const val PRAYER_MANUAL_CORRECTIONS = "prayer_manual_corrections"
     const val PRAYER_HIGHER_LAT         = "prayer_higher_lat"
 
-    // ── Adhkar detail ────────────────────────────────────────────────────────────
+    // ── Quran ─────────────────────────────────────────────────────────────────
+    const val QURAN_READER = "quran_reader"
+
+    // ── Adhkar detail ─────────────────────────────────────────────────────────
     const val ADHKAR_DETAIL = "adhkar_detail/{categoryId}"
 
     /** Builds the Adhkar detail route for [categoryId]. */

@@ -76,6 +76,10 @@
     <string name="more_share_app">مشاركة التطبيق</string>
     <string name="more_rate_khatmah">قيّم ختمة</string>
 
+    <!-- Index tab -->
+    <string name="index_read_quran">قراءة القرآن</string>
+    <string name="index_aya_count">%d آية</string>
+
     <!-- Notification test -->
     <string name="notif_channel_test_name">اختبار</string>
     <string name="notif_test_title">إشعار تجريبي</string>

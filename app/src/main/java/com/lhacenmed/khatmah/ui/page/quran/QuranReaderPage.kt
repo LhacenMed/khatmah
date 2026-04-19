@@ -1,63 +1,151 @@
 package com.lhacenmed.khatmah.ui.page.quran
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.lhacenmed.khatmah.data.quran.QuranAya
+import com.lhacenmed.khatmah.ui.nav.LocalNavController
+import com.lhacenmed.khatmah.ui.theme.DinNextLtFamily
 import com.lhacenmed.khatmah.ui.theme.WarshFamily
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
-// Uthmani-style Basmala — matches the glyph style used throughout the app
-private const val BASMALA_TEXT = "بِسْمِ اِ۬للَّهِ اِ۬لرَّحْمَٰنِ اِ۬لرَّحِيمِ"
+// ── Estimated bar heights used for page-area calculation ─────────────────────
+private val TOP_BAR_DP    = 72.dp
+private val BOTTOM_BAR_DP = 64.dp
+private val PAGE_PAD_H_DP = 16.dp  // per side → 32 dp total
+private val PAGE_PAD_V_DP = 8.dp   // per side → 16 dp total
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
+/**
+ * Full-screen Quran reader registered as a standalone NavPage.
+ *
+ * Forces RTL layout so the pager, slider, and back arrow all behave correctly
+ * for Arabic Quran reading without any per-component direction overrides.
+ */
 @Composable
-fun QuranReaderScreen(padding: PaddingValues) {
+fun QuranReaderScreen() {
     val vm: QuranViewModel = viewModel()
     val state by vm.state.collectAsState()
 
-    Box(
-        modifier         = Modifier
-            .fillMaxSize()
-            .padding(padding),
-        contentAlignment = Alignment.Center,
-    ) {
+    // Force RTL for the entire reader — Quran is always Arabic/RTL
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         when (val s = state) {
-            QuranViewModel.State.Loading -> CircularProgressIndicator()
-            is QuranViewModel.State.Ready -> if (s.pages.isNotEmpty()) {
-                QuranPager(
-                    pages      = s.pages,
-                    initPage   = vm.savedPage,
-                    onSavePage = vm::savePage,
-                )
+            is QuranViewModel.State.Loading -> LoadingBox()
+            is QuranViewModel.State.Ready   -> ReaderContent(ayas = s.ayas, vm = vm)
+        }
+    }
+}
+
+// ── Content after ayas are loaded ─────────────────────────────────────────────
+
+@Composable
+private fun ReaderContent(
+    ayas: List<QuranAya>,
+    vm: QuranViewModel,
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val density      = LocalDensity.current
+        val textMeasurer = rememberTextMeasurer()
+
+        // Compute pixel dimensions of the readable text area
+        val topBarPx  = with(density) { TOP_BAR_DP.roundToPx() }
+        val botBarPx  = with(density) { BOTTOM_BAR_DP.roundToPx() }
+        val padHPx    = with(density) { PAGE_PAD_H_DP.roundToPx() * 2 }
+        val padVPx    = with(density) { PAGE_PAD_V_DP.roundToPx() * 2 }
+        val pageW     = constraints.maxWidth - padHPx
+        val pageH     = constraints.maxHeight - topBarPx - botBarPx - padVPx
+        val cacheKey  = pageW.toLong() shl 20 or pageH.toLong()
+
+        // Resolve colours from MaterialTheme while still in Composition context
+        val onBg    = MaterialTheme.colorScheme.onBackground
+        val primary = MaterialTheme.colorScheme.primary
+
+        // Text styles used both for building pages and rendering them
+        val ayaStyle = TextStyle(
+            fontFamily    = WarshFamily,
+            fontSize      = 20.sp,
+            lineHeight    = 38.sp,
+            textDirection = TextDirection.Rtl,
+            textAlign     = TextAlign.Justify,
+            color         = onBg,
+        )
+        val headerStyle = TextStyle(
+            fontFamily    = DinNextLtFamily,
+            fontSize      = 13.sp,
+            textDirection = TextDirection.Rtl,
+            textAlign     = TextAlign.Center,
+            color         = primary,
+        )
+        val basmalaStyle = TextStyle(
+            fontFamily    = WarshFamily,
+            fontSize      = 18.sp,
+            lineHeight    = 32.sp,
+            textDirection = TextDirection.Rtl,
+            textAlign     = TextAlign.Center,
+            color         = primary,
+        )
+        val ayaNumSpan = SpanStyle(
+            color    = primary,
+            fontSize = 14.sp,
+        )
+
+        var pages by remember { mutableStateOf(vm.getCachedPages(cacheKey)) }
+
+        LaunchedEffect(ayas, cacheKey) {
+            if (pages == null) {
+                val gapPx = with(density) { 8.dp.roundToPx() }
+                // Build pages on Dispatchers.Default to avoid blocking the UI thread.
+                // TextMeasurer.measure() is a pure text-layout computation and is safe
+                // to call from a non-main thread.
+                val built = withContext(Dispatchers.Default) {
+                    QuranPageBuilder.build(
+                        ayas         = ayas,
+                        measurer     = textMeasurer,
+                        pageWidth    = pageW,
+                        pageHeight   = pageH,
+                        ayaStyle     = ayaStyle,
+                        headerStyle  = headerStyle,
+                        basmalaStyle = basmalaStyle,
+                        ayaNumSpan   = ayaNumSpan,
+                        gapPx        = gapPx,
+                    )
+                }
+                vm.cachePages(cacheKey, built)
+                pages = built
             }
         }
+
+        val built = pages
+        if (built == null) LoadingBox()
+        else QuranPager(
+            pages        = built,
+            savedPage    = vm.savedPage,
+            onSavePage   = vm::savePage,
+            ayaStyle     = ayaStyle,
+            headerStyle  = headerStyle,
+            basmalaStyle = basmalaStyle,
+        )
     }
 }
 
@@ -65,57 +153,151 @@ fun QuranReaderScreen(padding: PaddingValues) {
 
 @Composable
 private fun QuranPager(
-    pages:      List<QuranPage>,
-    initPage:   Int,
-    onSavePage: (Int) -> Unit,
+    pages:        List<QuranPageData>,
+    savedPage:    Int,
+    onSavePage:   (Int) -> Unit,
+    ayaStyle:     TextStyle,
+    headerStyle:  TextStyle,
+    basmalaStyle: TextStyle,
 ) {
-    val isRtl      = LocalLayoutDirection.current == LayoutDirection.Rtl
+    if (pages.isEmpty()) return
+
+    val nav        = LocalNavController.current
+    val scope      = rememberCoroutineScope()
     val pagerState = rememberPagerState(
-        initialPage = initPage.coerceIn(0, pages.lastIndex),
+        initialPage = savedPage.coerceIn(0, pages.lastIndex),
     ) { pages.size }
 
-    // Persist position only after the swipe gesture fully settles (not mid-fling)
+    // Persist reading position once the animated scroll settles
     LaunchedEffect(pagerState.settledPage) { onSavePage(pagerState.settledPage) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        PageBar(
-            current = pagerState.currentPage + 1,
-            total   = pages.size,
-            isRtl   = isRtl,
-        )
-        HorizontalDivider()
-        // reverseLayout = true makes page 0 (Al-Fatiha) appear on the physical
-        // RIGHT side, matching Arabic book convention. The pagerState index is
-        // always 0...N regardless of layout direction.
+    Scaffold(
+        topBar = {
+            QuranTopBar(
+                suraName = pages[pagerState.settledPage].suraName,
+                pageNum  = pages[pagerState.settledPage].pageNum,
+                juz      = pages[pagerState.settledPage].juz,
+                onBack   = { nav.popBackStack() },
+            )
+        },
+        bottomBar = {
+            QuranBottomBar(
+                currentPage = pagerState.currentPage,
+                totalPages  = pages.size,
+                onJump      = { target -> scope.launch { pagerState.scrollToPage(target) } },
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { innerPadding ->
+        // reverseLayout=false: in the forced-RTL context Compose already places
+        // page 0 on the physical right (Al-Fatiha), which is correct.
         HorizontalPager(
             state         = pagerState,
-            reverseLayout = isRtl,
+            reverseLayout = false,
             modifier      = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            key           = { pages[it].number },
+                .fillMaxSize()
+                .padding(innerPadding),
+            key           = { pages[it].pageNum },
         ) { idx ->
-            PageContent(page = pages[idx])
+            PageContent(
+                page         = pages[idx],
+                ayaStyle     = ayaStyle,
+                headerStyle  = headerStyle,
+                basmalaStyle = basmalaStyle,
+            )
         }
     }
 }
 
-// ── Page number bar ───────────────────────────────────────────────────────────
+// ── Top bar ───────────────────────────────────────────────────────────────────
 
 @Composable
-private fun PageBar(current: Int, total: Int, isRtl: Boolean) {
+private fun QuranTopBar(
+    suraName: String,
+    pageNum:  Int,
+    juz:      String,
+    onBack:   () -> Unit,
+) {
     Box(
-        modifier         = Modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(horizontal = 20.dp, vertical = 10.dp),
+            .background(MaterialTheme.colorScheme.surfaceContainer),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text  = if (isRtl) "${arabicNum(current)} / ${arabicNum(total)}"
-            else       "$current / $total",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        // Back button – in forced RTL, AutoMirrored renders as → (correct Arabic UX)
+        IconButton(
+            onClick  = onBack,
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(4.dp),
+        ) {
+            Icon(
+                imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = null,
+                tint               = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+
+        // Centred title: sura name + page/juz line
+        Column(
+            modifier            = Modifier.padding(horizontal = 52.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text       = suraName,
+                style      = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color      = MaterialTheme.colorScheme.onSurface,
+                maxLines   = 1,
+            )
+            Text(
+                text  = "صفحة $pageNum , جزء $juz",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+// ── Bottom bar (page slider) ──────────────────────────────────────────────────
+
+@Composable
+private fun QuranBottomBar(
+    currentPage: Int,
+    totalPages:  Int,
+    onJump:      (Int) -> Unit,
+) {
+    var sliderValue by remember { mutableFloatStateOf(0f) }
+    var isDragging  by remember { mutableStateOf(false) }
+
+    // Keep slider in sync with pager while the user is not dragging
+    LaunchedEffect(currentPage) {
+        if (!isDragging) {
+            sliderValue = if (totalPages > 1) currentPage.toFloat() / (totalPages - 1) else 0f
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Slider(
+            value    = sliderValue,
+            onValueChange = { v ->
+                sliderValue = v
+                isDragging  = true
+            },
+            onValueChangeFinished = {
+                isDragging = false
+                val target = (sliderValue * (totalPages - 1)).roundToInt()
+                    .coerceIn(0, totalPages - 1)
+                onJump(target)
+            },
+            valueRange = 0f..1f,
+            modifier   = Modifier.fillMaxWidth(),
         )
     }
 }
@@ -123,94 +305,77 @@ private fun PageBar(current: Int, total: Int, isRtl: Boolean) {
 // ── Page content ──────────────────────────────────────────────────────────────
 
 @Composable
-private fun PageContent(page: QuranPage) {
-    LazyColumn(
-        modifier            = Modifier.fillMaxSize(),
-        contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+private fun PageContent(
+    page:         QuranPageData,
+    ayaStyle:     TextStyle,
+    headerStyle:  TextStyle,
+    basmalaStyle: TextStyle,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = PAGE_PAD_H_DP, vertical = PAGE_PAD_V_DP),
     ) {
-        items(page.items, key = ::itemKey) { item ->
-            when (item) {
-                is QuranPageItem.Basmala    -> BasmalaRow()
-                is QuranPageItem.SuraHeader -> SuraHeaderRow(item)
-                is QuranPageItem.Aya        -> AyaRow(item)
+        page.segments.forEach { seg ->
+            Spacer(Modifier.height(4.dp))
+            when (seg) {
+                is QuranSegment.Basmala    -> BasmalaRow(basmalaStyle)
+                is QuranSegment.SuraHeader -> SuraHeaderRow(seg, headerStyle)
+                is QuranSegment.AyaFlow    -> AyaFlowRow(seg, ayaStyle)
             }
         }
     }
 }
 
-// ── Item rows ─────────────────────────────────────────────────────────────────
-
-/** Decorative Basmala shown at the top of each sura (except 1 and 9). */
 @Composable
-private fun BasmalaRow() {
+private fun BasmalaRow(style: TextStyle) {
     Text(
-        text       = BASMALA_TEXT,
-        fontFamily = WarshFamily,
-        fontSize   = 18.sp,
-        lineHeight = 30.sp,
-        textAlign  = TextAlign.Center,
-        color      = MaterialTheme.colorScheme.primary,
-        modifier   = Modifier
+        text     = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+        style    = style,
+        modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp),
     )
 }
 
-/** Sura name centred between two horizontal dividers. */
 @Composable
-private fun SuraHeaderRow(item: QuranPageItem.SuraHeader) {
+private fun SuraHeaderRow(seg: QuranSegment.SuraHeader, style: TextStyle) {
     Row(
         modifier          = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         HorizontalDivider(
-            modifier = Modifier.weight(1f),
-            color    = MaterialTheme.colorScheme.outlineVariant,
+            modifier  = Modifier.weight(1f),
+            color     = MaterialTheme.colorScheme.outlineVariant,
+            thickness = 0.8.dp,
         )
         Text(
-            text       = item.name,
-            style      = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color      = MaterialTheme.colorScheme.primary,
-            modifier   = Modifier.padding(horizontal = 12.dp),
+            text     = "  ${seg.name}  ",
+            style    = style,
+            modifier = Modifier.padding(horizontal = 4.dp),
         )
         HorizontalDivider(
-            modifier = Modifier.weight(1f),
-            color    = MaterialTheme.colorScheme.outlineVariant,
+            modifier  = Modifier.weight(1f),
+            color     = MaterialTheme.colorScheme.outlineVariant,
+            thickness = 0.8.dp,
         )
     }
 }
 
-/**
- * Aya text followed by its number in Quranic ornate brackets ﴿١﴾.
- * Justified alignment spreads Arabic text naturally across the full line width.
- */
 @Composable
-private fun AyaRow(item: QuranPageItem.Aya) {
+private fun AyaFlowRow(seg: QuranSegment.AyaFlow, style: TextStyle) {
     Text(
-        text       = "${item.text} ${arabicNum(item.ayaNum)}",
-        fontFamily = WarshFamily,
-        fontSize   = 19.sp,
-        lineHeight = 36.sp,
-        textAlign  = TextAlign.Justify,
-        color      = MaterialTheme.colorScheme.onBackground,
-        modifier   = Modifier.fillMaxWidth(),
+        text     = seg.text,
+        style    = style,
+        modifier = Modifier.fillMaxWidth(),
     )
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Shared ────────────────────────────────────────────────────────────────────
 
-/** Converts a Western integer to Eastern Arabic numerals (٠١٢٣٤٥٦٧٨٩). */
-private fun arabicNum(n: Int): String = n.toString().map {
-    "٠١٢٣٤٥٦٧٨٩"[it - '0']
-}.joinToString("")
-
-/** Stable, globally unique key per item for LazyColumn composition. */
-private fun itemKey(item: QuranPageItem): String = when (item) {
-    is QuranPageItem.Basmala    -> "b${item.suraNum}"
-    is QuranPageItem.SuraHeader -> "s${item.num}"
-    is QuranPageItem.Aya        -> "a${item.suraNum}_${item.ayaNum}"
+@Composable
+internal fun LoadingBox() {
+    Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
 }

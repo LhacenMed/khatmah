@@ -39,6 +39,7 @@ import com.lhacenmed.khatmah.ui.page.settings.appearance.ThemeSettingsPage
 import com.lhacenmed.khatmah.ui.page.settings.prayers.*
 import com.lhacenmed.khatmah.ui.page.tabs.*
 import com.lhacenmed.khatmah.ui.page.tabs.adhkar.AdhkarDetailPage
+import com.lhacenmed.khatmah.ui.page.quran.QuranReaderScreen
 import com.lhacenmed.khatmah.util.OnboardingPrefs
 import com.lhacenmed.khatmah.widget.WidgetNavRequest
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -147,14 +148,17 @@ fun AppEntry() {
             }
 
             // ── Prayer settings sub-pages ─────────────────────────────────────
-            animatedComposable(Route.PRAYER_SETTINGS)           { PrayerSettingsContent()     }
-            animatedComposable(Route.PRAYER_CALC_METHOD)        { CalcMethodContent()         }
-            animatedComposable(Route.PRAYER_JURISTIC)           { JuristicContent()           }
-            animatedComposable(Route.PRAYER_DST)                { DstContent()                }
-            animatedComposable(Route.PRAYER_MANUAL_CORRECTIONS) { ManualCorrectionsContent()  }
-            animatedComposable(Route.PRAYER_HIGHER_LAT)         { HigherLatContent()          }
+            animatedComposable(Route.PRAYER_SETTINGS)           { PrayerSettingsContent()    }
+            animatedComposable(Route.PRAYER_CALC_METHOD)        { CalcMethodContent()        }
+            animatedComposable(Route.PRAYER_JURISTIC)           { JuristicContent()          }
+            animatedComposable(Route.PRAYER_DST)                { DstContent()               }
+            animatedComposable(Route.PRAYER_MANUAL_CORRECTIONS) { ManualCorrectionsContent() }
+            animatedComposable(Route.PRAYER_HIGHER_LAT)         { HigherLatContent()         }
 
-            // ─── Adhkar detail ──────────────────────────────────────────────────────────
+            // ── Quran reader (full-screen, outside tab shell) ─────────────────
+            animatedComposable(Route.QURAN_READER) { QuranReaderScreen() }
+
+            // ── Adhkar detail ─────────────────────────────────────────────────
             animatedComposable(
                 route     = Route.ADHKAR_DETAIL,
                 arguments = listOf(

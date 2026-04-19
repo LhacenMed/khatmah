@@ -6,4 +6,5 @@ data class QuranAya(
     val sura:    String,
     val ayaNum:  Int,
     val aya:     String,
+    val juz:     String,
 )
