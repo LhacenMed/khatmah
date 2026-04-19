@@ -21,6 +21,7 @@ local.properties
 context.txt
 node_modules/
 package-lock.json
+.env
 
 khatmah-key-store.jks
 *.jks
