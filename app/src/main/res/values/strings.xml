@@ -1,16 +1,258 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Khatmah</string>
+
+    <!-- Bottom navigation -->
     <string name="today">Today</string>
     <string name="athkar">Athkar</string>
     <string name="prayers">Prayers</string>
     <string name="index">Index</string>
     <string name="more">More</string>
-    <string name="settings_fragment">Settings Fragment</string>
-    <string name="home_fragment">Home Fragment</string>
-    <string name="notification_fragment">Notification Fragment</string>
-    <!-- TODO: Remove or change this placeholder text -->
+
+    <!-- Theme settings -->
     <string name="theme_settings">Theme</string>
     <string name="theme_system">System Default</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+
+    <!-- Language settings -->
+    <string name="language_settings">Language</string>
+    <string name="language_system_default">System Default</string>
+    <string name="language_english">English</string>
+    <string name="language_arabic">Arabic — العربية</string>
+
+    <!-- PreferenceSwitchWithDivider accessibility -->
+    <string name="open_settings">Open settings</string>
+
+    <!-- AboutPage -->
+    <string name="about_page">About</string>
+    <string name="about_app">App</string>
+    <string name="about_links">Links</string>
+    <string name="version">Version</string>
+    <string name="about_translate">Translate</string>
+    <string name="about_translate_desc">Help translate Khatmah into your language</string>
+    <string name="about_source_code">Source Code</string>
+    <string name="about_source_code_desc">View the source code on GitHub</string>
+
+    <!-- Shared UI -->
+    <string name="back">Back</string>
+    <string name="next">Next</string>
+    <string name="navigate_up">Navigate up</string>
+
+    <!-- More tab — sections -->
+    <string name="more_support_us">Support Us</string>
+    <string name="more_current_khatmah">Current Khatmah</string>
+    <string name="more_quranic_sunnahs">Quranic Sunnahs</string>
+    <string name="more_settings">Settings</string>
+    <string name="more_prayer_times">Prayer Times</string>
+    <string name="more_athkar_alarms">Athkar Alarms</string>
+    <string name="more_sunnahs_alarms">Sunnahs Alarms</string>
+    <string name="more_khatmah_app">Khatmah App</string>
+
+    <!-- More tab — items -->
+    <string name="more_support_khatmah">Support Khatmah</string>
+    <string name="more_previous_sessions">Previous Sessions</string>
+    <string name="more_upcoming_sessions">Upcoming Sessions</string>
+    <string name="more_bookmark">Bookmark</string>
+    <string name="more_surat_kahf">Surat Al-Kahf</string>
+    <string name="more_surat_mulk">Surat Al-Mulk</string>
+    <string name="more_surat_baqarah">Surat Al-Baqarah</string>
+    <string name="more_daily_alarm">Daily Alarm</string>
+    <string name="more_start_new_khatmah">Start New Khatmah</string>
+    <string name="more_prayer_times_settings">Prayer Times Settings</string>
+    <string name="more_qibla_direction">Qibla Direction</string>
+    <string name="more_day_athkar_alarm">Day Athkar Alarm</string>
+    <string name="more_day_athkar_time">Day Athkar Time</string>
+    <string name="more_night_athkar_alarm">Night Athkar Alarm</string>
+    <string name="more_night_athkar_time">Night Athkar Time</string>
+    <string name="more_al_mulk_alarm">Al-Mulk Alarm</string>
+    <string name="more_al_mulk_time">Al-Mulk Time</string>
+    <string name="more_al_baqarah_alarm">Al-Baqarah Alarm</string>
+    <string name="more_al_baqarah_time">Al-Baqarah Time</string>
+    <string name="more_language">Language</string>
+    <string name="more_contact_us">Contact Us</string>
+    <string name="more_twitter">Follow Us on Twitter</string>
+    <string name="more_instagram">Follow Us on Instagram</string>
+    <string name="more_share_app">Share App</string>
+    <string name="more_rate_khatmah">Rate Khatmah</string>
+
+    <!-- Notification test -->
+    <string name="notif_channel_test_name">Test</string>
+    <string name="notif_test_title">Test Notification</string>
+    <string name="notif_test_body">Notifications are working correctly.</string>
+    <string name="notif_test_action">Send Test Notification</string>
+    <string name="notif_test_action_subtitle">Verify that notifications are delivered</string>
+
+    <!-- Onboarding -->
+    <string name="skip">Skip</string>
+    <string name="onboarding_lang_title">Language</string>
+    <string name="onboarding_lang_desc">Select your preferred language for the app.</string>
+
+    <!-- Notifications permission -->
+    <string name="onboarding_notif_title">Stay on Track</string>
+    <string name="onboarding_notif_desc">Allow notifications so we can remind you to read your daily Quran portion and Athkar.</string>
+    <string name="onboarding_notif_denied">You can enable notifications later from your device settings.</string>
+    <string name="onboarding_notif_action">Allow Notifications</string>
+    <string name="onboarding_notif_skip">Continue Without Notifications</string>
+
+    <!-- Location permission -->
+    <string name="onboarding_location_title">Your Prayer Times</string>
+    <string name="onboarding_location_desc">Allow location access so we can calculate accurate prayer times for your city.</string>
+    <string name="onboarding_location_locating">Detecting your location…</string>
+    <string name="onboarding_location_denied">Location permission denied. Choose your city manually.</string>
+    <string name="onboarding_location_action">Use My Location</string>
+    <string name="onboarding_location_manual">Choose Manually</string>
+    <string name="onboarding_location_not_found">Couldn\'t detect your location. Try again or choose manually.</string>
+    <string name="onboarding_location_disabled_desc">Location services are turned off. Please turn them on to calculate accurate prayer times.</string>
+    <string name="onboarding_location_enable_gps">Enable Location Services</string>
+    <string name="onboarding_location_retry">Try Again</string>
+
+    <string name="location_title">Your Location</string>
+    <string name="location_desc">Allow access so prayer times are calculated for your city.</string>
+    <string name="location_denied_desc">Location access was denied. Choose your city manually instead.</string>
+    <string name="location_failed_desc">Could not detect your location. Choose your city manually or try again.</string>
+    <string name="location_grant">Grant Access</string>
+    <string name="location_locating">Detecting location…</string>
+    <string name="location_choose_manually">Choose Manually</string>
+    <string name="select_country">Select Country</string>
+    <string name="select_city">Select City</string>
+    <string name="search">Search…</string>
+    <string name="no_results">No results</string>
+    <string name="network_error">Couldn\'t load. Check your connection.</string>
+    <string name="retry">Retry</string>
+    <string name="geocode_error">Couldn\'t determine coordinates. Try again.</string>
+
+    <!-- Manual location -->
+    <string name="manual_location_title">Set Your Location</string>
+    <string name="manual_location_desc">Enter your city name to calculate accurate prayer times.</string>
+    <string name="manual_location_hint">City name…</string>
+    <string name="manual_location_search">Find</string>
+    <string name="manual_location_searching">Searching…</string>
+    <string name="manual_location_not_found">City not found. Try a different spelling or nearby city.</string>
+
+    <!-- Today tab -->
+    <string name="today_refresh_prayers">Refresh Prayer Times</string>
+    <string name="today_refreshing">Updating prayer times…</string>
+
+    <!-- Prayers tab screen -->
+    <string name="prayers_screen_title">Prayer Times</string>
+    <string name="prayers_till">Till %s</string>
+    <string name="prayers_city_unknown">Unknown Location</string>
+    <string name="prayers_settings">Prayer Settings</string>
+    <string name="prayers_qibla">Qibla Direction</string>
+    <string name="prayers_next_fajr">Next: Fajr Tomorrow</string>
+    <string name="prayers_alarm_on">Turn off alarm</string>
+    <string name="prayers_alarm_off">Turn on alarm</string>
+    <string name="prayers_today">Today</string>
+    <string name="prayers_location_disabled">Location Services Disabled</string>
+    <string name="prayers_location_permission_denied">Location Permission Denied</string>
+    <string name="prayers_enable_location">Enable Location</string>
+    <string name="prayers_prev_day">Previous day</string>
+    <string name="prayers_next_day">Next day</string>
+    <string name="prayers_requires_android_8">Prayer times require Android 8.0 or higher</string>
+
+    <!-- Individual prayer names -->
+    <string name="prayer_fajr">Fajr</string>
+    <string name="prayer_sunrise">Sunrise</string>
+    <string name="prayer_dhuhr">Dhuhr</string>
+    <string name="prayer_asr">Asr</string>
+    <string name="prayer_maghrib">Maghrib</string>
+    <string name="prayer_isha">Isha</string>
+
+    <!-- Hijri calendar -->
+    <string name="hijri_year_suffix">AH</string>
+    <string-array name="hijri_months">
+        <item>Muharram</item>
+        <item>Safar</item>
+        <item>Rabi\' al-Awwal</item>
+        <item>Rabi\' al-Thani</item>
+        <item>Jumada al-Awwal</item>
+        <item>Jumada al-Thani</item>
+        <item>Rajab</item>
+        <item>Sha\'ban</item>
+        <item>Ramadan</item>
+        <item>Shawwal</item>
+        <item>Dhu al-Qi\'dah</item>
+        <item>Dhu al-Hijjah</item>
+    </string-array>
+
+    <!-- ── Prayer Settings ────────────────────────────────────────────────── -->
+
+    <!-- Main settings page -->
+    <string name="prayer_settings_title">Prayer Times Settings</string>
+    <string name="prayer_settings_location">Location</string>
+    <string name="prayer_settings_auto_location">Auto-detect Location</string>
+    <string name="prayer_settings_manual_location">Search Location Manually</string>
+    <string name="prayer_settings_calc_section">Prayer Times Calculation</string>
+    <string name="prayer_settings_auto">Automatic Settings</string>
+    <string name="prayer_settings_calc_method">Calculation Method</string>
+    <string name="prayer_settings_juristic">Juristic Method</string>
+    <string name="prayer_settings_dst">Daylight Saving Time</string>
+    <string name="prayer_settings_corrections">Manual Corrections</string>
+    <string name="prayer_settings_higher_lat">Higher Latitude</string>
+
+    <!-- Juristic method options -->
+    <string name="juristic_shafi">Shafi, Maliki, Hanbali</string>
+    <string name="juristic_hanafi">Hanafi</string>
+
+    <!-- DST options -->
+    <string name="dst_automatic">Automatic</string>
+    <string name="dst_plus_one">+1 Hour</string>
+    <string name="dst_minus_one">-1 Hour</string>
+
+    <!-- Higher latitude options -->
+    <string name="higher_lat_none">None</string>
+    <string name="higher_lat_middle">Middle of the Night</string>
+    <string name="higher_lat_seventh">1/7 of the Night</string>
+    <string name="higher_lat_angle">Angle-Based Method</string>
+
+    <!-- Manual corrections page -->
+    <string name="corrections_all_default">All default</string>
+    <string name="corrections_customized">Customized</string>
+    <string name="corrections_reset">Reset All</string>
+    <string name="corrections_mins">min</string>
+
+    <!-- Calculation method list item subtitle -->
+    <!-- %1$.1f° = Fajr angle, %2$s = Isha description -->
+    <string name="calc_method_subtitle">Fajr: %1$.1f° / Isha: %2$s</string>
+    <!-- %1$.1f° = Isha angle -->
+    <string name="calc_method_isha_angle">%1$.1f°</string>
+    <!-- %1$d = minutes after Maghrib -->
+    <string name="calc_method_isha_mins">%1$d min after Maghrib</string>
+
+    <!-- ── Adhkar categories ────────────────────────────────────────────────── -->
+    <string name="adhkar_morning">Morning Adhkar</string>
+    <string name="adhkar_evening">Evening Adhkar</string>
+    <string name="adhkar_sleep">Sleep Adhkar</string>
+    <string name="adhkar_after_prayer">After Prayer</string>
+    <string name="adhkar_wakeup">Waking Up</string>
+    <string name="adhkar_mosque">Mosque Adhkar</string>
+    <string name="adhkar_maathura">Ma\'thura Duas</string>
+    <string name="adhkar_quran_duas">Quranic Duas</string>
+    <string name="adhkar_travel">Travel Dua</string>
+    <string name="adhkar_ruqyah">Ruqyah</string>
+
+    <!-- ── Dhikr reader ────────────────────────────────────────────────────── -->
+
+    <!-- Action buttons -->
+    <string name="dhikr_read">Read</string>
+    <string name="dhikr_next">Next</string>
+    <string name="dhikr_done">Done</string>
+    <string name="dhikr_share">Share dhikr</string>
+    <string name="dhikr_font_size">Font size</string>
+
+    <!-- Completion slide -->
+    <!-- %s is replaced with the category name e.g. "Morning Adhkar" -->
+    <string name="adhkar_completed">You\'ve completed reading\n%s</string>
+
+    <!-- Repetition count labels -->
+    <string name="rep_once">Once</string>
+    <string name="rep_twice">Twice</string>
+    <string name="rep_three">Three times</string>
+    <string name="rep_seven">Seven times</string>
+    <string name="rep_ten">Ten times</string>
+    <string name="rep_thirty_three">Thirty-three times</string>
+    <string name="rep_hundred">One hundred times</string>
+    <!-- Fallback: %d is replaced with the numeric count -->
+    <string name="rep_n_times">%d times</string>
 </resources>

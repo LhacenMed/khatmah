@@ -19,3 +19,21 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# WorkManager – Room generates WorkDatabase_Impl at compile time; R8 must not
+# strip or rename it because WorkManager looks it up by exact class name.
+-keep class androidx.work.impl.WorkDatabase_Impl { *; }
+
+# Keep Worker subclass constructors so WorkManager can instantiate them.
+-keep class * extends androidx.work.Worker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+-keep class * extends androidx.work.CoroutineWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+-keep class * extends androidx.work.ListenableWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+
+# Suppress notes about missing WorkManager internals (safe to ignore).
+-dontnote androidx.work.**

@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ختمة</string>
+
+    <!-- Bottom navigation -->
+    <string name="today">ورد اليوم</string>
+    <string name="athkar">الأذكار</string>
+    <string name="prayers">الصلاة</string>
+    <string name="index">الفهرس</string>
+    <string name="more">المزيد</string>
+
+    <!-- Theme settings -->
+    <string name="theme_settings">المظهر</string>
+    <string name="theme_system">إعداد النظام</string>
+    <string name="theme_light">فاتح</string>
+    <string name="theme_dark">داكن</string>
+
+    <!-- Language settings -->
+    <string name="language_settings">اللغة</string>
+    <string name="language_system_default">إعداد النظام</string>
+    <string name="language_english">English — الإنجليزية</string>
+    <string name="language_arabic">العربية</string>
+
+    <!-- PreferenceSwitchWithDivider accessibility -->
+    <string name="open_settings">فتح الإعدادات</string>
+
+    <!-- AboutPage -->
+    <string name="about_page">حول</string>
+    <string name="about_app">التطبيق</string>
+    <string name="about_links">روابط</string>
+    <string name="version">الإصدار</string>
+    <string name="about_translate">المساهمة في الترجمة</string>
+    <string name="about_translate_desc">ساهم في ترجمة تطبيق ختمة إلى لغتك</string>
+    <string name="about_source_code">الشفرة المصدرية</string>
+    <string name="about_source_code_desc">عرض الشفرة المصدرية على GitHub</string>
+
+    <!-- Shared UI -->
+    <string name="back">رجوع</string>
+    <string name="next">التالي</string>
+    <string name="navigate_up">رجوع</string>
+
+    <!-- More tab — sections -->
+    <string name="more_support_us">ادعمنا</string>
+    <string name="more_current_khatmah">الختمة الحالية</string>
+    <string name="more_quranic_sunnahs">السنن القرآنية</string>
+    <string name="more_settings">الإعدادات</string>
+    <string name="more_prayer_times">أوقات الصلاة</string>
+    <string name="more_athkar_alarms">تنبيهات الأذكار</string>
+    <string name="more_sunnahs_alarms">تنبيهات السنن</string>
+    <string name="more_khatmah_app">تطبيق ختمة</string>
+
+    <!-- More tab — items -->
+    <string name="more_support_khatmah">دعم ختمة</string>
+    <string name="more_previous_sessions">الجلسات السابقة</string>
+    <string name="more_upcoming_sessions">الجلسات القادمة</string>
+    <string name="more_bookmark">الإشارة المرجعية</string>
+    <string name="more_surat_kahf">سورة الكهف</string>
+    <string name="more_surat_mulk">سورة الملك</string>
+    <string name="more_surat_baqarah">سورة البقرة</string>
+    <string name="more_daily_alarm">التنبيه اليومي</string>
+    <string name="more_start_new_khatmah">بدء ختمة جديدة</string>
+    <string name="more_prayer_times_settings">إعدادات أوقات الصلاة</string>
+    <string name="more_qibla_direction">اتجاه القبلة</string>
+    <string name="more_day_athkar_alarm">تنبيه أذكار الصباح</string>
+    <string name="more_day_athkar_time">وقت أذكار الصباح</string>
+    <string name="more_night_athkar_alarm">تنبيه أذكار المساء</string>
+    <string name="more_night_athkar_time">وقت أذكار المساء</string>
+    <string name="more_al_mulk_alarm">تنبيه سورة الملك</string>
+    <string name="more_al_mulk_time">وقت سورة الملك</string>
+    <string name="more_al_baqarah_alarm">تنبيه سورة البقرة</string>
+    <string name="more_al_baqarah_time">وقت سورة البقرة</string>
+    <string name="more_language">اللغة</string>
+    <string name="more_contact_us">تواصل معنا</string>
+    <string name="more_twitter">تابعنا على تويتر</string>
+    <string name="more_instagram">تابعنا على إنستغرام</string>
+    <string name="more_share_app">مشاركة التطبيق</string>
+    <string name="more_rate_khatmah">قيّم ختمة</string>
+
+    <!-- Notification test -->
+    <string name="notif_channel_test_name">اختبار</string>
+    <string name="notif_test_title">إشعار تجريبي</string>
+    <string name="notif_test_body">الإشعارات تعمل بشكل صحيح.</string>
+    <string name="notif_test_action">إرسال إشعار تجريبي</string>
+    <string name="notif_test_action_subtitle">تحقق من وصول الإشعارات</string>
+
+    <!-- Onboarding -->
+    <string name="skip">تخطى</string>
+    <string name="onboarding_lang_title">اللغة</string>
+    <string name="onboarding_lang_desc">اختر اللغة المفضلة للتطبيق.</string>
+
+    <!-- Notifications permission -->
+    <string name="onboarding_notif_title">ابقَ على المسار</string>
+    <string name="onboarding_notif_desc">اسمح بالإشعارات حتى نتمكن من تذكيرك بقراءة وردك اليومي وأذكارك.</string>
+    <string name="onboarding_notif_denied">يمكنك تفعيل الإشعارات لاحقاً من إعدادات جهازك.</string>
+    <string name="onboarding_notif_action">السماح بالإشعارات</string>
+    <string name="onboarding_notif_skip">المتابعة بدون إشعارات</string>
+
+    <!-- Location permission -->
+    <string name="onboarding_location_title">أوقات صلاتك</string>
+    <string name="onboarding_location_desc">اسمح بالوصول إلى الموقع لحساب أوقات الصلاة الدقيقة لمدينتك.</string>
+    <string name="onboarding_location_locating">جارٍ تحديد موقعك…</string>
+    <string name="onboarding_location_denied">تم رفض إذن الموقع. اختر مدينتك يدوياً.</string>
+    <string name="onboarding_location_action">استخدام موقعي</string>
+    <string name="onboarding_location_manual">اختيار يدوي</string>
+    <string name="onboarding_location_not_found">تعذّر تحديد موقعك. حاول مرة أخرى أو اختر يدوياً.</string>
+    <string name="onboarding_location_disabled_desc">خدمات الموقع متوقفة. يرجى تفعيلها لحساب أوقات الصلاة بدقة.</string>
+    <string name="onboarding_location_enable_gps">تفعيل خدمات الموقع</string>
+    <string name="onboarding_location_retry">إعادة المحاولة</string>
+
+    <string name="location_title">موقعك</string>
+    <string name="location_desc">اسمح بالوصول ليتم حساب أوقات الصلاة لمدينتك.</string>
+    <string name="location_denied_desc">تم رفض الوصول إلى الموقع. اختر مدينتك يدويًا بدلًا من ذلك.</string>
+    <string name="location_failed_desc">تعذر تحديد موقعك. اختر مدينتك يدويًا أو حاول مرة أخرى.</string>
+    <string name="location_grant">منح الإذن</string>
+    <string name="location_locating">جارٍ تحديد الموقع…</string>
+    <string name="location_choose_manually">اختيار يدوي</string>
+    <string name="select_country">اختر البلد</string>
+    <string name="select_city">اختر المدينة</string>
+    <string name="search">بحث…</string>
+    <string name="no_results">لا توجد نتائج</string>
+    <string name="network_error">تعذّر التحميل. تحقق من اتصالك.</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="geocode_error">تعذّر تحديد الإحداثيات. حاول مرة أخرى.</string>
+
+    <!-- Manual location -->
+    <string name="manual_location_title">حدّد موقعك</string>
+    <string name="manual_location_desc">أدخل اسم مدينتك لحساب مواقيت الصلاة الدقيقة.</string>
+    <string name="manual_location_hint">اسم المدينة…</string>
+    <string name="manual_location_search">بحث</string>
+    <string name="manual_location_searching">جارٍ البحث…</string>
+    <string name="manual_location_not_found">لم يتم العثور على المدينة. جرب كتابة مختلفة أو مدينة مجاورة.</string>
+
+    <!-- Today tab -->
+    <string name="today_refresh_prayers">تحديث أوقات الصلاة</string>
+    <string name="today_refreshing">جارٍ تحديث أوقات الصلاة…</string>
+
+    <!-- Prayers tab screen -->
+    <string name="prayers_screen_title">أوقات الصلاة</string>
+    <string name="prayers_till">حتى %s</string>
+    <string name="prayers_city_unknown">موقع غير معروف</string>
+    <string name="prayers_settings">إعدادات الصلاة</string>
+    <string name="prayers_qibla">اتجاه القبلة</string>
+    <string name="prayers_next_fajr">التالي: فجر الغد</string>
+    <string name="prayers_alarm_on">إيقاف المنبه</string>
+    <string name="prayers_alarm_off">تشغيل المنبه</string>
+    <string name="prayers_today">اليوم</string>
+    <string name="prayers_location_disabled">خدمات الموقع غير مفعلة</string>
+    <string name="prayers_location_permission_denied">تم رفض إذن الموقع</string>
+    <string name="prayers_enable_location">تفعيل الموقع</string>
+    <string name="prayers_prev_day">اليوم السابق</string>
+    <string name="prayers_next_day">اليوم التالي</string>
+    <string name="prayers_requires_android_8">أوقات الصلاة تتطلب Android 8.0 أو أعلى</string>
+
+    <!-- Individual prayer names -->
+    <string name="prayer_fajr">الفجر</string>
+    <string name="prayer_sunrise">الشروق</string>
+    <string name="prayer_dhuhr">الظهر</string>
+    <string name="prayer_asr">العصر</string>
+    <string name="prayer_maghrib">المغرب</string>
+    <string name="prayer_isha">العشاء</string>
+
+    <!-- Hijri calendar -->
+    <string name="hijri_year_suffix">هـ</string>
+    <string-array name="hijri_months">
+        <item>محرم</item>
+        <item>صفر</item>
+        <item>ربيع الأول</item>
+        <item>ربيع الثاني</item>
+        <item>جمادى الأولى</item>
+        <item>جمادى الثانية</item>
+        <item>رجب</item>
+        <item>شعبان</item>
+        <item>رمضان</item>
+        <item>شوال</item>
+        <item>ذو القعدة</item>
+        <item>ذو الحجة</item>
+    </string-array>
+
+    <!-- ── Prayer Settings ────────────────────────────────────────────────── -->
+
+    <!-- Main settings page -->
+    <string name="prayer_settings_title">إعدادات أوقات الصلاة</string>
+    <string name="prayer_settings_location">الموقع</string>
+    <string name="prayer_settings_auto_location">تحديد الموقع تلقائيًا</string>
+    <string name="prayer_settings_manual_location">البحث عن الموقع يدويًا</string>
+    <string name="prayer_settings_calc_section">حساب أوقات الصلاة</string>
+    <string name="prayer_settings_auto">الإعدادات التلقائية</string>
+    <string name="prayer_settings_calc_method">طريقة الحساب</string>
+    <string name="prayer_settings_juristic">المذهب الفقهي</string>
+    <string name="prayer_settings_dst">التوقيت الصيفي</string>
+    <string name="prayer_settings_corrections">التصحيحات اليدوية</string>
+    <string name="prayer_settings_higher_lat">خطوط العرض العالية</string>
+
+    <!-- Juristic method options -->
+    <string name="juristic_shafi">شافعي، مالكي، حنبلي</string>
+    <string name="juristic_hanafi">حنفي</string>
+
+    <!-- DST options -->
+    <string name="dst_automatic">تلقائي</string>
+    <string name="dst_plus_one">‎+1 ساعة</string>
+    <string name="dst_minus_one">‎-1 ساعة</string>
+
+    <!-- Higher latitude options -->
+    <string name="higher_lat_none">لا شيء</string>
+    <string name="higher_lat_middle">منتصف الليل</string>
+    <string name="higher_lat_seventh">سُبع الليل</string>
+    <string name="higher_lat_angle">الطريقة الزاوية</string>
+
+    <!-- Manual corrections page -->
+    <string name="corrections_all_default">الافتراضي</string>
+    <string name="corrections_customized">مخصص</string>
+    <string name="corrections_reset">إعادة الضبط</string>
+    <string name="corrections_mins">د</string>
+
+    <!-- Calculation method list item subtitle -->
+    <string name="calc_method_subtitle">الفجر: %1$.1f° / العشاء: %2$s</string>
+    <string name="calc_method_isha_angle">%1$.1f°</string>
+    <string name="calc_method_isha_mins">%1$d دقيقة بعد المغرب</string>
+
+    <!-- ── Adhkar categories ────────────────────────────────────────────────── -->
+    <string name="adhkar_morning">أذكار الصباح</string>
+    <string name="adhkar_evening">أذكار المساء</string>
+    <string name="adhkar_sleep">أذكار النوم</string>
+    <string name="adhkar_after_prayer">أذكار الصلاة</string>
+    <string name="adhkar_wakeup">أذكار الاستيقاظ</string>
+    <string name="adhkar_mosque">أذكار المسجد</string>
+    <string name="adhkar_maathura">أدعية مأثورة</string>
+    <string name="adhkar_quran_duas">أدعية قرآنية</string>
+    <string name="adhkar_travel">دعاء السفر</string>
+    <string name="adhkar_ruqyah">الرقية الشرعية</string>
+
+    <!-- ── Dhikr reader ────────────────────────────────────────────────────── -->
+
+    <!-- Action buttons -->
+    <string name="dhikr_read">قراءة</string>
+    <string name="dhikr_next">التالي</string>
+    <string name="dhikr_done">تم</string>
+    <string name="dhikr_share">مشاركة الذكر</string>
+    <string name="dhikr_font_size">حجم الخط</string>
+
+    <!-- Completion slide -->
+    <!-- %s is replaced with the category name e.g. "أذكار الصباح" -->
+    <string name="adhkar_completed">لقد أتممت قراءة\n%s</string>
+
+    <!-- Repetition count labels -->
+    <string name="rep_once">مرة واحدة</string>
+    <string name="rep_twice">مرتان</string>
+    <string name="rep_three">ثلاث مرات</string>
+    <string name="rep_seven">سبع مرات</string>
+    <string name="rep_ten">عشر مرات</string>
+    <string name="rep_thirty_three">ثلاثًا وثلاثين مرة</string>
+    <string name="rep_hundred">مئة مرة</string>
+    <!-- Fallback: %d is replaced with the numeric count -->
+    <string name="rep_n_times">%d مرات</string>
+</resources>
