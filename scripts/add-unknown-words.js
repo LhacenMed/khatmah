@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Usage: node add-unknown-words.js
+// Usage: node ./scripts/add-unknown-words.js
 // Runs cspell on project, extracts unknown words, adds to .vscode/settings.json
 
 const fs = require("fs");

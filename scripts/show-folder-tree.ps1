@@ -1,6 +1,6 @@
 # Show-FolderTree.ps1
 # Displays a tree-like structure of all files and folders in a given directory
-# run: .\show-folder-tree.ps1 -Path "C:\Users\lhacenmed\AndroidStudioProjects\Khatmah\app\src\main"
+# run: .\scripts\show-folder-tree.ps1 -Path "C:\Users\lhacenmed\AndroidStudioProjects\Khatmah\app\src\main"
 param (
     [Parameter(Mandatory = $false)]
     [string]$Path = ".",
