@@ -52,4 +52,4 @@ val Typography = Typography().run {
 }
 
 private fun TextStyle.styled(): TextStyle =
-    copy(fontFamily = CairoFamily, textDirection = TextDirection.Content)
+    copy(fontFamily = DinNextLtFamily, textDirection = TextDirection.Content)
