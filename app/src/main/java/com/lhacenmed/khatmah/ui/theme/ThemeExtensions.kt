@@ -5,7 +5,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.google.android.material.color.MaterialColors
@@ -39,7 +38,7 @@ object FixedAccentColors {
 
 /** Title style used by preference list items — matches Material You settings conventions. */
 val preferenceTitle = TextStyle(
-    fontFamily = FontFamily.Default,
+    fontFamily = CairoFamily,
     fontWeight = FontWeight.Normal,
     fontSize   = 20.sp,
     lineHeight = 24.sp,
