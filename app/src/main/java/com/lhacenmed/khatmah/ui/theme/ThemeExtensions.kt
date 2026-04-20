@@ -38,7 +38,7 @@ object FixedAccentColors {
 
 /** Title style used by preference list items — matches Material You settings conventions. */
 val preferenceTitle = TextStyle(
-    fontFamily = DinNextLtFamily,
+    fontFamily = NotoKufiFamily,
     fontWeight = FontWeight.Normal,
     fontSize   = 20.sp,
     lineHeight = 24.sp,

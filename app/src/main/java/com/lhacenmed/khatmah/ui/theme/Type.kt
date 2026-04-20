@@ -38,6 +38,16 @@ val CairoFamily = FontFamily(
     Font(R.font.cairo_medium,       FontWeight.Medium),
     Font(R.font.cairo_semi_bold,       FontWeight.SemiBold),
 )
+val NotoKufiFamily = FontFamily(
+    Font(R.font.noto_kufi_extra_light, FontWeight.ExtraLight),
+    Font(R.font.noto_kufi_light,       FontWeight.Light),
+    Font(R.font.noto_kufi_regular,     FontWeight.Normal),
+    Font(R.font.noto_kufi_bold,        FontWeight.Bold),
+    Font(R.font.noto_kufi_extra_bold,  FontWeight.ExtraBold),
+    Font(R.font.noto_kufi_black,       FontWeight.Black),
+    Font(R.font.noto_kufi_medium,       FontWeight.Medium),
+    Font(R.font.noto_kufi_semi_bold,       FontWeight.SemiBold),
+)
 
 // TextDirection.Content: Compose text auto-resolves direction based on locale (RTL for Arabic, LTR for English)
 val Typography = Typography().run {
@@ -61,4 +71,4 @@ val Typography = Typography().run {
 }
 
 private fun TextStyle.styled(): TextStyle =
-    copy(fontFamily = DinNextLtFamily, textDirection = TextDirection.Content)
+    copy(fontFamily = NotoKufiFamily, textDirection = TextDirection.Content)
