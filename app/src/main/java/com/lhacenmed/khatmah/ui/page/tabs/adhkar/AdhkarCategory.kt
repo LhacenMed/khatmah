@@ -1,85 +1,55 @@
-package com.lhacenmed.khatmah.ui.page.tabs.adhkar
+package com.lhacenmed.khatmah.data.adhkar
 
 import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.Color
-import com.lhacenmed.khatmah.R
 
 /**
- * A single Adhkar category rendered as a card in the grid.
+ * Source of a category card icon.
  *
- * [span] = 1 → half-width cell · [span] = 2 → full-width cell.
+ * [Res]  → built-in vector drawable (seeded categories).
+ * [Uri]  → user-provided image file path (supports PNG/JPG/SVG via Coil).
+ * [None] → no icon.
+ */
+sealed class IconSource {
+    data class Res(@DrawableRes val resId: Int) : IconSource()
+    data class Uri(val path: String) : IconSource()
+    object None : IconSource()
+}
+
+/**
+ * A single Adhkar category as a UI model, sourced from the database.
+ *
+ * [span] = 1 → half-width grid cell.
+ * [span] = 2 → full-width grid cell.
  */
 data class AdhkarCategory(
     val id: String,
-    @StringRes val titleRes: Int,
-    @DrawableRes val iconRes: Int,
+    val title: String,
+    val iconSource: IconSource = IconSource.None,
     val color: Color,
     val span: Int = 1,
 )
 
-/** Ordered list powering the Adhkar grid. */
-val adhkarCategories: List<AdhkarCategory> = listOf(
-    AdhkarCategory(
-        id       = "morning",
-        titleRes = R.string.adhkar_morning,
-        iconRes  = R.drawable.ic_fajr,
-        color    = Color(0xFF1565C0),
-        span     = 2,
-    ),
-    AdhkarCategory(
-        id       = "evening",
-        titleRes = R.string.adhkar_evening,
-        iconRes  = R.drawable.ic_isha,
-        color    = Color(0xFF4527A0),
-        span     = 2,
-    ),
-    AdhkarCategory(
-        id       = "after_prayer",
-        titleRes = R.string.adhkar_after_prayer,
-        iconRes  = R.drawable.ic_mosque,
-        color    = Color(0xFF2E7D32),
-    ),
-    AdhkarCategory(
-        id       = "sleep",
-        titleRes = R.string.adhkar_sleep,
-        iconRes  = R.drawable.ic_isha,
-        color    = Color(0xFF6A1B9A),
-    ),
-    AdhkarCategory(
-        id       = "mosque",
-        titleRes = R.string.adhkar_mosque,
-        iconRes  = R.drawable.ic_mosque,
-        color    = Color(0xFFBF360C),
-    ),
-    AdhkarCategory(
-        id       = "wakeup",
-        titleRes = R.string.adhkar_wakeup,
-        iconRes  = R.drawable.ic_sunrise,
-        color    = Color(0xFF00838F),
-    ),
-    AdhkarCategory(
-        id       = "quran_duas",
-        titleRes = R.string.adhkar_quran_duas,
-        iconRes  = R.drawable.ic_book,
-        color    = Color(0xFFAFB42B),
-    ),
-    AdhkarCategory(
-        id       = "ruqyah",
-        titleRes = R.string.adhkar_ruqyah,
-        iconRes  = R.drawable.ic_athkar,
-        color    = Color(0xFF006064),
-    ),
-    AdhkarCategory(
-        id       = "maathura",
-        titleRes = R.string.adhkar_maathura,
-        iconRes  = R.drawable.ic_book,
-        color    = Color(0xFF558B2F),
-    ),
-    AdhkarCategory(
-        id       = "travel",
-        titleRes = R.string.adhkar_travel,
-        iconRes  = R.drawable.ic_athkar,
-        color    = Color(0xFF880E4F),
-    ),
+// ── Built-in seed descriptors ─────────────────────────────────────────────────
+// Used only once during first-launch DB seeding; afterwards everything lives in DB.
+
+internal data class BuiltInCategoryDescriptor(
+    val id: String,
+    val titleResName: String,
+    val iconResName: String,
+    val colorArgb: Int,
+    val span: Int = 1,
+)
+
+internal val builtInDescriptors: List<BuiltInCategoryDescriptor> = listOf(
+    BuiltInCategoryDescriptor("morning",      "adhkar_morning",      "ic_fajr",    0xFF1565C0.toInt(), 2),
+    BuiltInCategoryDescriptor("evening",      "adhkar_evening",      "ic_isha",    0xFF4527A0.toInt(), 2),
+    BuiltInCategoryDescriptor("after_prayer", "adhkar_after_prayer", "ic_mosque",  0xFF2E7D32.toInt()),
+    BuiltInCategoryDescriptor("sleep",        "adhkar_sleep",        "ic_isha",    0xFF6A1B9A.toInt()),
+    BuiltInCategoryDescriptor("mosque",       "adhkar_mosque",       "ic_mosque",  0xFFBF360C.toInt()),
+    BuiltInCategoryDescriptor("wakeup",       "adhkar_wakeup",       "ic_sunrise", 0xFF00838F.toInt()),
+    BuiltInCategoryDescriptor("quran_duas",   "adhkar_quran_duas",   "ic_book",    0xFFAFB42B.toInt()),
+    BuiltInCategoryDescriptor("ruqyah",       "adhkar_ruqyah",       "ic_athkar",  0xFF006064.toInt()),
+    BuiltInCategoryDescriptor("maathura",     "adhkar_maathura",     "ic_book",    0xFF558B2F.toInt()),
+    BuiltInCategoryDescriptor("travel",       "adhkar_travel",       "ic_athkar",  0xFF880E4F.toInt()),
 )

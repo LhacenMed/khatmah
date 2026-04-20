@@ -1,6 +1,8 @@
 package com.lhacenmed.khatmah.ui.page.tabs.adhkar
 
 import android.content.Intent
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -29,6 +31,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,6 +44,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,8 +68,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.data.adhkar.AdhkarData
 import com.lhacenmed.khatmah.data.adhkar.Dhikr
 import com.lhacenmed.khatmah.data.adhkar.DhikrParagraph
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
@@ -132,17 +136,40 @@ private fun repLabel(count: Int): String = when (count) {
  */
 @Composable
 fun AdhkarDetailPage(categoryId: String) {
-    val nav     = LocalNavController.current
-    val context = LocalContext.current
+    val nav      = LocalNavController.current
+    val context  = LocalContext.current
+    val activity = LocalActivity.current as ComponentActivity
 
-    val category = remember(categoryId) { adhkarCategories.find { it.id == categoryId } }
-    val adhkar   = remember(categoryId) { AdhkarData.forCategory(categoryId) }
+    val vm: AdhkarViewModel = viewModel(activity)
+    val state by vm.uiState.collectAsState()
 
-    // Nothing to show — navigate back immediately.
-    if (adhkar.isEmpty()) {
+    // Category title — sourced from the live ViewModel state
+    val category = remember(categoryId, state.categories) {
+        state.categories.find { it.id == categoryId }
+    }
+    // Dhikr list — loaded from DB on first composition
+    var adhkar by remember { mutableStateOf<List<Dhikr>>(emptyList()) }
+    var isDhikrLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(categoryId) {
+        adhkar = vm.getDhikrForCategory(categoryId)
+        isDhikrLoading = false
+    }
+
+    // Empty / not-found guard
+    if (!isDhikrLoading && adhkar.isEmpty()) {
         LaunchedEffect(Unit) { nav.popBackStack() }
         return
     }
+    if (isDhikrLoading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    // categoryName now comes from the DB-backed model
+    val categoryName = category?.title.orEmpty()
 
     val totalPages = adhkar.size + 1        // last page is the completion slide
     val pagerState = rememberPagerState { totalPages }
@@ -217,8 +244,6 @@ fun AdhkarDetailPage(categoryId: String) {
             )
         )
     }
-
-    val categoryName = category?.let { stringResource(it.titleRes) }.orEmpty()
 
     // ── UI ────────────────────────────────────────────────────────────────────
 
@@ -392,7 +417,7 @@ private fun DhikrBody(dhikr: Dhikr, fontSize: DhikrFontSize) {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(start = 20.dp, end = 20.dp, top = 28.dp, bottom = 50.dp),
+            .padding(start = 20.dp, end = 20.dp, top = 28.dp, bottom = 80.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         dhikr.paragraphs.forEachIndexed { i, paragraph ->
@@ -454,10 +479,10 @@ private fun CompletionBody(categoryName: String) {
                 modifier           = Modifier.size(72.dp),
             )
             Text(
-                text      = stringResource(R.string.adhkar_completed, categoryName),
-                style     = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center,
-                color     = MaterialTheme.colorScheme.onBackground,
+                text       = stringResource(R.string.adhkar_completed, categoryName),
+                style      = MaterialTheme.typography.headlineSmall,
+                textAlign  = TextAlign.Center,
+                color      = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Medium,
             )
         }
@@ -510,12 +535,12 @@ private fun DhikrBottomBar(
             // share button to CenterEnd — the circle is always at the exact
             // horizontal midpoint of the screen regardless of sibling widths.
             Box(
-                modifier          = Modifier
+                modifier         = Modifier
                     .fillMaxWidth()
                     .graphicsLayer {
                         alpha = if (isCompletionPage) 0f else 1f
                     },
-                contentAlignment  = Alignment.Center,
+                contentAlignment = Alignment.Center,
             ) {
                 // Repetition label — logical start (physical right in RTL).
                 Text(
@@ -556,11 +581,10 @@ private fun DhikrBottomBar(
 
             // ── Primary action ────────────────────────────────────────────────
             Button(
-                onClick  = (
-                        when {
-                            isCompletionPage -> onBack
-                            else             -> onAction
-                        }),
+                onClick  = when {
+                    isCompletionPage -> onBack
+                    else             -> onAction
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(45.dp),

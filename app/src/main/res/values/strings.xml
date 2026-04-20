@@ -259,4 +259,40 @@
     <string name="rep_hundred">One hundred times</string>
     <!-- Fallback: %d is replaced with the numeric count -->
     <string name="rep_n_times">%d times</string>
+
+    <!-- Adhkar CRUD -->
+    <string name="add_adhkar">New Adhkar</string>
+    <string name="create">Create</string>
+    <string name="delete">Delete</string>
+    <string name="select_all">Select all</string>
+    <string name="n_selected">%d selected</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
+
+    <!-- Add Adhkar page -->
+    <string name="adhkar_preview">Preview</string>
+    <string name="adhkar_card_section">Card Appearance</string>
+    <string name="adhkar_content_section">Adhkar Content</string>
+    <string name="adhkar_title_label">Title *</string>
+    <string name="adhkar_title_placeholder">Card title</string>
+    <string name="adhkar_color_label">Background color</string>
+    <string name="adhkar_icon_label">Icon (optional)</string>
+    <string name="adhkar_pick_image">Pick image</string>
+    <string name="adhkar_remove_icon">Remove</string>
+    <string name="adhkar_card_width_label">Card width</string>
+    <string name="adhkar_half_width">Half</string>
+    <string name="adhkar_full_width">Full width</string>
+    <string name="adhkar_add_dhikr">Add Dhikr</string>
+    <string name="adhkar_add_paragraph">Add paragraph</string>
+    <string name="adhkar_paragraph_body">Body</string>
+    <string name="adhkar_paragraph_quran">Quran</string>
+    <string name="adhkar_paragraph_note">Note</string>
+    <string name="adhkar_paragraph_body_hint">Enter supplication text…</string>
+    <string name="adhkar_paragraph_quran_hint">Enter Quranic verse…</string>
+    <string name="adhkar_paragraph_note_hint">Enter hadith source or footnote…</string>
+    <string name="adhkar_repetitions">Repetitions: %d</string>
+    <string name="adhkar_dhikr_n">Dhikr %d</string>
+
+    <!-- Color picker -->
+    <string name="color_picker_title">Pick a color</string>
 </resources>

@@ -41,8 +41,9 @@ object Route {
     fun quranReader(suraNum: Int = 0, ayaNum: Int = 0) =
         "quran_reader?suraNum=$suraNum&ayaNum=$ayaNum"
 
-    // ── Adhkar detail ─────────────────────────────────────────────────────────
+    // ── Adhkar ────────────────────────────────────────────────────────────────────
     const val ADHKAR_DETAIL = "adhkar_detail/{categoryId}"
+    const val ADD_ADHKAR    = "add_adhkar"           // ← NEW
 
     /** Builds the Adhkar detail route for [categoryId]. */
     fun adhkarDetail(categoryId: String) = "adhkar_detail/$categoryId"

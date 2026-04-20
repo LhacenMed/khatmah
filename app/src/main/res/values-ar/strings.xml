@@ -256,4 +256,40 @@
     <string name="rep_hundred">مئة مرة</string>
     <!-- Fallback: %d is replaced with the numeric count -->
     <string name="rep_n_times">%d مرات</string>
+
+    <!-- Adhkar CRUD -->
+    <string name="add_adhkar">أذكار جديدة</string>
+    <string name="create">إنشاء</string>
+    <string name="delete">حذف</string>
+    <string name="select_all">تحديد الكل</string>
+    <string name="n_selected">%d محدد</string>
+    <string name="cancel">إلغاء</string>
+    <string name="ok">موافق</string>
+
+    <!-- Add Adhkar page -->
+    <string name="adhkar_preview">معاينة</string>
+    <string name="adhkar_card_section">مظهر البطاقة</string>
+    <string name="adhkar_content_section">محتوى الأذكار</string>
+    <string name="adhkar_title_label">العنوان *</string>
+    <string name="adhkar_title_placeholder">عنوان البطاقة</string>
+    <string name="adhkar_color_label">لون الخلفية</string>
+    <string name="adhkar_icon_label">أيقونة (اختياري)</string>
+    <string name="adhkar_pick_image">اختر صورة</string>
+    <string name="adhkar_remove_icon">إزالة</string>
+    <string name="adhkar_card_width_label">عرض البطاقة</string>
+    <string name="adhkar_half_width">نصف</string>
+    <string name="adhkar_full_width">عرض كامل</string>
+    <string name="adhkar_add_dhikr">إضافة ذكر</string>
+    <string name="adhkar_add_paragraph">إضافة فقرة</string>
+    <string name="adhkar_paragraph_body">النص</string>
+    <string name="adhkar_paragraph_quran">قرآن</string>
+    <string name="adhkar_paragraph_note">ملاحظة</string>
+    <string name="adhkar_paragraph_body_hint">أدخل نص الدعاء…</string>
+    <string name="adhkar_paragraph_quran_hint">أدخل آية قرآنية…</string>
+    <string name="adhkar_paragraph_note_hint">أدخل مصدر الحديث أو ملاحظة…</string>
+    <string name="adhkar_repetitions">التكرار: %d</string>
+    <string name="adhkar_dhikr_n">ذكر %d</string>
+
+    <!-- Color picker -->
+    <string name="color_picker_title">اختر لونًا</string>
 </resources>

@@ -16,6 +16,7 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.Color
 import com.lhacenmed.khatmah.R
 
 // ── Scroll-fraction easing ────────────────────────────────────────────────────
@@ -34,8 +35,8 @@ val collapseFraction: (Float) -> Float = {
 
 /**
  * Stateless top app bar used by the main shell (tab screen).
- * No scroll behavior — the shell never scrolls its chrome.
- * Shows only a title at top-level; adds a back arrow on sub-pages.
+ * Accepts optional [actions] for tab-specific toolbar items (e.g. Athkar add/delete).
+ * [containerColor] can be overridden to signal contextual modes (e.g. selection).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +44,8 @@ fun AppTopBar(
     title: String,
     isTopLevel: Boolean,
     onBack: () -> Unit,
+    actions: @Composable RowScope.() -> Unit = {},
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
 ) {
     TopAppBar(
         title = { Text(title) },
@@ -56,8 +59,9 @@ fun AppTopBar(
                 }
             }
         },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor             = MaterialTheme.colorScheme.surfaceContainer,
+        actions = actions,
+        colors  = TopAppBarDefaults.topAppBarColors(
+            containerColor             = containerColor,
             titleContentColor          = MaterialTheme.colorScheme.onSurface,
             navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
             actionIconContentColor     = MaterialTheme.colorScheme.onSurfaceVariant,

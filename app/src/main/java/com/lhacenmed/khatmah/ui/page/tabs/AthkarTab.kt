@@ -1,6 +1,9 @@
 package com.lhacenmed.khatmah.ui.page.tabs
 
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -8,22 +11,26 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.component.AdhkarCard
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.ui.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.ui.nav.NavScreen
-import com.lhacenmed.khatmah.ui.page.tabs.adhkar.adhkarCategories
+import com.lhacenmed.khatmah.ui.page.tabs.adhkar.AdhkarViewModel
 
-// Items within this distance from the top animate directly; farther ones jump-then-animate.
 private const val SMOOTH_SCROLL_THRESHOLD = 4
 
-// ── Tab registration ────────────────────────────────────────────────────────────
+// ── Tab registration ──────────────────────────────────────────────────────────
 
 val AthkarTab = NavScreen(
     route    = Route.ATHKAR,
@@ -31,22 +38,31 @@ val AthkarTab = NavScreen(
     labelRes = R.string.athkar,
 ) { padding -> AthkarScreen(padding) }
 
-// ── Screen ────────────────────────────────────────────────────────────
+// ── Screen ────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun AthkarScreen(padding: PaddingValues) {
+    val activity    = LocalActivity.current as ComponentActivity
     val nav         = LocalNavController.current
-    val gridState   = rememberLazyGridState()
+    val vm: AdhkarViewModel = viewModel(activity)
+    val state       by vm.uiState.collectAsState()
     val scrollToTop = LocalScrollToTop.current
+    val gridState   = rememberLazyGridState()
 
-    // Two-phase scroll-to-top: instant jump near the top, then smooth animation.
+    // Scroll-to-top signal from tab re-tap
     LaunchedEffect(scrollToTop) {
         scrollToTop.collect {
-            if (gridState.firstVisibleItemIndex > SMOOTH_SCROLL_THRESHOLD) {
+            if (gridState.firstVisibleItemIndex > SMOOTH_SCROLL_THRESHOLD)
                 gridState.scrollToItem(SMOOTH_SCROLL_THRESHOLD)
-            }
             gridState.animateScrollToItem(0)
         }
+    }
+
+    if (state.isLoading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
     }
 
     LazyVerticalGrid(
@@ -63,13 +79,19 @@ private fun AthkarScreen(padding: PaddingValues) {
         verticalArrangement   = Arrangement.spacedBy(8.dp),
     ) {
         items(
-            items = adhkarCategories,
+            items = state.categories,
             key   = { it.id },
             span  = { item -> GridItemSpan(item.span) },
         ) { category ->
             AdhkarCard(
-                category = category,
-                onClick  = { nav.navigate(Route.adhkarDetail(category.id)) },
+                category      = category,
+                selectionMode = state.selectionMode,
+                selected      = category.id in state.selectedIds,
+                onClick       = {
+                    if (state.selectionMode) vm.toggleSelection(category.id)
+                    else nav.navigate(Route.adhkarDetail(category.id))
+                },
+                onLongClick   = { vm.enterSelectionMode(category.id) },
             )
         }
     }

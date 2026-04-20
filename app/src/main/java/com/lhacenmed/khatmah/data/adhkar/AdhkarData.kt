@@ -854,4 +854,7 @@ object AdhkarData {
 
     /** Returns the ordered dhikr list for [categoryId], or empty if unregistered. */
     fun forCategory(categoryId: String): List<Dhikr> = data[categoryId] ?: emptyList()
+
+    /** Exposes all built-in category dhikr maps for DB seeding. */
+    fun allCategories(): Map<String, List<Dhikr>> = data
 }
