@@ -4,7 +4,7 @@
 
     <!-- Bottom navigation -->
     <string name="today">Today</string>
-    <string name="athkar">Athkar</string>
+    <string name="adhkar">Adhkar</string>
     <string name="prayers">Prayers</string>
     <string name="index">Index</string>
     <string name="more">More</string>
@@ -37,6 +37,8 @@
     <!-- Shared UI -->
     <string name="back">Back</string>
     <string name="next">Next</string>
+    <string name="save">Save</string>
+    <string name="edit">Edit</string>
     <string name="navigate_up">Navigate up</string>
 
     <!-- More tab — sections -->
@@ -45,7 +47,7 @@
     <string name="more_quranic_sunnahs">Quranic Sunnahs</string>
     <string name="more_settings">Settings</string>
     <string name="more_prayer_times">Prayer Times</string>
-    <string name="more_athkar_alarms">Athkar Alarms</string>
+    <string name="more_adhkar_alarms">Adhkar Alarms</string>
     <string name="more_sunnahs_alarms">Sunnahs Alarms</string>
     <string name="more_khatmah_app">Khatmah App</string>
 
@@ -61,10 +63,10 @@
     <string name="more_start_new_khatmah">Start New Khatmah</string>
     <string name="more_prayer_times_settings">Prayer Times Settings</string>
     <string name="more_qibla_direction">Qibla Direction</string>
-    <string name="more_day_athkar_alarm">Day Athkar Alarm</string>
-    <string name="more_day_athkar_time">Day Athkar Time</string>
-    <string name="more_night_athkar_alarm">Night Athkar Alarm</string>
-    <string name="more_night_athkar_time">Night Athkar Time</string>
+    <string name="more_day_adhkar_alarm">Day Adhkar Alarm</string>
+    <string name="more_day_adhkar_time">Day Adhkar Time</string>
+    <string name="more_night_adhkar_alarm">Night Adhkar Alarm</string>
+    <string name="more_night_adhkar_time">Night Adhkar Time</string>
     <string name="more_al_mulk_alarm">Al-Mulk Alarm</string>
     <string name="more_al_mulk_time">Al-Mulk Time</string>
     <string name="more_al_baqarah_alarm">Al-Baqarah Alarm</string>
@@ -94,7 +96,7 @@
 
     <!-- Notifications permission -->
     <string name="onboarding_notif_title">Stay on Track</string>
-    <string name="onboarding_notif_desc">Allow notifications so we can remind you to read your daily Quran portion and Athkar.</string>
+    <string name="onboarding_notif_desc">Allow notifications so we can remind you to read your daily Quran portion and Adhkar.</string>
     <string name="onboarding_notif_denied">You can enable notifications later from your device settings.</string>
     <string name="onboarding_notif_action">Allow Notifications</string>
     <string name="onboarding_notif_skip">Continue Without Notifications</string>
@@ -269,7 +271,7 @@
     <string name="cancel">Cancel</string>
     <string name="ok">OK</string>
 
-    <!-- Add Adhkar page -->
+    <!-- Add / Edit Adhkar page -->
     <string name="adhkar_preview">Preview</string>
     <string name="adhkar_card_section">Card Appearance</string>
     <string name="adhkar_content_section">Adhkar Content</string>
@@ -278,6 +280,7 @@
     <string name="adhkar_color_label">Background color</string>
     <string name="adhkar_icon_label">Icon (optional)</string>
     <string name="adhkar_pick_image">Pick image</string>
+    <string name="adhkar_replace_icon">Replace icon</string>
     <string name="adhkar_remove_icon">Remove</string>
     <string name="adhkar_card_width_label">Card width</string>
     <string name="adhkar_half_width">Half</string>
@@ -292,6 +295,7 @@
     <string name="adhkar_paragraph_note_hint">Enter hadith source or footnote…</string>
     <string name="adhkar_repetitions">Repetitions: %d</string>
     <string name="adhkar_dhikr_n">Dhikr %d</string>
+    <string name="adhkar_reset_defaults">Reset to Default</string>
 
     <!-- Color picker -->
     <string name="color_picker_title">Pick a color</string>

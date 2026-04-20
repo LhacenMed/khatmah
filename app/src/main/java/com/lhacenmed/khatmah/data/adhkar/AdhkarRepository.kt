@@ -46,7 +46,7 @@ class AdhkarRepository(private val context: Context) {
         "ic_mosque"  to R.drawable.ic_mosque,
         "ic_sunrise" to R.drawable.ic_sunrise,
         "ic_book"    to R.drawable.ic_book,
-        "ic_athkar"  to R.drawable.ic_athkar,
+        "ic_adhkar"  to R.drawable.ic_adhkar,
     )
 
     // ── Seeding ───────────────────────────────────────────────────────────────
@@ -163,6 +163,96 @@ class AdhkarRepository(private val context: Context) {
         } finally {
             db.endTransaction()
         }
+    }
+
+    /**
+     * Updates an existing category row and replaces its entire dhikr list.
+     * Always uses [title_text] so that title changes survive locale switches;
+     * [resetCategoryToDefaults] restores [title_res] for built-ins.
+     */
+    suspend fun updateCategory(
+        category: AdhkarCategory,
+        dhikrList: List<Dhikr>,
+    ) = withContext(Dispatchers.IO) {
+        db.beginTransaction()
+        try {
+            db.update("categories", ContentValues().apply {
+                putNull("title_res")
+                put("title_text", category.title)
+                put("color_argb", category.color.toArgb())
+                put("span", category.span)
+                when (val src = category.iconSource) {
+                    is IconSource.Res  -> { put("icon_res", context.resources.getResourceEntryName(src.resId)); putNull("icon_uri") }
+                    is IconSource.Uri  -> { putNull("icon_res"); put("icon_uri", src.path) }
+                    is IconSource.None -> { putNull("icon_res"); putNull("icon_uri") }
+                }
+            }, "id = ?", arrayOf(category.id))
+
+            // Replace dhikr list entirely
+            db.delete("dhikr", "category_id = ?", arrayOf(category.id))
+            dhikrList.forEachIndexed { idx, dhikr ->
+                db.insert("dhikr", null, ContentValues().apply {
+                    put("category_id", category.id)
+                    put("sort_order", idx)
+                    put("repetitions", dhikr.repetitions)
+                    put("paragraphs", dhikr.paragraphs.toJson())
+                })
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /**
+     * Restores a built-in category to its original descriptor values and original dhikr
+     * from [AdhkarData]. No-op for user-created categories.
+     */
+    suspend fun resetCategoryToDefaults(categoryId: String) = withContext(Dispatchers.IO) {
+        val desc         = builtInDescriptors.firstOrNull { it.id == categoryId } ?: return@withContext
+        val originalDhikr = AdhkarData.allCategories()[categoryId]             ?: return@withContext
+
+        db.beginTransaction()
+        try {
+            db.update("categories", ContentValues().apply {
+                put("title_res", desc.titleResName)
+                putNull("title_text")
+                put("icon_res", desc.iconResName)
+                putNull("icon_uri")
+                put("color_argb", desc.colorArgb)
+                put("span", desc.span)
+            }, "id = ?", arrayOf(categoryId))
+
+            db.delete("dhikr", "category_id = ?", arrayOf(categoryId))
+            originalDhikr.forEachIndexed { idx, dhikr ->
+                db.insert("dhikr", null, ContentValues().apply {
+                    put("category_id", categoryId)
+                    put("sort_order", idx)
+                    put("repetitions", dhikr.repetitions)
+                    put("paragraphs", dhikr.paragraphs.toJson())
+                })
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /**
+     * Returns the original defaults for a built-in category, resolved from
+     * in-memory data (no DB access). Returns null for user-created categories.
+     */
+    fun getBuiltInDefaults(categoryId: String): BuiltInDefaults? {
+        val desc      = builtInDescriptors.firstOrNull { it.id == categoryId } ?: return null
+        val titleResId = builtInTitleIds[desc.titleResName]                    ?: return null
+        val dhikrList = AdhkarData.allCategories()[categoryId]                 ?: return null
+        return BuiltInDefaults(
+            title     = context.getString(titleResId),
+            color     = Color(desc.colorArgb),
+            iconResId = builtInIconIds[desc.iconResName],
+            span      = desc.span,
+            dhikrList = dhikrList,
+        )
     }
 
     suspend fun deleteCategories(ids: List<String>) = withContext(Dispatchers.IO) {

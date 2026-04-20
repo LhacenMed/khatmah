@@ -60,8 +60,8 @@ val MoreTab = NavScreen(
 private fun MoreScreen(padding: PaddingValues) {
     // ── Alarm switch states ────────────────────────────────────────────────────
     // Persisted across recompositions; drives enabled state on paired time items.
-    var dayAthkarOn      by rememberSaveable { mutableStateOf(true) }
-    var nightAthkarOn    by rememberSaveable { mutableStateOf(true) }
+    var dayAdhkarOn      by rememberSaveable { mutableStateOf(true) }
+    var nightAdhkarOn    by rememberSaveable { mutableStateOf(true) }
     var alMulkAlarmOn    by rememberSaveable { mutableStateOf(false) }
     var alBaqarahAlarmOn by rememberSaveable { mutableStateOf(false) }
 
@@ -171,38 +171,38 @@ private fun MoreScreen(padding: PaddingValues) {
             )
         }
 
-        // ── Athkar Alarms ─────────────────────────────────────────────────────
-        item { PreferenceSubtitle(text = stringResource(R.string.more_athkar_alarms)) }
+        // ── Adhkar Alarms ─────────────────────────────────────────────────────
+        item { PreferenceSubtitle(text = stringResource(R.string.more_adhkar_alarms)) }
         item {
             PreferenceSwitch(
-                title     = stringResource(R.string.more_day_athkar_alarm),
+                title     = stringResource(R.string.more_day_adhkar_alarm),
                 icon      = Icons.Outlined.WbSunny,
-                isChecked = dayAthkarOn,
-                onClick   = { dayAthkarOn = !dayAthkarOn },
+                isChecked = dayAdhkarOn,
+                onClick   = { dayAdhkarOn = !dayAdhkarOn },
             )
         }
         item {
             PreferenceItem(
-                title        = stringResource(R.string.more_day_athkar_time),
+                title        = stringResource(R.string.more_day_adhkar_time),
                 icon         = Icons.Outlined.Schedule,
-                enabled      = dayAthkarOn,
-                trailingIcon = { TrailingTimeText(time = "07:00 AM", enabled = dayAthkarOn) },
+                enabled      = dayAdhkarOn,
+                trailingIcon = { TrailingTimeText(time = "07:00 AM", enabled = dayAdhkarOn) },
             )
         }
         item {
             PreferenceSwitch(
-                title     = stringResource(R.string.more_night_athkar_alarm),
+                title     = stringResource(R.string.more_night_adhkar_alarm),
                 icon      = Icons.Outlined.DarkMode,
-                isChecked = nightAthkarOn,
-                onClick   = { nightAthkarOn = !nightAthkarOn },
+                isChecked = nightAdhkarOn,
+                onClick   = { nightAdhkarOn = !nightAdhkarOn },
             )
         }
         item {
             PreferenceItem(
-                title        = stringResource(R.string.more_night_athkar_time),
+                title        = stringResource(R.string.more_night_adhkar_time),
                 icon         = Icons.Outlined.Schedule,
-                enabled      = nightAthkarOn,
-                trailingIcon = { TrailingTimeText(time = "05:30 PM", enabled = nightAthkarOn) },
+                enabled      = nightAdhkarOn,
+                trailingIcon = { TrailingTimeText(time = "05:30 PM", enabled = nightAdhkarOn) },
             )
         }
 

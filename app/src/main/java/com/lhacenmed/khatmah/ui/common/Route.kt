@@ -12,7 +12,7 @@ object Route {
 
     // ── Tabs (bottom navigation) ──────────────────────────────────────────────
     const val TODAY   = "today"
-    const val ATHKAR  = "athkar"
+    const val ADHKAR  = "adhkar"
     const val PRAYERS = "prayers"
     const val INDEX   = "index"
     const val MORE    = "more"
@@ -41,12 +41,25 @@ object Route {
     fun quranReader(suraNum: Int = 0, ayaNum: Int = 0) =
         "quran_reader?suraNum=$suraNum&ayaNum=$ayaNum"
 
-    // ── Adhkar ────────────────────────────────────────────────────────────────────
+    // ── Adhkar ────────────────────────────────────────────────────────────────
     const val ADHKAR_DETAIL = "adhkar_detail/{categoryId}"
-    const val ADD_ADHKAR    = "add_adhkar"           // ← NEW
+
+    /**
+     * Unified create / edit page for Adhkar categories.
+     * [categoryId] absent (empty) → create mode.
+     * [categoryId] present         → edit mode.
+     */
+    const val ADHKAR_EDITOR = "adhkar_editor?categoryId={categoryId}"
 
     /** Builds the Adhkar detail route for [categoryId]. */
     fun adhkarDetail(categoryId: String) = "adhkar_detail/$categoryId"
+
+    /**
+     * Navigates to create mode when [categoryId] is null,
+     * or edit mode when a [categoryId] is supplied.
+     */
+    fun adhkarEditor(categoryId: String? = null) =
+        "adhkar_editor?categoryId=${categoryId.orEmpty()}"
 
     // ── Onboarding ────────────────────────────────────────────────────────────
     const val ONBOARDING_LANGUAGE       = "onboarding_language"

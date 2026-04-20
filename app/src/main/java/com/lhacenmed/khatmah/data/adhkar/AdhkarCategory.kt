@@ -30,6 +30,18 @@ data class AdhkarCategory(
     val span: Int = 1,
 )
 
+/**
+ * Snapshot of a built-in category's original defaults.
+ * Used by [AdhkarEditorPage] to determine what has changed and enable "Reset to Default".
+ */
+data class BuiltInDefaults(
+    val title:     String,
+    val color:     Color,
+    val iconResId: Int?,
+    val span:      Int,
+    val dhikrList: List<Dhikr>,
+)
+
 // ── Built-in seed descriptors ─────────────────────────────────────────────────
 // Used only once during first-launch DB seeding; afterwards everything lives in DB.
 
@@ -49,7 +61,7 @@ internal val builtInDescriptors: List<BuiltInCategoryDescriptor> = listOf(
     BuiltInCategoryDescriptor("mosque",       "adhkar_mosque",       "ic_mosque",  0xFFBF360C.toInt()),
     BuiltInCategoryDescriptor("wakeup",       "adhkar_wakeup",       "ic_sunrise", 0xFF00838F.toInt()),
     BuiltInCategoryDescriptor("quran_duas",   "adhkar_quran_duas",   "ic_book",    0xFFAFB42B.toInt()),
-    BuiltInCategoryDescriptor("ruqyah",       "adhkar_ruqyah",       "ic_athkar",  0xFF006064.toInt()),
+    BuiltInCategoryDescriptor("ruqyah",       "adhkar_ruqyah",       "ic_adhkar",  0xFF006064.toInt()),
     BuiltInCategoryDescriptor("maathura",     "adhkar_maathura",     "ic_book",    0xFF558B2F.toInt()),
-    BuiltInCategoryDescriptor("travel",       "adhkar_travel",       "ic_athkar",  0xFF880E4F.toInt()),
+    BuiltInCategoryDescriptor("travel",       "adhkar_travel",       "ic_adhkar",  0xFF880E4F.toInt()),
 )

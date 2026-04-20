@@ -28,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Button
@@ -72,6 +73,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.data.adhkar.Dhikr
 import com.lhacenmed.khatmah.data.adhkar.DhikrParagraph
+import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.ui.theme.WarshFamily
 import kotlinx.coroutines.launch
@@ -133,6 +135,9 @@ private fun repLabel(count: Int): String = when (count) {
  *    its Surface background behind the navigation bar automatically (edge-to-edge).
  *  • The [RepCircle] is always composed; alpha = 0 when repetitions == 1, keeping
  *    the bottom-bar height stable across all dhikr pages.
+ *  • [state.version] is included in the dhikr [LaunchedEffect] key so that after
+ *    an edit or reset in [AdhkarEditorPage], the detail page automatically
+ *    re-fetches the updated dhikr list when the user returns.
  */
 @Composable
 fun AdhkarDetailPage(categoryId: String) {
@@ -147,11 +152,11 @@ fun AdhkarDetailPage(categoryId: String) {
     val category = remember(categoryId, state.categories) {
         state.categories.find { it.id == categoryId }
     }
-    // Dhikr list — loaded from DB on first composition
+    // Dhikr list — re-fetched whenever the VM version increments (post-edit/reset)
     var adhkar by remember { mutableStateOf<List<Dhikr>>(emptyList()) }
     var isDhikrLoading by remember { mutableStateOf(true) }
 
-    LaunchedEffect(categoryId) {
+    LaunchedEffect(categoryId, state.version) {
         adhkar = vm.getDhikrForCategory(categoryId)
         isDhikrLoading = false
     }
@@ -252,6 +257,7 @@ fun AdhkarDetailPage(categoryId: String) {
             DhikrTopBar(
                 title    = categoryName,
                 onBack   = { nav.popBackStack() },
+                onEdit   = { nav.navigate(Route.adhkarEditor(categoryId)) },
                 onResize = { fontSize = fontSize.next() },
             )
         },
@@ -320,8 +326,9 @@ fun AdhkarDetailPage(categoryId: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DhikrTopBar(
-    title: String,
-    onBack: () -> Unit,
+    title:    String,
+    onBack:   () -> Unit,
+    onEdit:   () -> Unit,
     onResize: () -> Unit,
 ) {
     TopAppBar(
@@ -335,6 +342,12 @@ private fun DhikrTopBar(
             }
         },
         actions = {
+            IconButton(onClick = onEdit) {
+                Icon(
+                    imageVector        = Icons.Outlined.Edit,
+                    contentDescription = stringResource(R.string.edit),
+                )
+            }
             IconButton(onClick = onResize) {
                 Icon(
                     imageVector        = Icons.Outlined.FormatSize,

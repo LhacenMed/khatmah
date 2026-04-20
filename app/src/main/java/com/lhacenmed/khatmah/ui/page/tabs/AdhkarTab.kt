@@ -27,25 +27,26 @@ import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.ui.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.ui.nav.NavScreen
 import com.lhacenmed.khatmah.ui.page.tabs.adhkar.AdhkarViewModel
+import com.lhacenmed.khatmah.ui.page.tabs.adhkar.AdhkarUiState
 
 private const val SMOOTH_SCROLL_THRESHOLD = 4
 
 // ── Tab registration ──────────────────────────────────────────────────────────
 
-val AthkarTab = NavScreen(
-    route    = Route.ATHKAR,
-    iconRes  = R.drawable.ic_athkar,
-    labelRes = R.string.athkar,
-) { padding -> AthkarScreen(padding) }
+val AdhkarTab = NavScreen(
+    route    = Route.ADHKAR,
+    iconRes  = R.drawable.ic_adhkar,
+    labelRes = R.string.adhkar,
+) { padding -> AdhkarScreen(padding) }
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun AthkarScreen(padding: PaddingValues) {
+private fun AdhkarScreen(padding: PaddingValues) {
     val activity    = LocalActivity.current as ComponentActivity
     val nav         = LocalNavController.current
     val vm: AdhkarViewModel = viewModel(activity)
-    val state       by vm.uiState.collectAsState()
+    val state: AdhkarUiState by vm.uiState.collectAsState()
     val scrollToTop = LocalScrollToTop.current
     val gridState   = rememberLazyGridState()
 

@@ -51,13 +51,14 @@ import com.lhacenmed.khatmah.ui.page.settings.appearance.LanguagePage
 import com.lhacenmed.khatmah.ui.page.settings.appearance.ThemeSettingsPage
 import com.lhacenmed.khatmah.ui.page.settings.prayers.*
 import com.lhacenmed.khatmah.ui.page.tabs.*
-import com.lhacenmed.khatmah.ui.page.tabs.adhkar.AddAdhkarPage
 import com.lhacenmed.khatmah.ui.page.tabs.adhkar.AdhkarDetailPage
+import com.lhacenmed.khatmah.ui.page.tabs.adhkar.AdhkarEditorPage
 import com.lhacenmed.khatmah.ui.page.tabs.adhkar.AdhkarViewModel
 import com.lhacenmed.khatmah.ui.page.quran.QuranReaderScreen
 import com.lhacenmed.khatmah.ui.page.quran.QuranSearchPage
 import com.lhacenmed.khatmah.util.OnboardingPrefs
 import com.lhacenmed.khatmah.widget.WidgetNavRequest
+import kotlinx.coroutines.flow.MutableSharedFlow
 
 // ─── Root composable ──────────────────────────────────────────────────────────
 
@@ -70,7 +71,7 @@ fun AppEntry() {
         if (OnboardingPrefs.isComplete(context)) Route.MAIN else Route.ONBOARDING_LANGUAGE
     }
 
-    val tabs  = listOf(TodayTab, AthkarTab, PrayersTab, IndexTab, MoreTab)
+    val tabs  = listOf(TodayTab, AdhkarTab, PrayersTab, IndexTab, MoreTab)
     val pages = listOf(ThemeSettingsPage, LanguagePage, AboutPage)
 
     val navController = rememberNavController()
@@ -153,6 +154,20 @@ fun AppEntry() {
             ) { QuranReaderScreen() }
             animatedComposable(Route.QURAN_SEARCH) { QuranSearchPage() }
 
+            // ── Adhkar editor (create + edit) ─────────────────────────────────
+            // categoryId empty → create mode; non-empty → edit mode.
+            animatedComposable(
+                route     = Route.ADHKAR_EDITOR,
+                arguments = listOf(
+                    navArgument("categoryId") { type = NavType.StringType; defaultValue = "" },
+                ),
+            ) { backStack ->
+                AdhkarEditorPage(
+                    categoryId = backStack.arguments?.getString("categoryId")
+                        .orEmpty().ifEmpty { null },
+                )
+            }
+
             // ── Adhkar detail ─────────────────────────────────────────────────
             animatedComposable(
                 route     = Route.ADHKAR_DETAIL,
@@ -164,9 +179,6 @@ fun AppEntry() {
                     categoryId = backStack.arguments?.getString("categoryId").orEmpty(),
                 )
             }
-
-            // ── Add Adhkar ────────────────────────────────────────────────────
-            animatedComposable(Route.ADD_ADHKAR) { AddAdhkarPage() }
         }
     }
 }
@@ -174,13 +186,13 @@ fun AppEntry() {
 // ─── Main shell ───────────────────────────────────────────────────────────────
 
 /**
- * Tab host screen with Athkar-aware top bar.
+ * Tab host screen with Adhkar-aware top bar.
  *
- * [AdhkarViewModel] is activity-scoped so [AthkarTab]'s grid and this top bar
+ * [AdhkarViewModel] is activity-scoped so [AdhkarTab]'s grid and this top bar
  * share the exact same instance — selection state stays in sync automatically.
  *
  * Back-press priority:
- *  1. If Athkar selection mode is active → exit selection mode.
+ *  1. If Adhkar selection mode is active → exit selection mode.
  *  2. If on any non-primary tab → return to tab 0 (Today).
  *  3. Otherwise fall through to system back.
  */
@@ -192,32 +204,32 @@ private fun MainScreen(
 ) {
     val nav      = LocalNavController.current
     val activity = LocalActivity.current as ComponentActivity
-    val athkarVm: AdhkarViewModel = viewModel(activity)
-    val athkarState by athkarVm.uiState.collectAsState()
+    val adhkarVm: AdhkarViewModel = viewModel(activity)
+    val adhkarState by adhkarVm.uiState.collectAsState()
 
-    val currentTab      = tabs[selectedIndex]
-    val isAthkarTab     = currentTab.route == Route.ATHKAR
-    val inAthkarSelect  = isAthkarTab && athkarState.selectionMode
+    val currentTab     = tabs[selectedIndex]
+    val isAdhkarTab    = currentTab.route == Route.ADHKAR
+    val inAdhkarSelect = isAdhkarTab && adhkarState.selectionMode
 
-    BackHandler(enabled = selectedIndex != 0 || inAthkarSelect) {
+    BackHandler(enabled = selectedIndex != 0 || inAdhkarSelect) {
         when {
-            inAthkarSelect -> athkarVm.exitSelectionMode()
+            inAdhkarSelect -> adhkarVm.exitSelectionMode()
             else           -> onSelect(0)
         }
     }
 
-    val scrollToTopFlows = remember { Array(tabs.size) { kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1) } }
+    val scrollToTopFlows = remember { Array(tabs.size) { MutableSharedFlow<Unit>(extraBufferCapacity = 1) } }
     val anchorViews      = remember { arrayOfNulls<View>(tabs.size) }
 
     // Top bar title: show selection count when in selection mode
     val topBarTitle = when {
-        inAthkarSelect -> stringResource(R.string.n_selected, athkarState.selectedIds.size)
+        inAdhkarSelect -> stringResource(R.string.n_selected, adhkarState.selectedIds.size)
         else           -> stringResource(currentTab.labelRes)
     }
 
     // Top bar container color highlights contextual (selection) mode
     val topBarColor = when {
-        inAthkarSelect -> MaterialTheme.colorScheme.primaryContainer
+        inAdhkarSelect -> MaterialTheme.colorScheme.primaryContainer
         else           -> MaterialTheme.colorScheme.surfaceContainer
     }
 
@@ -225,16 +237,16 @@ private fun MainScreen(
         topBar = {
             AppTopBar(
                 title          = topBarTitle,
-                isTopLevel     = !inAthkarSelect,
-                onBack         = { if (inAthkarSelect) athkarVm.exitSelectionMode() },
+                isTopLevel     = !inAdhkarSelect,
+                onBack         = { if (inAdhkarSelect) adhkarVm.exitSelectionMode() },
                 containerColor = topBarColor,
                 actions        = {
-                    if (isAthkarTab) {
-                        if (inAthkarSelect) {
+                    if (isAdhkarTab) {
+                        if (inAdhkarSelect) {
                             // Select-all toggle
-                            IconButton(onClick = athkarVm::toggleSelectAll) {
+                            IconButton(onClick = adhkarVm::toggleSelectAll) {
                                 Icon(
-                                    imageVector        = if (athkarState.allSelected)
+                                    imageVector        = if (adhkarState.allSelected)
                                         Icons.Default.CheckBox
                                     else
                                         Icons.Default.CheckBoxOutlineBlank,
@@ -242,15 +254,15 @@ private fun MainScreen(
                                 )
                             }
                             // Delete selected
-                            TextButton(onClick = athkarVm::deleteSelected) {
+                            TextButton(onClick = adhkarVm::deleteSelected) {
                                 Text(
                                     stringResource(R.string.delete),
                                     color = MaterialTheme.colorScheme.error,
                                 )
                             }
                         } else {
-                            // Add new adhkar
-                            IconButton(onClick = { nav.navigate(Route.ADD_ADHKAR) }) {
+                            // Add new adhkar category
+                            IconButton(onClick = { nav.navigate(Route.adhkarEditor()) }) {
                                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_adhkar))
                             }
                         }
@@ -267,7 +279,7 @@ private fun MainScreen(
                     if (idx >= 0) {
                         if (idx == selectedIndex) scrollToTopFlows[idx].tryEmit(Unit)
                         else {
-                            if (inAthkarSelect) athkarVm.exitSelectionMode()
+                            if (inAdhkarSelect) adhkarVm.exitSelectionMode()
                             onSelect(idx)
                         }
                     }

@@ -35,7 +35,7 @@ val collapseFraction: (Float) -> Float = {
 
 /**
  * Stateless top app bar used by the main shell (tab screen).
- * Accepts optional [actions] for tab-specific toolbar items (e.g. Athkar add/delete).
+ * Accepts optional [actions] for tab-specific toolbar items (e.g. Adhkar add/delete).
  * [containerColor] can be overridden to signal contextual modes (e.g. selection).
  */
 @OptIn(ExperimentalMaterial3Api::class)
