@@ -1,158 +1,178 @@
 package com.lhacenmed.khatmah.ui.page.quran
 
-import androidx.compose.ui.text.*
-import androidx.compose.ui.unit.Constraints
 import com.lhacenmed.khatmah.data.quran.QuranAya
+import kotlin.math.ceil
+import kotlin.math.max
 
 /**
- * Builds [QuranPageData] pages from raw aya data using [TextMeasurer].
+ * Builds [QuranPageData] pages from raw aya data using pure line-count arithmetic.
  *
- * Strategy:
- *  1. Iterate over suras. For each sura emit: Basmala (if applicable),
- *     SuraHeader, then the sura's ayas.
- *  2. For aya content, use a binary search to find the maximum number of
- *     consecutive ayas that fit in the remaining page height — O(n log n)
- *     total measure calls instead of O(n²).
- *  3. All ayas within one contiguous sura section are concatenated into a
- *     single [AnnotatedString] so they flow naturally on the same line(s).
+ * Why this is fast:
+ *  The previous builder used TextMeasurer with binary search — O(n log n) expensive
+ *  layout passes, taking several seconds. This builder uses only character-count
+ *  estimation with integer arithmetic: O(n), completes in < 10 ms for the full Quran.
  *
- * Must be called on the main thread (or a thread where [TextMeasurer] is safe).
+ * Page fill strategy:
+ *  Each item is assigned an estimated line count:
+ *    SuraHeader = 1 line · Basmala = 1 line · Aya = ceil(text.length / CHARS_PER_LINE) lines.
+ *  Items are packed greedily until lines ≥ [LINES_PER_PAGE].
+ *
+ * Special opening pages (centered = true):
+ *  Al-Fatiha (sura 1) and Al-Baqarah ayas 1–5 are each isolated onto their own
+ *  page before normal pagination begins. These pages are marked [QuranPageData.centered]
+ *  so the renderer uses center text-alignment instead of justify.
+ *  Suras emitted on special pages are recorded in [headedSuras] so the normal
+ *  pagination loop never re-emits their SuraHeader or Basmala.
+ *
+ * Item order within each sura boundary: SuraHeader → Basmala → Ayas.
  */
 object QuranPageBuilder {
 
-    private const val BASMALA = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ"
-    // Sample text used to pre-measure header row height (content irrelevant)
-    private const val HEADER_SAMPLE = "── سورة الفاتحة ──"
+    /** Target logical lines per page. Drives packing density. */
+    const val LINES_PER_PAGE = 25
 
-    fun build(
-        ayas:        List<QuranAya>,
-        measurer:    TextMeasurer,
-        pageWidth:   Int,
-        pageHeight:  Int,
-        ayaStyle:    TextStyle,
-        headerStyle: TextStyle,
-        basmalaStyle: TextStyle,
-        ayaNumSpan:  SpanStyle,
-        gapPx:       Int,
-    ): List<QuranPageData> {
-        if (ayas.isEmpty()) return emptyList()
+    /**
+     * Estimated Unicode code units per rendered line for WarshFamily at 20sp.
+     * Quran text contains many diacritics (harakat), inflating code-unit count ~2-3×
+     * vs. visible glyphs. Calibrated for a standard ~360 dp content width.
+     */
+    private const val CHARS_PER_LINE = 58
 
-        val wc = Constraints(maxWidth = pageWidth)
+    private fun estimateLines(text: String): Int =
+        max(1, ceil(text.length.toFloat() / CHARS_PER_LINE).toInt())
 
-        // Pre-measure fixed-height items once
-        // Fix: use named parameter `constraints =` — the 3rd positional arg is `overflow: TextOverflow`
-        val basmalaH = measurer.measure(BASMALA,       basmalaStyle, constraints = wc).size.height + gapPx
-        val headerH  = measurer.measure(HEADER_SAMPLE, headerStyle,  constraints = wc).size.height + gapPx
+    fun build(ayas: List<QuranAya>): List<QuranPageData> {
+        // Filter out DB rows where the aya text is null or blank — these would
+        // render as an empty line followed by an aya number ornament.
+        val valid = ayas.filter { it.aya.isNotBlank() }
+        if (valid.isEmpty()) return emptyList()
 
-        // ── Page state ────────────────────────────────────────────────────────
         val result  = mutableListOf<QuranPageData>()
-        val segs    = mutableListOf<QuranSegment>()
-        var pH      = 0       // accumulated height on current page
-        var pNum    = 1
-        var pSura   = ""
-        var pJuz    = ""
+        var pageNum = 1
+
+        // Suras whose header was emitted on a special page — skipped in normal flow
+        // to prevent a duplicate SuraHeader + Basmala on the continuation page.
+        val headedSuras = mutableSetOf<Int>()
+
+        // ── Special opening pages (centered) ─────────────────────────────────
+
+        // Al-Fatiha: all ayas on one isolated centered page. Sura 1 has no Basmala.
+        val fatihaAyas = valid.filter { it.suraNum == 1 }
+        if (fatihaAyas.isNotEmpty()) {
+            val name = fatihaAyas.first().sura.removePrefix("سورة ").trim()
+            val segs = buildList<QuranSegment> {
+                add(QuranSegment.SuraHeader(1, name))
+                fatihaAyas.forEach { add(QuranSegment.Aya(it.suraNum, it.ayaNum, it.aya)) }
+            }
+            result += QuranPageData(
+                pageNum  = pageNum++,
+                suraName = name,
+                juz      = fatihaAyas.first().juz,
+                segments = segs,
+                centered = true,
+            )
+            headedSuras += 1
+        }
+
+        // Al-Baqarah ayas 1–5: isolated centered page with header + Basmala.
+        // Remaining Baqarah ayas (6+) continue in normal pagination without re-heading.
+        val baqarahOpening = valid.filter { it.suraNum == 2 && it.ayaNum <= 5 }
+        if (baqarahOpening.isNotEmpty()) {
+            val name = baqarahOpening.first().sura.removePrefix("سورة ").trim()
+            val segs = buildList<QuranSegment> {
+                add(QuranSegment.SuraHeader(2, name))
+                add(QuranSegment.Basmala(2))
+                baqarahOpening.forEach { add(QuranSegment.Aya(it.suraNum, it.ayaNum, it.aya)) }
+            }
+            result += QuranPageData(
+                pageNum  = pageNum++,
+                suraName = name,
+                juz      = baqarahOpening.first().juz,
+                segments = segs,
+                centered = true,
+            )
+            headedSuras += 2
+        }
+
+        // ── Normal pagination ─────────────────────────────────────────────────
+        // Sura 1 is fully consumed above. Baqarah ayas 1–5 are consumed above;
+        // aya 6+ continues here without a repeated header.
+        val normalAyas = valid.filter {
+            it.suraNum != 1 && !(it.suraNum == 2 && it.ayaNum <= 5)
+        }
+        if (normalAyas.isEmpty()) return result
+
+        val curSegs = mutableListOf<QuranSegment>()
+        var lineCount = 0
+        var pageSura  = ""
+        var pageJuz   = ""
+
+        // Lazy metadata: set only when the page is fresh so each page
+        // is attributed to its first sura.
+        fun setMeta(sura: String, juz: String) {
+            if (curSegs.isEmpty()) { pageSura = sura; pageJuz = juz }
+        }
 
         fun flush() {
-            if (segs.isNotEmpty()) {
-                result += QuranPageData(pNum++, pSura, pJuz, segs.toList())
-                segs.clear(); pH = 0; pSura = ""; pJuz = ""
+            if (curSegs.isNotEmpty()) {
+                result += QuranPageData(pageNum++, pageSura, pageJuz, curSegs.toList())
+                curSegs.clear(); lineCount = 0; pageSura = ""; pageJuz = ""
             }
         }
 
-        fun setMeta(sura: String, juz: String) {
-            if (segs.isEmpty()) { pSura = sura; pJuz = juz }
+        fun addSeg(seg: QuranSegment, lines: Int, sura: String, juz: String) {
+            setMeta(sura, juz); curSegs += seg; lineCount += lines
         }
 
-        fun addSeg(seg: QuranSegment, h: Int, sura: String, juz: String) {
-            setMeta(sura, juz); segs += seg; pH += h
-        }
+        val suraBuffer = mutableListOf<QuranAya>()
+        var prevSura   = -1
 
-        // ── Helpers ───────────────────────────────────────────────────────────
+        fun flushSura() {
+            val first    = suraBuffer.firstOrNull() ?: return
+            val suraNum  = first.suraNum
+            // Strip any "سورة " prefix that might be present in the DB name column.
+            val suraName = first.sura.removePrefix("سورة ").trim()
+            val firstJuz = first.juz
 
-        /** Concatenate [ayaList] into one AnnotatedString with inline aya numbers. */
-        fun ayaStr(ayaList: List<QuranAya>): AnnotatedString = buildAnnotatedString {
-            ayaList.forEachIndexed { i, a ->
-                if (i > 0) append(" ")
-                append(a.aya)
-                append(" ")
-                pushStyle(ayaNumSpan)
-                append("﴿${toArNums(a.ayaNum)}﴾")
-                pop()
+            // Skip header/basmala for suras already emitted on a special page.
+            val skipHeader = suraNum in headedSuras
+            val hasBasmala = !skipHeader && suraNum != 1 && suraNum != 9
+            val headerCost = if (skipHeader) 0 else (1 + if (hasBasmala) 1 else 0)
+
+            if (!skipHeader) {
+                // Orphan prevention: flush current page so headers never appear alone
+                // at the bottom of a page with no following ayas.
+                if (curSegs.isNotEmpty() && lineCount + headerCost > LINES_PER_PAGE) flush()
+
+                // ── Ordering: SuraHeader THEN Basmala ────────────────────────
+                addSeg(QuranSegment.SuraHeader(suraNum, suraName), 1, suraName, firstJuz)
+                if (hasBasmala) addSeg(QuranSegment.Basmala(suraNum), 1, suraName, firstJuz)
+                if (lineCount >= LINES_PER_PAGE) flush()
             }
+
+            for (aya in suraBuffer) {
+                val lines = estimateLines(aya.aya)
+                // Flush before adding only when the page already has content.
+                // An oversized aya (estimatedLines > LINES_PER_PAGE) always gets its
+                // own page rather than causing an infinite loop.
+                if (curSegs.isNotEmpty() && lineCount + lines > LINES_PER_PAGE) flush()
+                addSeg(QuranSegment.Aya(aya.suraNum, aya.ayaNum, aya.aya), lines, suraName, aya.juz)
+                if (lineCount >= LINES_PER_PAGE) flush()
+            }
+
+            suraBuffer.clear()
         }
 
-        /**
-         * Binary search: how many ayas from [list] fit within [availPx] height?
-         * Returns 0 if even 1 aya exceeds [availPx].
-         */
-        fun fitCount(list: List<QuranAya>, availPx: Int): Int {
-            var count = 0; var lo = 1; var hi = list.size
-            while (lo <= hi) {
-                val mid = (lo + hi) / 2
-                val h   = measurer.measure(ayaStr(list.take(mid)), ayaStyle, constraints = wc).size.height + gapPx
-                if (h <= availPx) { count = mid; lo = mid + 1 } else hi = mid - 1
-            }
-            return count
-        }
-
-        // ── Per-sura processing ───────────────────────────────────────────────
-
-        fun processSura(suraNum: Int, suraName: String, firstJuz: String, ayaList: List<QuranAya>) {
-            // Basmala (suras 1 and 9 are exceptions)
-            if (suraNum != 1 && suraNum != 9) {
-                if (pH + basmalaH > pageHeight) flush()
-                addSeg(QuranSegment.Basmala(suraNum), basmalaH, suraName, firstJuz)
-            }
-            // Sura header
-            if (pH + headerH > pageHeight) flush()
-            addSeg(QuranSegment.SuraHeader(suraNum, suraName), headerH, suraName, firstJuz)
-
-            // Aya content: greedily fill pages using binary search splits
-            var remaining = ayaList
-            while (remaining.isNotEmpty()) {
-                var fc = fitCount(remaining, pageHeight - pH)
-                if (fc == 0) {
-                    // Nothing fits on the current (partially filled) page → flush and retry
-                    if (segs.isNotEmpty()) flush()
-                    fc = fitCount(remaining, pageHeight).coerceAtLeast(1) // force ≥1 to avoid loop
-                }
-                val chunk    = remaining.take(fc)
-                val str      = ayaStr(chunk)
-                val strH     = measurer.measure(str, ayaStyle, constraints = wc).size.height + gapPx
-                val chunkJuz = chunk.first().juz
-                addSeg(
-                    QuranSegment.AyaFlow(suraNum, str, chunk.first().ayaNum, chunk.last().ayaNum),
-                    strH, suraName, chunkJuz,
-                )
-                remaining = remaining.drop(fc)
-                if (remaining.isNotEmpty()) flush()
-            }
-        }
-
-        // ── Main iteration ────────────────────────────────────────────────────
-        var prevSura = -1
-        val suraAyas = mutableListOf<QuranAya>()
-
-        for (aya in ayas) {
+        for (aya in normalAyas) {
             if (aya.suraNum != prevSura) {
-                if (suraAyas.isNotEmpty()) {
-                    processSura(prevSura, suraAyas.first().sura, suraAyas.first().juz, suraAyas.toList())
-                    suraAyas.clear()
-                }
+                if (suraBuffer.isNotEmpty()) flushSura()
                 prevSura = aya.suraNum
             }
-            suraAyas += aya
+            suraBuffer += aya
         }
-        if (suraAyas.isNotEmpty()) {
-            processSura(prevSura, suraAyas.first().sura, suraAyas.first().juz, suraAyas)
-        }
+        if (suraBuffer.isNotEmpty()) flushSura()
+        flush() // emit the final partial page
 
-        flush()
         return result
     }
-
-    // ── Utilities ─────────────────────────────────────────────────────────────
-
-    private fun toArNums(n: Int): String =
-        n.toString().map { "٠١٢٣٤٥٦٧٨٩"[it - '0'] }.joinToString("")
 }

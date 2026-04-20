@@ -1,12 +1,11 @@
 # context-builder.ps1
 # GUI context-file builder -- scrollable tree, mouse checkboxes, encoding-safe output.
-# Live directory watching: tree auto-updates on file/folder creates, deletes, renames.
 #
 # Usage: .\context-builder.ps1 [-Path <dir>] [-Out <file.txt>] [-Hidden]
-# Keys : ENTER -> Generate   ESC -> Close
+# Keys : ENTER -> Generate   F5 -> Refresh   ESC -> Close
 #
 # Example:
-#   .\scripts\context-builder.ps1 -Path "C:\Users\lhacenmed\AndroidStudioProjects\Khatmah\"
+#   .\scripts\context-builder.ps1 -Path "C:\Users\lhacenmed\AndroidStudioProjects\Khatmah\app\src\main\"
 
 param (
     [string]$Path   = ".",
@@ -29,18 +28,17 @@ $ANC_TR  = [System.Windows.Forms.AnchorStyles]::Top   -bor
 
 # --- Theme -------------------------------------------------------------------
 $CLR = @{
-    Bg        = [Drawing.Color]::FromArgb( 22,  22,  26)
-    Panel     = [Drawing.Color]::FromArgb( 30,  30,  35)
-    Surface   = [Drawing.Color]::FromArgb( 44,  44,  52)
-    Border    = [Drawing.Color]::FromArgb( 58,  58,  68)
-    Fg        = [Drawing.Color]::FromArgb(218, 218, 222)
-    Dim       = [Drawing.Color]::FromArgb(112, 112, 124)
-    Dir       = [Drawing.Color]::FromArgb( 96, 165, 250)
-    File      = [Drawing.Color]::FromArgb(200, 200, 205)
-    Green     = [Drawing.Color]::FromArgb( 74, 222, 128)
-    Accent    = [Drawing.Color]::FromArgb( 96, 165, 250)
-    AccFg     = [Drawing.Color]::White
-    LivePulse = [Drawing.Color]::FromArgb(250, 204,  21)   # indicator flash on fs-change batch
+    Bg      = [Drawing.Color]::FromArgb( 22,  22,  26)
+    Panel   = [Drawing.Color]::FromArgb( 30,  30,  35)
+    Surface = [Drawing.Color]::FromArgb( 44,  44,  52)
+    Border  = [Drawing.Color]::FromArgb( 58,  58,  68)
+    Fg      = [Drawing.Color]::FromArgb(218, 218, 222)
+    Dim     = [Drawing.Color]::FromArgb(112, 112, 124)
+    Dir     = [Drawing.Color]::FromArgb( 96, 165, 250)
+    File    = [Drawing.Color]::FromArgb(200, 200, 205)
+    Green   = [Drawing.Color]::FromArgb( 74, 222, 128)
+    Accent  = [Drawing.Color]::FromArgb( 96, 165, 250)
+    AccFg   = [Drawing.Color]::White
 }
 
 $FONT = @{
@@ -89,13 +87,14 @@ function Add-ChildNodes {
 
 # --- Selection helpers -------------------------------------------------------
 
-$script:_checking = $false   # re-entrancy guard for AfterCheck cascade
+$script:_checking    = $false   # re-entrancy guard for AfterCheck cascade
+$script:_initialized = $false   # true after first tree load; gates default-expand vs restore
 
-function Cascade-Check {
+function Invoke-CheckCascade {
     param([System.Windows.Forms.TreeNode]$Node, [bool]$State)
     foreach ($child in $Node.Nodes) {
         $child.Checked = $State
-        if ($child.Nodes.Count -gt 0) { Cascade-Check $child $State }
+        if ($child.Nodes.Count -gt 0) { Invoke-CheckCascade $child $State }
     }
 }
 
@@ -107,181 +106,60 @@ function Set-AllChecked {
     }
 }
 
-function Count-Checked {
+function Get-CheckedCount {
     param([System.Windows.Forms.TreeNodeCollection]$Nodes)
     $n = 0
     foreach ($node in $Nodes) {
         if ($node.Tag -and !$node.Tag.IsDir -and $node.Checked) { $n++ }
-        if ($node.Nodes.Count -gt 0) { $n += Count-Checked $node.Nodes }
+        if ($node.Nodes.Count -gt 0) { $n += Get-CheckedCount $node.Nodes }
     }
     return $n
 }
 
-function Collect-Selected {
+function Get-SelectedFiles {
     param([System.Windows.Forms.TreeNodeCollection]$Nodes, [System.Collections.Generic.List[PSCustomObject]]$Out)
     foreach ($node in $Nodes) {
         if ($node.Tag -and !$node.Tag.IsDir -and $node.Checked) { [void]$Out.Add($node.Tag) }
-        if ($node.Nodes.Count -gt 0) { Collect-Selected $node.Nodes $Out }
+        if ($node.Nodes.Count -gt 0) { Get-SelectedFiles $node.Nodes $Out }
     }
 }
 
-# --- Live-watch helpers ------------------------------------------------------
-# FileSystemWatcher fires on thread-pool threads. We enqueue raw events into a
-# ConcurrentQueue and drain them on the UI thread via Control.BeginInvoke so
-# that all TreeView mutations remain single-threaded.
+# --- Refresh state helpers ---------------------------------------------------
+# Snapshots checked/expanded paths before a rebuild, then restores them after.
+# OrdinalIgnoreCase HashSets give O(1) lookups on Windows paths.
 
-$script:fsQueue = [System.Collections.Concurrent.ConcurrentQueue[PSCustomObject]]::new()
-
-# Recursive node lookup by full filesystem path (case-insensitive).
-function Find-NodeByPath {
-    param([System.Windows.Forms.TreeNodeCollection]$Nodes, [string]$FullPath)
+function Get-CheckedPaths {
+    param([System.Windows.Forms.TreeNodeCollection]$Nodes, [System.Collections.Generic.HashSet[string]]$Paths)
     foreach ($node in $Nodes) {
-        if ($node.Tag -and $node.Tag.Full -ieq $FullPath) { return $node }
-        if ($node.Nodes.Count -gt 0) {
-            $hit = Find-NodeByPath $node.Nodes $FullPath
-            if ($null -ne $hit) { return $hit }
-        }
-    }
-    return $null
-}
-
-# Returns the insertion index that keeps dirs before files, each group alpha-sorted.
-function Get-InsertIndex {
-    param([System.Windows.Forms.TreeNodeCollection]$Nodes, [bool]$IsDir, [string]$Name)
-    for ($i = 0; $i -lt $Nodes.Count; $i++) {
-        $n = $Nodes[$i]
-        if (-not $n.Tag) { continue }
-        if ($IsDir -and -not $n.Tag.IsDir) { return $i }
-        if ($IsDir -eq $n.Tag.IsDir -and [string]::Compare($Name, $n.Tag.Name, $true) -lt 0) { return $i }
-    }
-    return $Nodes.Count
-}
-
-# Recursively rewrite Tag.Full / Tag.Rel after a parent directory is renamed.
-function Update-ChildPaths {
-    param([System.Windows.Forms.TreeNode]$Node, [string]$OldBase, [string]$NewBase)
-    foreach ($child in $Node.Nodes) {
-        if ($child.Tag) {
-            $nf = $NewBase + $child.Tag.Full.Substring($OldBase.Length)
-            $child.Tag = [PSCustomObject]@{
-                Full  = $nf
-                Rel   = '/' + $nf.Substring($root.Length).TrimStart('\', '/').Replace('\', '/')
-                IsDir = $child.Tag.IsDir
-                Name  = $child.Tag.Name
-            }
-        }
-        if ($child.Nodes.Count -gt 0) { Update-ChildPaths $child $OldBase $NewBase }
+        # Persist checked state for both files and directories
+        if ($node.Tag -and $node.Checked) { [void]$Paths.Add($node.Tag.Full) }
+        if ($node.Nodes.Count -gt 0) { Get-CheckedPaths $node.Nodes $Paths }
     }
 }
 
-# Snapshot checked-file paths into a HashSet before a full-tree rebuild.
-function Collect-CheckedPaths {
-    param([System.Windows.Forms.TreeNodeCollection]$Nodes, [System.Collections.Generic.HashSet[string]]$Out)
+function Get-ExpandedPaths {
+    param([System.Windows.Forms.TreeNodeCollection]$Nodes, [System.Collections.Generic.HashSet[string]]$Paths)
     foreach ($node in $Nodes) {
-        if ($node.Tag -and -not $node.Tag.IsDir -and $node.Checked) { [void]$Out.Add($node.Tag.Full) }
-        if ($node.Nodes.Count -gt 0) { Collect-CheckedPaths $node.Nodes $Out }
+        if ($node.Tag -and $node.Tag.IsDir -and $node.IsExpanded) {
+            [void]$Paths.Add($node.Tag.Full)
+        }
+        if ($node.Nodes.Count -gt 0) { Get-ExpandedPaths $node.Nodes $Paths }
     }
 }
 
-# Re-apply checked state after a full-tree rebuild using the saved HashSet.
-function Restore-CheckedPaths {
-    param([System.Windows.Forms.TreeNodeCollection]$Nodes, [System.Collections.Generic.HashSet[string]]$Saved)
+# Called with $script:_checking = $true so .Checked assignments do not cascade.
+function Set-RestoredState {
+    param(
+        [System.Windows.Forms.TreeNodeCollection]$Nodes,
+        [System.Collections.Generic.HashSet[string]]$CheckedPaths,
+        [System.Collections.Generic.HashSet[string]]$ExpandedPaths
+    )
     foreach ($node in $Nodes) {
-        if ($node.Tag -and -not $node.Tag.IsDir -and $Saved.Contains($node.Tag.Full)) {
-            $node.Checked = $true
+        if ($node.Tag) {
+            if ($CheckedPaths.Contains($node.Tag.Full))                        { $node.Checked = $true }
+            if ($node.Tag.IsDir -and $ExpandedPaths.Contains($node.Tag.Full)) { $node.Expand()        }
         }
-        if ($node.Nodes.Count -gt 0) { Restore-CheckedPaths $node.Nodes $Saved }
-    }
-}
-
-# Insert a new node for a path that just appeared on disk, in sorted position.
-function Process-Created {
-    param([string]$FullPath)
-    if (-not (Test-Path -LiteralPath $FullPath -ErrorAction SilentlyContinue)) { return }
-    $item = Get-Item -LiteralPath $FullPath -Force:($Hidden.IsPresent) -ErrorAction SilentlyContinue
-    if (-not $item) { return }
-
-    $parentPath  = [IO.Path]::GetDirectoryName($FullPath)
-    $parentNodes = if ($parentPath -ieq $root) {
-        $tree.Nodes
-    } else {
-        $p = Find-NodeByPath $tree.Nodes $parentPath
-        if ($null -eq $p) { return }   # parent not currently visible in tree
-        $p.Nodes
-    }
-
-    foreach ($n in $parentNodes) {                                          # skip duplicates
-        if ($n.Tag -and $n.Tag.Full -ieq $FullPath) { return }
-    }
-
-    $rel  = '/' + $item.FullName.Substring($root.Length).TrimStart('\', '/').Replace('\', '/')
-    $node = [System.Windows.Forms.TreeNode]::new($item.Name)
-    $node.Tag = [PSCustomObject]@{
-        Full  = $item.FullName
-        Rel   = $rel
-        IsDir = $item.PSIsContainer
-        Name  = $item.Name
-    }
-    $node.ForeColor = if ($item.PSIsContainer) { $CLR.Dir } else { $CLR.File }
-
-    $tree.BeginUpdate()
-    $parentNodes.Insert((Get-InsertIndex $parentNodes $item.PSIsContainer $item.Name), $node)
-    if ($item.PSIsContainer) { Add-ChildNodes $node.Nodes $item.FullName $root }   # populate if dir already has contents
-    $tree.EndUpdate()
-    & $refreshStatus
-}
-
-# Remove the node for a path that was deleted from disk.
-function Process-Deleted {
-    param([string]$FullPath)
-    $node = Find-NodeByPath $tree.Nodes $FullPath
-    if ($null -ne $node) {
-        $tree.BeginUpdate()
-        $node.Remove()
-        $tree.EndUpdate()
-        & $refreshStatus
-    }
-}
-
-# Rename / move a node in-place; falls back to Process-Created if old path is unknown.
-function Process-Renamed {
-    param([string]$OldFull, [string]$NewFull)
-    $node = Find-NodeByPath $tree.Nodes $OldFull
-    if ($null -eq $node) { Process-Created $NewFull; return }   # moved in from outside
-
-    $newName = [IO.Path]::GetFileName($NewFull)
-    $newRel  = '/' + $NewFull.Substring($root.Length).TrimStart('\', '/').Replace('\', '/')
-
-    $tree.BeginUpdate()
-    if ($node.Tag.IsDir) { Update-ChildPaths $node $OldFull $NewFull }   # fix all descendant paths
-    $node.Text = $newName
-    $node.Tag  = [PSCustomObject]@{
-        Full  = $NewFull
-        Rel   = $newRel
-        IsDir = $node.Tag.IsDir
-        Name  = $newName
-    }
-    $tree.EndUpdate()
-    & $refreshStatus
-}
-
-# Drain the fs-event queue -- always called on the UI thread via BeginInvoke.
-function Flush-FsQueue {
-    $ev      = $null
-    $changed = $false
-    while ($script:fsQueue.TryDequeue([ref]$ev)) {
-        switch ($ev.Type) {
-            'Created' { Process-Created $ev.Full              }
-            'Deleted' { Process-Deleted $ev.Full              }
-            'Renamed' { Process-Renamed $ev.OldFull $ev.Full  }
-        }
-        $changed = $true
-    }
-    if ($changed) {
-        $lblLive.Text      = '↻ Updated'
-        $lblLive.ForeColor = $CLR.LivePulse
-        $flashTimer.Stop()
-        $flashTimer.Start()
+        if ($node.Nodes.Count -gt 0) { Set-RestoredState $node.Nodes $CheckedPaths $ExpandedPaths }
     }
 }
 
@@ -407,26 +285,17 @@ $lblStatus.Font      = $FONT.Sm
 $lblStatus.ForeColor = $CLR.Dim
 $lblStatus.Location  = New-Object Drawing.Point(16, 20)
 
-# Live-watch indicator: steady green while watching, pulses yellow on each change batch.
-$lblLive = New-Object System.Windows.Forms.Label
-$lblLive.Text      = '● Watching'
-$lblLive.AutoSize  = $true
-$lblLive.Font      = $FONT.Sm
-$lblLive.ForeColor = $CLR.Green
-$lblLive.Location  = New-Object Drawing.Point(16, 20)   # overridden in layoutBot
-$lblLive.Cursor    = 'Default'
-
-$ttip = New-Object System.Windows.Forms.ToolTip
-$ttip.SetToolTip($lblLive, 'Watching for file system changes — tree updates automatically')
-
-# Resets the live indicator back to steady green after the pulse duration.
-$flashTimer = New-Object System.Windows.Forms.Timer
-$flashTimer.Interval = 900
-$flashTimer.Add_Tick({
-    $flashTimer.Stop()
-    $lblLive.Text      = '● Watching'
-    $lblLive.ForeColor = $CLR.Green
-})
+$btnRefresh = New-Object System.Windows.Forms.Button
+$btnRefresh.Text      = 'Refresh'
+$btnRefresh.Font      = $FONT.Sm
+$btnRefresh.Width     = 72
+$btnRefresh.Height    = 30
+$btnRefresh.BackColor = $CLR.Surface
+$btnRefresh.ForeColor = $CLR.Dim
+$btnRefresh.FlatStyle = 'Flat'
+$btnRefresh.Cursor    = 'Hand'
+$btnRefresh.Anchor    = $ANC_TR
+$btnRefresh.FlatAppearance.BorderColor = $CLR.Border
 
 $btnNone = New-Object System.Windows.Forms.Button
 $btnNone.Text      = 'None'
@@ -465,29 +334,85 @@ $btnGen.Enabled   = $false
 $btnGen.Anchor    = $ANC_TR
 $btnGen.FlatAppearance.BorderSize = 0
 
-$botBar.Controls.AddRange(@($lblStatus, $lblLive, $btnNone, $btnAll, $btnGen))
+$botBar.Controls.AddRange(@($lblStatus, $btnRefresh, $btnNone, $btnAll, $btnGen))
 
 $layoutBot = {
-    [int]$w  = $botBar.ClientSize.Width
-    [int]$wG = $btnGen.Width
-    [int]$wA = $btnAll.Width
-    [int]$wN = $btnNone.Width
-    $btnGen.Location  = New-Object Drawing.Point(($w - 16 - $wG),                    10)
-    $btnAll.Location  = New-Object Drawing.Point(($w - 24 - $wG - $wA),              12)
-    $btnNone.Location = New-Object Drawing.Point(($w - 32 - $wG - $wA - $wN),        12)
-    # live indicator: right-aligned just before the action buttons
-    $lblLive.Location = New-Object Drawing.Point(($w - 40 - $wG - $wA - $wN - $lblLive.PreferredWidth), 20)
+    # Build right-to-left: Generate -> All -> None -> Refresh, 8px gaps, 16px right margin
+    [int]$x = $botBar.ClientSize.Width - 16
+    $btnGen.Location     = New-Object Drawing.Point(($x - $btnGen.Width),     10)
+    $x -= $btnGen.Width + 8
+    $btnAll.Location     = New-Object Drawing.Point(($x - $btnAll.Width),     12)
+    $x -= $btnAll.Width + 8
+    $btnNone.Location    = New-Object Drawing.Point(($x - $btnNone.Width),    12)
+    $x -= $btnNone.Width + 8
+    $btnRefresh.Location = New-Object Drawing.Point(($x - $btnRefresh.Width), 12)
 }
 # Same guard as $layoutTop -- prevents premature-resize arithmetic failures.
 $botBar.Add_Resize({ if ($form.IsHandleCreated) { & $layoutBot } })
 
+# --- Flash timer -------------------------------------------------------------
+# Briefly turns the Refresh button green after a successful rebuild.
+$flashTimer          = New-Object System.Windows.Forms.Timer
+$flashTimer.Interval = 500
+$flashTimer.Add_Tick({
+    $flashTimer.Stop()
+    $btnRefresh.ForeColor = $CLR.Dim
+})
+
 # --- Status refresh ----------------------------------------------------------
 $refreshStatus = {
-    $n    = Count-Checked $tree.Nodes
+    $n    = Get-CheckedCount $tree.Nodes
     $noun = if ($n -eq 1) { 'file' } else { 'files' }
     $lblStatus.Text      = "$n $noun selected"
     $lblStatus.ForeColor = if ($n -gt 0) { $CLR.Green } else { $CLR.Dim }
     $btnGen.Enabled      = ($n -gt 0)
+}
+
+# --- Tree refresh ------------------------------------------------------------
+# Unified entry point for both first load and on-demand refresh.
+# On first load ($script:_initialized = $false) top-level dirs are expanded by default.
+# On refresh the prior checked + expanded state is fully restored; deleted items
+# are naturally absent from the new tree and therefore not re-checked.
+function Invoke-TreeRefresh {
+    # Snapshot state before clearing (empty sets on first load -- that's intentional)
+    $checkedPaths  = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $expandedPaths = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    Get-CheckedPaths  $tree.Nodes $checkedPaths
+    Get-ExpandedPaths $tree.Nodes $expandedPaths
+
+    $btnRefresh.Enabled = $false
+    $form.Cursor        = [System.Windows.Forms.Cursors]::WaitCursor
+
+    # _checking suppresses AfterCheck cascades while nodes are set programmatically
+    $script:_checking = $true
+    try {
+        $tree.BeginUpdate()
+        $tree.Nodes.Clear()
+        Add-ChildNodes $tree.Nodes $root $root
+
+        if (-not $script:_initialized) {
+            # First load: expand top-level directories by default
+            foreach ($n in $tree.Nodes) { if ($n.Tag -and $n.Tag.IsDir) { $n.Expand() } }
+        } else {
+            # Subsequent refresh: restore prior expand + checked state
+            Set-RestoredState $tree.Nodes $checkedPaths $expandedPaths
+        }
+        $tree.EndUpdate()
+    } finally {
+        $script:_checking   = $false
+        $btnRefresh.Enabled = $true
+        $form.Cursor        = [System.Windows.Forms.Cursors]::Default
+    }
+
+    & $refreshStatus
+
+    # Visual acknowledgement (skip silent first load)
+    if ($script:_initialized) {
+        $btnRefresh.ForeColor = $CLR.Green
+        $flashTimer.Stop()
+        $flashTimer.Start()
+    }
+    $script:_initialized = $true
 }
 
 # --- Events ------------------------------------------------------------------
@@ -497,7 +422,7 @@ $tree.Add_AfterCheck({
     if ($script:_checking) { return }
     $script:_checking = $true
     try {
-        if ($e.Node.Tag -and $e.Node.Tag.IsDir) { Cascade-Check $e.Node $e.Node.Checked }
+        if ($e.Node.Tag -and $e.Node.Tag.IsDir) { Invoke-CheckCascade $e.Node $e.Node.Checked }
         & $refreshStatus
     } finally {
         $script:_checking = $false
@@ -529,6 +454,8 @@ $btnNone.Add_Click({
     & $refreshStatus
 })
 
+$btnRefresh.Add_Click({ Invoke-TreeRefresh })
+
 $generate = {
     $outPath = $txtOut.Text.Trim()
     if (!$outPath) {
@@ -538,7 +465,7 @@ $generate = {
     if (![IO.Path]::IsPathRooted($outPath)) { $outPath = Join-Path (Get-Location) $outPath }
 
     $files = [System.Collections.Generic.List[PSCustomObject]]::new()
-    Collect-Selected $tree.Nodes $files
+    Get-SelectedFiles $tree.Nodes $files
 
     if ($files.Count -eq 0) {
         [System.Windows.Forms.MessageBox]::Show('No files selected.', 'Context Builder') | Out-Null
@@ -573,6 +500,10 @@ $form.Add_KeyDown({
         & $generate
         $e.Handled = $true
     }
+    if ($e.KeyCode -eq [System.Windows.Forms.Keys]::F5) {
+        Invoke-TreeRefresh
+        $e.Handled = $true
+    }
     if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Escape) { $form.Close() }
 })
 
@@ -582,68 +513,8 @@ $form.Controls.AddRange(@($tree, $topBar, $botSep, $botBar))
 $form.Add_Shown({
     & $layoutTop
     & $layoutBot
-
-    $tree.BeginUpdate()
-    Add-ChildNodes $tree.Nodes $root $root
-    foreach ($n in $tree.Nodes) { if ($n.Tag -and $n.Tag.IsDir) { $n.Expand() } }
-    $tree.EndUpdate()
-
-    & $refreshStatus
+    Invoke-TreeRefresh
     $tree.Focus()
-
-    # --- Start live directory watcher (structural events only: create / delete / rename) ---
-    # NotifyFilter is intentionally narrow -- content changes don't affect tree structure.
-    $script:watcher = New-Object System.IO.FileSystemWatcher
-    $script:watcher.Path                  = $root
-    $script:watcher.IncludeSubdirectories = $true
-    $script:watcher.NotifyFilter          = [IO.NotifyFilters]::FileName -bor
-            [IO.NotifyFilters]::DirectoryName
-    $script:watcher.SynchronizingObject   = $null   # fire on thread-pool; we marshal via BeginInvoke
-
-    # Created and Deleted share one handler; ChangeType.ToString() yields 'Created' or 'Deleted'.
-    $fsHandler = [System.IO.FileSystemEventHandler]{
-        param($s, $e)
-        $script:fsQueue.Enqueue([PSCustomObject]@{ Type = $e.ChangeType.ToString(); Full = $e.FullPath; OldFull = $null })
-        [void]$form.BeginInvoke([System.Windows.Forms.MethodInvoker]{ Flush-FsQueue })
-    }
-
-    $fsRenameHandler = [System.IO.RenamedEventHandler]{
-        param($s, $e)
-        $script:fsQueue.Enqueue([PSCustomObject]@{ Type = 'Renamed'; Full = $e.FullPath; OldFull = $e.OldFullPath })
-        [void]$form.BeginInvoke([System.Windows.Forms.MethodInvoker]{ Flush-FsQueue })
-    }
-
-    # Buffer overflow (too many rapid events): snapshot checked paths, rebuild tree, restore state.
-    $fsErrorHandler = [System.IO.ErrorEventHandler]{
-        param($s, $e)
-        [void]$form.BeginInvoke([System.Windows.Forms.MethodInvoker]{
-            $saved = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-            Collect-CheckedPaths $tree.Nodes $saved
-            $script:watcher.EnableRaisingEvents = $false
-            $tree.BeginUpdate()
-            $tree.Nodes.Clear()
-            Add-ChildNodes $tree.Nodes $root $root
-            foreach ($n in $tree.Nodes) { if ($n.Tag -and $n.Tag.IsDir) { $n.Expand() } }
-            $script:_checking = $true
-            Restore-CheckedPaths $tree.Nodes $saved
-            $script:_checking = $false
-            $tree.EndUpdate()
-            & $refreshStatus
-            $script:watcher.EnableRaisingEvents = $true
-        })
-    }
-
-    $script:watcher.add_Created($fsHandler)
-    $script:watcher.add_Deleted($fsHandler)
-    $script:watcher.add_Renamed($fsRenameHandler)
-    $script:watcher.add_Error($fsErrorHandler)
-    $script:watcher.EnableRaisingEvents = $true
-})
-
-$form.Add_FormClosed({
-    $script:watcher.EnableRaisingEvents = $false
-    $script:watcher.Dispose()
-    $flashTimer.Dispose()
 })
 
 [System.Windows.Forms.Application]::Run($form)
