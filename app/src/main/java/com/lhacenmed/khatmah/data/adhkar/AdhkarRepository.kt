@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import com.lhacenmed.khatmah.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -15,6 +16,38 @@ import java.util.UUID
 class AdhkarRepository(private val context: Context) {
 
     private val db get() = AdhkarDatabase.open(context)
+
+    // ── Built-in resource maps ────────────────────────────────────────────────
+    // Direct @StringRes / @DrawableRes lookups for built-in seeded categories.
+    //
+    // WHY: Resources.getIdentifier(name, type, context.packageName) fails in debug
+    // builds because applicationIdSuffix (".debug") makes context.packageName differ
+    // from the resource namespace in build.gradle — getIdentifier returns 0 and the
+    // raw key (e.g. "adhkar_wakeup") is shown as the card title instead of its
+    // translation.  Direct R.* references are resolved at compile time and are
+    // immune to this mismatch.
+
+    private val builtInTitleIds: Map<String, Int> = mapOf(
+        "adhkar_morning"      to R.string.adhkar_morning,
+        "adhkar_evening"      to R.string.adhkar_evening,
+        "adhkar_after_prayer" to R.string.adhkar_after_prayer,
+        "adhkar_sleep"        to R.string.adhkar_sleep,
+        "adhkar_wakeup"       to R.string.adhkar_wakeup,
+        "adhkar_mosque"       to R.string.adhkar_mosque,
+        "adhkar_maathura"     to R.string.adhkar_maathura,
+        "adhkar_quran_duas"   to R.string.adhkar_quran_duas,
+        "adhkar_travel"       to R.string.adhkar_travel,
+        "adhkar_ruqyah"       to R.string.adhkar_ruqyah,
+    )
+
+    private val builtInIconIds: Map<String, Int> = mapOf(
+        "ic_fajr"    to R.drawable.ic_fajr,
+        "ic_isha"    to R.drawable.ic_isha,
+        "ic_mosque"  to R.drawable.ic_mosque,
+        "ic_sunrise" to R.drawable.ic_sunrise,
+        "ic_book"    to R.drawable.ic_book,
+        "ic_athkar"  to R.drawable.ic_athkar,
+    )
 
     // ── Seeding ───────────────────────────────────────────────────────────────
 
@@ -64,25 +97,33 @@ class AdhkarRepository(private val context: Context) {
         ).use { c ->
             buildList {
                 while (c.moveToNext()) {
+                    val id        = c.getString(0)
                     val titleRes  = c.getString(1)
                     val titleText = c.getString(2)
                     val iconRes   = c.getString(3)
                     val iconUri   = c.getString(4)
 
-                    val title = titleText ?: titleRes?.let { resolveString(it) } ?: ""
+                    // Built-in categories: resolve via compile-time R.* map (avoids
+                    // getIdentifier package-mismatch bug in debug builds).
+                    // User categories: use title_text directly (never null for custom entries).
+                    val title = titleText
+                        ?: titleRes?.let { builtInTitleIds[it]?.let(context::getString) ?: resolveString(it) }
+                        ?: ""
+
                     val iconSource: IconSource = when {
                         iconUri != null -> IconSource.Uri(iconUri)
-                        iconRes != null -> resolveDrawableId(iconRes)
+                        iconRes != null -> (builtInIconIds[iconRes] ?: resolveDrawableId(iconRes))
                             ?.let { IconSource.Res(it) } ?: IconSource.None
                         else            -> IconSource.None
                     }
+
                     add(
                         AdhkarCategory(
-                            id          = c.getString(0),
-                            title       = title,
-                            iconSource  = iconSource,
-                            color       = Color(c.getInt(5)),
-                            span        = c.getInt(6),
+                            id         = id,
+                            title      = title,
+                            iconSource = iconSource,
+                            color      = Color(c.getInt(5)),
+                            span       = c.getInt(6),
                         )
                     )
                 }
@@ -165,6 +206,11 @@ class AdhkarRepository(private val context: Context) {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    /**
+     * Fallback resolver for non-built-in resource names (e.g. future extensibility).
+     * Note: unreachable for user-created categories (they use title_text) and for
+     * built-in categories (handled by builtInTitleIds map above).
+     */
     private fun resolveString(resName: String): String {
         val id = context.resources.getIdentifier(resName, "string", context.packageName)
         return if (id != 0) context.getString(id) else resName
