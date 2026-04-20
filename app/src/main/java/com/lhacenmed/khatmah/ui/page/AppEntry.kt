@@ -40,6 +40,7 @@ import com.lhacenmed.khatmah.ui.page.settings.prayers.*
 import com.lhacenmed.khatmah.ui.page.tabs.*
 import com.lhacenmed.khatmah.ui.page.tabs.adhkar.AdhkarDetailPage
 import com.lhacenmed.khatmah.ui.page.quran.QuranReaderScreen
+import com.lhacenmed.khatmah.ui.page.quran.QuranSearchPage
 import com.lhacenmed.khatmah.util.OnboardingPrefs
 import com.lhacenmed.khatmah.widget.WidgetNavRequest
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -155,8 +156,20 @@ fun AppEntry() {
             animatedComposable(Route.PRAYER_MANUAL_CORRECTIONS) { ManualCorrectionsContent() }
             animatedComposable(Route.PRAYER_HIGHER_LAT)         { HigherLatContent()         }
 
-            // ── Quran reader (full-screen, outside tab shell) ─────────────────
-            animatedComposable(Route.QURAN_READER) { QuranReaderScreen() }
+            // ── Quran reader ──────────────────────────────────────────────────
+            // suraNum = 0 → open at last-read page.
+            // suraNum > 0 → open at that surah's first page (e.g. from Index tab).
+            // ayaNum  > 0 → open at a specific aya (e.g. returned from search result).
+            animatedComposable(
+                route     = Route.QURAN_READER,
+                arguments = listOf(
+                    navArgument("suraNum") { type = NavType.IntType; defaultValue = 0 },
+                    navArgument("ayaNum")  { type = NavType.IntType; defaultValue = 0 },
+                ),
+            ) { QuranReaderScreen() }
+
+            // ── Quran search ──────────────────────────────────────────────────
+            animatedComposable(Route.QURAN_SEARCH) { QuranSearchPage() }
 
             // ── Adhkar detail ─────────────────────────────────────────────────
             animatedComposable(

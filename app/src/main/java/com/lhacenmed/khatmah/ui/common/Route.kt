@@ -31,7 +31,15 @@ object Route {
     const val PRAYER_HIGHER_LAT         = "prayer_higher_lat"
 
     // ── Quran ─────────────────────────────────────────────────────────────────
-    const val QURAN_READER = "quran_reader"
+    // suraNum = 0 → open at last-read page (SharedPrefs).
+    // suraNum > 0 → open at the first page of that surah.
+    // ayaNum  > 0 → open at that specific aya within the surah (used by search).
+    const val QURAN_READER = "quran_reader?suraNum={suraNum}&ayaNum={ayaNum}"
+    const val QURAN_SEARCH = "quran_search"
+
+    /** Opens the reader at [suraNum] / [ayaNum]. Defaults to last-read page when both are 0. */
+    fun quranReader(suraNum: Int = 0, ayaNum: Int = 0) =
+        "quran_reader?suraNum=$suraNum&ayaNum=$ayaNum"
 
     // ── Adhkar detail ─────────────────────────────────────────────────────────
     const val ADHKAR_DETAIL = "adhkar_detail/{categoryId}"

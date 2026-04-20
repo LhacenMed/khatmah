@@ -392,7 +392,7 @@ private fun DhikrBody(dhikr: Dhikr, fontSize: DhikrFontSize) {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 28.dp),
+            .padding(start = 20.dp, end = 20.dp, top = 28.dp, bottom = 50.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         dhikr.paragraphs.forEachIndexed { i, paragraph ->

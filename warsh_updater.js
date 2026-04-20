@@ -279,29 +279,31 @@ const Database = require("better-sqlite3");
 const db = new Database("quran.db");
 
 // 1. Column definitions (name, type, nullable, default, primary key)
-const columns = db.prepare("PRAGMA table_info('quran')").all();
+const columns = db.prepare("PRAGMA table_info('arabic_text')").all();
 console.log("── Columns ──────────────────────────────");
 console.table(columns);
 
 // 2. Indexes
-const indexes = db.prepare("PRAGMA index_list('quran')").all();
+const indexes = db.prepare("PRAGMA index_list('arabic_text')").all();
 console.log("── Indexes ──────────────────────────────");
 console.table(indexes);
 
 // 3. Foreign keys
-const fks = db.prepare("PRAGMA foreign_key_list('quran')").all();
+const fks = db.prepare("PRAGMA foreign_key_list('arabic_text')").all();
 console.log("── Foreign Keys ─────────────────────────");
 console.table(fks);
 
 // 4. Raw CREATE TABLE statement (source of truth)
 const def = db
-  .prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='quran'")
+  .prepare(
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='arabic_text'",
+  )
   .get();
 console.log("── CREATE statement ─────────────────────");
 console.log(def.sql);
 
 // 5. Row count + quick sample
-const count = db.prepare("SELECT COUNT(*) AS cnt FROM quran").get();
+const count = db.prepare("SELECT COUNT(*) AS cnt FROM arabic_text").get();
 console.log(`\n── Row count: ${count.cnt} ───────────────────────`);
 // const sample = db.prepare("SELECT * FROM quran LIMIT 3").all();
 // console.log("── First 3 rows ─────────────────────────");

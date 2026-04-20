@@ -13,6 +13,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,15 +29,22 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.ui.theme.WarshFamily
 import com.lhacenmed.khatmah.ui.theme.WarshSuraNameFamily
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 // ── Animation constant ────────────────────────────────────────────────────────
 
 private const val ANIM_MS = 280
+
+// ── SavedStateHandle keys shared with QuranSearchPage ────────────────────────
+
+internal const val KEY_JUMP_SURA = "jumpSura"
+internal const val KEY_JUMP_AYA  = "jumpAya"
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -45,16 +53,41 @@ private const val ANIM_MS = 280
  *
  * Forces RTL layout so the pager, slider, and back arrow all match Arabic
  * reading convention without per-component direction overrides.
+ *
+ * Observes [KEY_JUMP_SURA] / [KEY_JUMP_AYA] on its own [SavedStateHandle] so that
+ * [QuranSearchPage] can write a result there before popping back, and the pager
+ * will scroll to the correct page seamlessly.
  */
 @Composable
 fun QuranReaderScreen() {
-    val vm: QuranViewModel = viewModel()
+    val vm:  QuranViewModel = viewModel()
+    val nav  = LocalNavController.current
     val state by vm.state.collectAsState()
+
+    // Observe jump requests written by QuranSearchPage before it pops back.
+    val backEntry = nav.currentBackStackEntry
+    val jumpSura  by remember(backEntry) {
+        backEntry?.savedStateHandle?.getStateFlow(KEY_JUMP_SURA, 0)
+            ?: MutableStateFlow(0)
+    }.collectAsState()
+
+    LaunchedEffect(jumpSura) {
+        if (jumpSura > 0) {
+            val jumpAya = backEntry?.savedStateHandle?.get<Int>(KEY_JUMP_AYA) ?: 1
+            vm.requestJump(jumpSura, jumpAya)
+            // Reset to 0 so a second selection of the same aya fires again.
+            backEntry?.savedStateHandle?.set(KEY_JUMP_SURA, 0)
+        }
+    }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         when (val s = state) {
             is QuranViewModel.State.Loading -> LoadingBox()
-            is QuranViewModel.State.Ready   -> QuranPager(pages = s.pages, vm = vm)
+            is QuranViewModel.State.Ready   -> QuranPager(
+                pages    = s.pages,
+                vm       = vm,
+                onSearch = { nav.navigate(Route.QURAN_SEARCH) },
+            )
         }
     }
 }
@@ -69,10 +102,20 @@ fun QuranReaderScreen() {
  *
  * Content is vertically centered within the full screen height with no reserved
  * padding for bars; bars animate independently on top without shifting content.
+ *
+ * In the forced RTL context the search icon sits in [CenterAlignedTopAppBar]'s
+ * actions slot — visually on the left — opposite the back arrow on the right.
+ *
+ * Pending jumps from [QuranSearchPage] are observed via [QuranViewModel.pendingJump]
+ * and scroll the pager without disrupting the current bar visibility state.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun QuranPager(pages: List<QuranPageData>, vm: QuranViewModel) {
+private fun QuranPager(
+    pages:    List<QuranPageData>,
+    vm:       QuranViewModel,
+    onSearch: () -> Unit,
+) {
     val nav        = LocalNavController.current
     val scope      = rememberCoroutineScope()
     val pagerState = rememberPagerState(
@@ -82,6 +125,15 @@ private fun QuranPager(pages: List<QuranPageData>, vm: QuranViewModel) {
     var barsVisible by remember { mutableStateOf(true) }
 
     LaunchedEffect(pagerState.settledPage) { vm.savePage(pagerState.settledPage) }
+
+    // Scroll to pages requested by search result selection.
+    val pendingJump by vm.pendingJump.collectAsState()
+    LaunchedEffect(pendingJump) {
+        pendingJump?.let { page ->
+            pagerState.scrollToPage(page)
+            vm.consumeJump()
+        }
+    }
 
     val curPage = pages[pagerState.settledPage]
 
@@ -114,7 +166,11 @@ private fun QuranPager(pages: List<QuranPageData>, vm: QuranViewModel) {
                 .align(Alignment.TopCenter)
                 .fillMaxWidth(),
         ) {
-            QuranTopBar(page = curPage, onBack = { nav.popBackStack() })
+            QuranTopBar(
+                page     = curPage,
+                onBack   = { nav.popBackStack() },
+                onSearch = onSearch,
+            )
         }
 
         // ── Floating bottom bar ───────────────────────────────────────────────
@@ -141,12 +197,17 @@ private fun QuranPager(pages: List<QuranPageData>, vm: QuranViewModel) {
  * [CenterAlignedTopAppBar] with [statusBarsPadding] so the title column is
  * centred in the visible bar area and never overlaps the system status bar.
  *
- * [containerColor] is transparent — the outer [Surface] provides the background
- * so elevation shadow renders correctly.
+ * In the forced RTL context:
+ *   [navigationIcon] slot → right side → back arrow.
+ *   [actions] slot        → left side  → search icon (opposite the back arrow).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun QuranTopBar(page: QuranPageData, onBack: () -> Unit) {
+private fun QuranTopBar(
+    page:     QuranPageData,
+    onBack:   () -> Unit,
+    onSearch: () -> Unit,
+) {
     Surface(
         color           = MaterialTheme.colorScheme.surfaceContainer,
         shadowElevation = 4.dp,
@@ -175,6 +236,15 @@ private fun QuranTopBar(page: QuranPageData, onBack: () -> Unit) {
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null,
+                        tint               = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            },
+            actions = {
+                IconButton(onClick = onSearch) {
+                    Icon(
+                        imageVector        = Icons.Default.Search,
                         contentDescription = null,
                         tint               = MaterialTheme.colorScheme.onSurface,
                     )

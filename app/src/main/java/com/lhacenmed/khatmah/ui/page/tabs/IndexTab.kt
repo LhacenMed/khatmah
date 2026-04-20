@@ -1,5 +1,6 @@
 package com.lhacenmed.khatmah.ui.page.tabs
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -90,14 +91,17 @@ private fun IndexScreen(padding: PaddingValues) {
         // ── Read Quran button ─────────────────────────────────────────────────
         item(key = "read_quran_btn") {
             ReadQuranButton(
-                onClick  = { nav.navigate(Route.QURAN_READER) },
+                onClick  = { nav.navigate(Route.quranReader()) },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
 
         // ── Surah list ────────────────────────────────────────────────────────
         items(surahs, key = { it.num }) { surah ->
-            SurahRow(surah)
+            SurahRow(
+                surah   = surah,
+                onClick = { nav.navigate(Route.quranReader(suraNum = surah.num)) },
+            )
             HorizontalDivider(
                 modifier  = Modifier.padding(horizontal = 16.dp),
                 thickness = 0.5.dp,
@@ -132,22 +136,23 @@ private fun ReadQuranButton(onClick: () -> Unit, modifier: Modifier = Modifier) 
 }
 
 @Composable
-private fun SurahRow(surah: SurahInfo) {
+private fun SurahRow(surah: SurahInfo, onClick: () -> Unit) {
     ListItem(
-        headlineContent = {
+        modifier          = Modifier.clickable(onClick = onClick),
+        headlineContent   = {
             Text(
                 text  = surah.name,
                 style = MaterialTheme.typography.bodyLarge,
             )
         },
-        leadingContent = {
+        leadingContent    = {
             Text(
                 text  = toArNums(surah.num),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
         },
-        trailingContent = {
+        trailingContent   = {
             Text(
                 text  = stringResource(R.string.index_aya_count, surah.ayaCount),
                 style = MaterialTheme.typography.bodySmall,

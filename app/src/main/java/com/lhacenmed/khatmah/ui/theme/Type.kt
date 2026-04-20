@@ -15,7 +15,7 @@ val AlmaghribiWarshFamily = FontFamily(Font(R.font.almaghribi_warsh))
 val UthmaniWarshFamily = FontFamily(Font(R.font.uthmani_warsh))
 val WarshTharwatEmaraFamily = FontFamily(Font(R.font.warsh_tharwat_emara))
 val WarshSuraNameFamily = FontFamily(Font(R.font.warsh_sura_name))
-//warsh_sura_name
+val SurahHeaderFamily = FontFamily(Font(R.font.surah_header_color_regular))
 val KFGQPCFamily = FontFamily(
     Font(R.font.kfgqpc_warsh_v2_regular, FontWeight.Normal),
     Font(R.font.kfgqpc_warsh_v2_bold, FontWeight.Bold),

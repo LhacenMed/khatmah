@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.lhacenmed.khatmah.data.quran.QuranRepository
 import kotlinx.coroutines.Dispatchers
@@ -13,32 +14,50 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class QuranViewModel(app: Application) : AndroidViewModel(app) {
+class QuranViewModel(
+    app: Application,
+    private val handle: SavedStateHandle,
+) : AndroidViewModel(app) {
 
     sealed class State {
-        object Loading                                   : State()
+        object Loading                                    : State()
         data class Ready(val pages: List<QuranPageData>) : State()
     }
 
     private val repo  = QuranRepository(app)
     private val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    private val _state = MutableStateFlow<State>(State.Loading)
+    private val _state       = MutableStateFlow<State>(State.Loading)
     val state: StateFlow<State> = _state.asStateFlow()
+
+    /**
+     * Non-null while a page jump is pending (triggered by a search result selection).
+     * Consumed by the pager via [consumeJump] once scrolled.
+     */
+    private val _pendingJump = MutableStateFlow<Int?>(null)
+    val pendingJump: StateFlow<Int?> = _pendingJump.asStateFlow()
 
     /** Last-read page index (0-based); restored on cold start via SharedPreferences. */
     var savedPage: Int = prefs.getInt(KEY_PAGE, 0)
         private set
 
+    /** Packed (suraNum shl 32 or ayaNum) → page index. Built once after pages are loaded. */
+    private var ayaPageIndex: Map<Long, Int> = emptyMap()
+
     init {
         viewModelScope.launch {
-            // IO dispatcher: read 6 262 rows from SQLite (~50-100 ms)
-            // Default dispatcher: build pages with pure arithmetic (~5-10 ms)
             val pages = withContext(Dispatchers.Default) {
                 QuranPageBuilder.build(repo.allAyas())
             }
-            // Clamp saved page in case the page count changed (DB update, etc.)
-            savedPage = savedPage.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
+            ayaPageIndex = buildAyaPageIndex(pages)
+
+            val targetSura = handle.get<Int>("suraNum") ?: 0
+            savedPage = if (targetSura > 0) {
+                val targetAya = (handle.get<Int>("ayaNum") ?: 0).coerceAtLeast(1)
+                pageForAya(targetSura, targetAya) ?: findSuraPage(targetSura, pages)
+            } else {
+                savedPage.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
+            }
             _state.value = State.Ready(pages)
         }
     }
@@ -47,6 +66,43 @@ class QuranViewModel(app: Application) : AndroidViewModel(app) {
         savedPage = index
         prefs.edit { putInt(KEY_PAGE, index) }
     }
+
+    /**
+     * Requests an immediate pager scroll to the page containing [suraNum] / [ayaNum].
+     * If the aya is not yet indexed (VM still loading), the request is silently dropped.
+     */
+    fun requestJump(suraNum: Int, ayaNum: Int) {
+        _pendingJump.value = pageForAya(suraNum, ayaNum)
+    }
+
+    /** Called by the pager after it has scrolled to the pending page. */
+    fun consumeJump() {
+        _pendingJump.value = null
+    }
+
+    /** Returns the 0-based page index for [suraNum] / [ayaNum], or null if not mapped. */
+    fun pageForAya(suraNum: Int, ayaNum: Int): Int? =
+        ayaPageIndex[suraNum.toLong() shl 32 or ayaNum.toLong()]
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    private fun buildAyaPageIndex(pages: List<QuranPageData>): Map<Long, Int> {
+        val map = HashMap<Long, Int>(6300)
+        pages.forEachIndexed { idx, page ->
+            page.segments.forEach { seg ->
+                if (seg is QuranSegment.Aya) {
+                    map[seg.suraNum.toLong() shl 32 or seg.ayaNum.toLong()] = idx
+                }
+            }
+        }
+        return map
+    }
+
+    /** Fallback: index of the first page whose header belongs to [suraNum]. */
+    private fun findSuraPage(suraNum: Int, pages: List<QuranPageData>): Int =
+        pages.indexOfFirst { page ->
+            page.segments.any { it is QuranSegment.SuraHeader && it.num == suraNum }
+        }.coerceAtLeast(0)
 
     private companion object {
         const val PREFS    = "quran_reader"
