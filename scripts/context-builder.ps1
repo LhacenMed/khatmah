@@ -164,6 +164,7 @@ function Set-RestoredState {
 }
 
 # --- Context writer ----------------------------------------------------------
+# Builds the context string, writes it to disk, and returns it for clipboard use.
 function Write-Context {
     param([System.Collections.Generic.List[PSCustomObject]]$Files, [string]$OutPath)
 
@@ -182,7 +183,10 @@ function Write-Context {
         [void]$sb.AppendLine($TICK3)
         if ($i -lt $Files.Count - 1) { [void]$sb.AppendLine('---') }
     }
-    [IO.File]::WriteAllText($OutPath, $sb.ToString(), [Text.Encoding]::UTF8)
+
+    $text = $sb.ToString()
+    [IO.File]::WriteAllText($OutPath, $text, [Text.Encoding]::UTF8)
+    return $text
 }
 
 # --- Resolve root path -------------------------------------------------------
@@ -350,13 +354,22 @@ $layoutBot = {
 # Same guard as $layoutTop -- prevents premature-resize arithmetic failures.
 $botBar.Add_Resize({ if ($form.IsHandleCreated) { & $layoutBot } })
 
-# --- Flash timer -------------------------------------------------------------
+# --- Flash timers ------------------------------------------------------------
 # Briefly turns the Refresh button green after a successful rebuild.
 $flashTimer          = New-Object System.Windows.Forms.Timer
 $flashTimer.Interval = 500
 $flashTimer.Add_Tick({
     $flashTimer.Stop()
     $btnRefresh.ForeColor = $CLR.Dim
+})
+
+# Briefly turns the Generate button green after a successful generate + copy.
+$genFlashTimer          = New-Object System.Windows.Forms.Timer
+$genFlashTimer.Interval = 1200
+$genFlashTimer.Add_Tick({
+    $genFlashTimer.Stop()
+    $btnGen.BackColor = $CLR.Accent
+    $btnGen.Text      = 'Generate ->'
 })
 
 # --- Status refresh ----------------------------------------------------------
@@ -478,15 +491,22 @@ $generate = {
     [System.Windows.Forms.Application]::DoEvents()
 
     try {
-        Write-Context $files $outPath
+        $text = Write-Context $files $outPath
+        [System.Windows.Forms.Clipboard]::SetText($text)
+
+        # Green flash confirms both save and copy without a blocking dialog
+        $btnGen.BackColor = $CLR.Green
+        $btnGen.Text      = 'Copied!'
+        $genFlashTimer.Stop()
+        $genFlashTimer.Start()
+
         [System.Windows.Forms.MessageBox]::Show(
-                "Saved to:`n$outPath`n`n$($files.Count) file(s) bundled.",
+                "Saved to:`n$outPath`n`n$($files.Count) file(s) bundled.`nContent copied to clipboard.",
                 'Done!', 'OK', 'Information'
         ) | Out-Null
     } catch {
         [System.Windows.Forms.MessageBox]::Show("Error writing file:`n$_", 'Context Builder', 'OK', 'Error') | Out-Null
     } finally {
-        $btnGen.Text    = 'Generate ->'
         $btnGen.Enabled = $true
         $form.Cursor    = [System.Windows.Forms.Cursors]::Default
     }
