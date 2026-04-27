@@ -6,6 +6,7 @@ import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.lhacenmed.khatmah.data.prefs.AppPrefs
 import com.lhacenmed.khatmah.data.quran.QuranRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,8 @@ class QuranViewModel(
     sealed class State {
         object Loading                                    : State()
         data class Ready(val pages: List<QuranPageData>) : State()
+        /** Image reader mode: 604 mushaf pages, no text rendering. */
+        data class ImageReady(val pageCount: Int)        : State()
     }
 
     private val repo  = QuranRepository(app)
@@ -46,20 +49,42 @@ class QuranViewModel(
 
     init {
         viewModelScope.launch {
-            val pages = withContext(Dispatchers.Default) {
-                QuranPageBuilder.build(repo.allAyas())
-            }
-            ayaPageIndex = buildAyaPageIndex(pages)
-
-            val targetSura = handle.get<Int>("suraNum") ?: 0
-            savedPage = if (targetSura > 0) {
-                val targetAya = (handle.get<Int>("ayaNum") ?: 0).coerceAtLeast(1)
-                pageForAya(targetSura, targetAya) ?: findSuraPage(targetSura, pages)
+            if (AppPrefs.readerStyle.value == AppPrefs.ReaderStyle.IMAGES) {
+                initImageMode()
             } else {
-                savedPage.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
+                initTextMode()
             }
-            _state.value = State.Ready(pages)
         }
+    }
+
+    private suspend fun initImageMode() {
+        val mushafMap = withContext(Dispatchers.IO) { repo.ayaMushhafPages() }
+        ayaPageIndex  = mushafMap
+
+        val targetSura = handle.get<Int>("suraNum") ?: 0
+        savedPage = if (targetSura > 0) {
+            val targetAya = (handle.get<Int>("ayaNum") ?: 0).coerceAtLeast(1)
+            pageForAya(targetSura, targetAya) ?: 0
+        } else {
+            savedPage.coerceIn(0, MUSHAF_PAGE_COUNT - 1)
+        }
+        _state.value = State.ImageReady(MUSHAF_PAGE_COUNT)
+    }
+
+    private suspend fun initTextMode() {
+        val pages = withContext(Dispatchers.Default) {
+            QuranPageBuilder.build(repo.allAyas())
+        }
+        ayaPageIndex = buildAyaPageIndex(pages)
+
+        val targetSura = handle.get<Int>("suraNum") ?: 0
+        savedPage = if (targetSura > 0) {
+            val targetAya = (handle.get<Int>("ayaNum") ?: 0).coerceAtLeast(1)
+            pageForAya(targetSura, targetAya) ?: findSuraPage(targetSura, pages)
+        } else {
+            savedPage.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
+        }
+        _state.value = State.Ready(pages)
     }
 
     fun savePage(index: Int) {
@@ -105,7 +130,8 @@ class QuranViewModel(
         }.coerceAtLeast(0)
 
     private companion object {
-        const val PREFS    = "quran_reader"
-        const val KEY_PAGE = "last_page"
+        const val PREFS             = "quran_reader"
+        const val KEY_PAGE          = "last_page"
+        const val MUSHAF_PAGE_COUNT = 604
     }
 }

@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -29,6 +30,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,17 +75,22 @@ fun QuranReaderScreen() {
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         when (val s = state) {
-            is QuranViewModel.State.Loading -> LoadingBox()
-            is QuranViewModel.State.Ready   -> QuranPager(
+            is QuranViewModel.State.Loading    -> LoadingBox()
+            is QuranViewModel.State.Ready      -> QuranPager(
                 pages    = s.pages,
                 vm       = vm,
                 onSearch = { nav.navigate(Route.QURAN_SEARCH) },
+            )
+            is QuranViewModel.State.ImageReady -> QuranImagePager(
+                pageCount = s.pageCount,
+                vm        = vm,
+                onSearch  = { nav.navigate(Route.QURAN_SEARCH) },
             )
         }
     }
 }
 
-// ── Pager shell ───────────────────────────────────────────────────────────────
+// ── Text pager shell ──────────────────────────────────────────────────────────
 
 /**
  * Root layout: pager fills the screen; bars float above it.
@@ -111,30 +118,6 @@ private fun QuranPager(
     ) { pages.size }
 
     var barsVisible by remember { mutableStateOf(true) }
-
-    // ── System bars sync ──────────────────────────────────────────────────────
-    val view = LocalView.current
-    val window = (view.context as androidx.activity.ComponentActivity).window
-    val insetsController = remember(view) {
-        WindowInsetsControllerCompat(window, view).also {
-            it.systemBarsBehavior =
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
-    }
-
-    LaunchedEffect(barsVisible) {
-        if (barsVisible) {
-            insetsController.show(WindowInsetsCompat.Type.systemBars())
-        } else {
-            insetsController.hide(WindowInsetsCompat.Type.systemBars())
-        }
-    }
-
-    // Restore system bars when leaving this screen.
-    DisposableEffect(Unit) {
-        onDispose { insetsController.show(WindowInsetsCompat.Type.systemBars()) }
-    }
-    // ─────────────────────────────────────────────────────────────────────────
 
     LaunchedEffect(pagerState.settledPage) { vm.savePage(pagerState.settledPage) }
 
@@ -182,7 +165,86 @@ private fun QuranPager(
     }
 }
 
-// ── Top bar ───────────────────────────────────────────────────────────────────
+// ── Image pager shell ─────────────────────────────────────────────────────────
+
+/**
+ * Full-screen mushaf image reader (604 pages from assets/quran/).
+ *
+ * Identical chrome to [QuranPager] (tap-to-toggle bars, slider, system bars sync).
+ * Each page renders assets/quran/{pageNum}.jpg filling the full screen.
+ * Jump-to-aya from search and index tab works via the same [QuranViewModel.pendingJump]
+ * mechanism — the VM resolves (suraNum, ayaNum) → mushaf page index via page_aya.
+ */
+@Composable
+private fun QuranImagePager(
+    pageCount: Int,
+    vm:        QuranViewModel,
+    onSearch:  () -> Unit,
+) {
+    val nav        = LocalNavController.current
+    val scope      = rememberCoroutineScope()
+    val pagerState = rememberPagerState(
+        initialPage = vm.savedPage.coerceIn(0, pageCount - 1),
+    ) { pageCount }
+
+    var barsVisible by remember { mutableStateOf(true) }
+
+    LaunchedEffect(pagerState.settledPage) { vm.savePage(pagerState.settledPage) }
+
+    val pendingJump by vm.pendingJump.collectAsState()
+    LaunchedEffect(pendingJump) {
+        pendingJump?.let { page -> pagerState.scrollToPage(page); vm.consumeJump() }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .pointerInput(Unit) { detectTapGestures { barsVisible = !barsVisible } },
+    ) {
+        HorizontalPager(
+            state    = pagerState,
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding(),
+        ) { idx ->
+            AsyncImage(
+                model              = "file:///android_asset/quran/${idx + 1}.jpg",
+                contentDescription = null,
+                contentScale       = ContentScale.FillBounds,
+                modifier           = Modifier.fillMaxSize(),
+            )
+        }
+
+        AnimatedVisibility(
+            visible  = barsVisible,
+            enter    = slideInVertically(tween(ANIM_MS)) { -it } + fadeIn(tween(ANIM_MS)),
+            exit     = slideOutVertically(tween(ANIM_MS)) { -it } + fadeOut(tween(ANIM_MS / 2)),
+            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
+        ) {
+            ImageTopBar(
+                pageNum  = pagerState.settledPage + 1,
+                onBack   = { nav.popBackStack() },
+                onSearch = onSearch,
+            )
+        }
+
+        AnimatedVisibility(
+            visible  = barsVisible,
+            enter    = slideInVertically(tween(ANIM_MS)) { it } + fadeIn(tween(ANIM_MS)),
+            exit     = slideOutVertically(tween(ANIM_MS)) { it } + fadeOut(tween(ANIM_MS / 2)),
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+        ) {
+            QuranBottomBar(
+                currentPage = pagerState.currentPage,
+                totalPages  = pageCount,
+                onJump      = { target -> scope.launch { pagerState.scrollToPage(target) } },
+            )
+        }
+    }
+}
+
+// ── Top bar (text mode) ───────────────────────────────────────────────────────
 
 /**
  * [CenterAlignedTopAppBar] with [statusBarsPadding].
@@ -209,6 +271,39 @@ private fun QuranTopBar(page: QuranPageData, onBack: () -> Unit, onSearch: () ->
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface)
+                }
+            },
+            actions = {
+                IconButton(onClick = onSearch) {
+                    Icon(Icons.Default.Search, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface)
+                }
+            },
+        )
+    }
+}
+
+// ── Top bar (image mode) ──────────────────────────────────────────────────────
+
+/** Minimal top bar for image mode — shows the mushaf page number. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ImageTopBar(pageNum: Int, onBack: () -> Unit, onSearch: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer, shadowElevation = 4.dp) {
+        CenterAlignedTopAppBar(
+            modifier = Modifier.statusBarsPadding(),
+            colors   = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
+            title = {
+                Text(
+                    text  = "صفحة ${toArNums(pageNum)}",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {

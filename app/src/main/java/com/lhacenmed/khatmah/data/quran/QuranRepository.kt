@@ -143,6 +143,21 @@ class QuranRepository(private val context: Context) {
     }
 
     /**
+     * Returns a map of ayaKey(suraNum, ayaNum) → 0-based mushaf image index (page_aya - 1).
+     * Used in image reader mode so jump-to-aya and jump-to-sura resolve to the correct image.
+     */
+    suspend fun ayaMushhafPages(): Map<Long, Int> = withContext(Dispatchers.IO) {
+        QuranDb.open(context).rawQuery(SQL_MUSHAF_PAGES, null).use { c ->
+            val map = HashMap<Long, Int>(6300)
+            while (c.moveToNext()) {
+                val key  = c.getInt(0).toLong() shl 32 or c.getInt(1).toLong()
+                map[key] = c.getInt(2) - 1  // page_aya is 1-based → 0-based pager index
+            }
+            map
+        }
+    }
+
+    /**
      * Two-pass normalized Arabic search.
      *
      * Pass 1 — single ayas: entry's normalized text contains the normalized query.
@@ -183,9 +198,10 @@ class QuranRepository(private val context: Context) {
         suraNum.toLong() shl 32 or ayaNum.toLong()
 
     private companion object {
-        const val SQL_AYAS   = "SELECT sura_num,sura,aya_num,aya,juz FROM quran ORDER BY sura_num,aya_num"
-        const val SQL_SURAHS = "SELECT sura_num,sura,COUNT(aya_num) FROM quran GROUP BY sura_num ORDER BY sura_num"
-        const val SQL_CACHE  = """
+        const val SQL_AYAS         = "SELECT sura_num,sura,aya_num,aya,juz FROM quran ORDER BY sura_num,aya_num"
+        const val SQL_SURAHS       = "SELECT sura_num,sura,COUNT(aya_num) FROM quran GROUP BY sura_num ORDER BY sura_num"
+        const val SQL_MUSHAF_PAGES = "SELECT sura_num,aya_num,page_aya FROM quran ORDER BY sura_num,aya_num"
+        const val SQL_CACHE        = """
             SELECT q.sura_num,q.aya_num,q.sura,q.aya,COALESCE(at.arabic_text,q.aya)
             FROM quran q
             LEFT JOIN arabic_text at ON at.sura=q.sura_num AND at.ayah=q.aya_num
