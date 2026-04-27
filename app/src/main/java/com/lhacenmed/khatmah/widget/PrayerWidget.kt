@@ -1,6 +1,8 @@
 package com.lhacenmed.khatmah.widget
 
 import android.annotation.SuppressLint
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
@@ -41,9 +43,10 @@ import com.lhacenmed.khatmah.data.prayer.PrayerSettings
 import com.lhacenmed.khatmah.data.prayer.PrayerTime
 import com.lhacenmed.khatmah.util.LocaleManager
 import com.lhacenmed.khatmah.util.OnboardingPrefs
-import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -51,13 +54,22 @@ import java.time.format.DateTimeFormatter
 class PrayerWidget : GlanceAppWidget() {
 
     /**
-     * The next upcoming prayer and how many milliseconds remain until it starts.
-     * Always represents a future prayer — never negative, never "since".
+     * Describes the countdown panel state:
+     *
+     * [CountingDown] — next prayer hasn't arrived yet; Chronometer counts down.
+     * [ElapsedSince] — a prayer passed within [ELAPSED_WINDOW_MS]; Chronometer counts up.
+     *                  That prayer stays highlighted in the list for 30 minutes.
      */
-    private data class Countdown(val prayer: PrayerTime, val msRemaining: Long)
+    private sealed class Countdown {
+        abstract val prayer: PrayerTime
+        data class CountingDown(override val prayer: PrayerTime, val msRemaining: Long) : Countdown()
+        data class ElapsedSince(override val prayer: PrayerTime, val msElapsed: Long)   : Countdown()
+    }
 
     companion object {
-        // Highlight color (#FFEB3B) for the active prayer row.
+        /** How long (ms) to show "Since / مضى على" before switching to the next prayer. */
+        private const val ELAPSED_WINDOW_MS = 30 * 60 * 1000L
+
         private val COLOR_HIGHLIGHT = android.graphics.Color.argb(255, 255, 235, 59)
         private const val COLOR_NORMAL = android.graphics.Color.WHITE
 
@@ -93,28 +105,90 @@ class PrayerWidget : GlanceAppWidget() {
         } ?: emptyList()
 
         val countdown: Countdown? = prayers.takeIf { it.isNotEmpty() }
-            ?.let { resolveCountdown(it, LocalTime.now()) }
+            ?.let { resolveCountdown(it, LocalTime.now(), LocalDate.now()) }
+
+        if (prayers.isNotEmpty()) scheduleNextAlarm(context, prayers)
 
         provideContent {
             GlanceTheme { Content(prayers, countdown) }
         }
     }
 
+    // ── Alarm scheduling ──────────────────────────────────────────────────────
+
+    /**
+     * Schedules an exact alarm at the next transition point:
+     *  - If inside the 30-min elapsed window → alarm at window end (prayer + 30 min).
+     *  - Otherwise → alarm at the next prayer time.
+     *
+     * Falls back gracefully on API 31-32 if SCHEDULE_EXACT_ALARM hasn't been granted.
+     */
+    internal fun scheduleNextAlarm(context: Context, prayers: List<PrayerTime>) {
+        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !am.canScheduleExactAlarms()) return
+
+        val zone      = ZoneId.systemDefault()
+        val now       = LocalTime.now()
+        val today     = LocalDate.now()
+        val nowMs     = System.currentTimeMillis()
+        val lastPassed = prayers.lastOrNull { !it.time.isAfter(now) }
+
+        val triggerMs: Long = if (lastPassed != null) {
+            val passedMs  = ZonedDateTime.of(today, lastPassed.time, zone).toInstant().toEpochMilli()
+            val windowEnd = passedMs + ELAPSED_WINDOW_MS
+            if (windowEnd > nowMs) windowEnd          // still in elapsed window
+            else nextPrayerEpochMs(prayers, now, today, zone, nowMs)
+        } else {
+            nextPrayerEpochMs(prayers, now, today, zone, nowMs)
+        }
+
+        val pi = PendingIntent.getBroadcast(
+            context, 0,
+            Intent(context, PrayerAlarmReceiver::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMs, pi)
+    }
+
+    private fun nextPrayerEpochMs(
+        prayers: List<PrayerTime>,
+        now:     LocalTime,
+        today:   LocalDate,
+        zone:    ZoneId,
+        nowMs:   Long,
+    ): Long {
+        val next = prayers.firstOrNull { it.time.isAfter(now) } ?: prayers.first()
+        var ms   = ZonedDateTime.of(today, next.time, zone).toInstant().toEpochMilli()
+        if (ms <= nowMs) ms += 86_400_000L
+        return ms
+    }
+
     // ── Countdown resolution ──────────────────────────────────────────────────
 
     /**
-     * Finds the next upcoming prayer and returns a [Countdown] with a guaranteed
-     * non-negative [Countdown.msRemaining].
+     * Determines whether to show elapsed or remaining time:
      *
-     * If all prayers for today have passed, wraps to tomorrow's Fajr so the
-     * Chronometer always counts forward — never negative.
+     * - If a prayer passed within [ELAPSED_WINDOW_MS] → [Countdown.ElapsedSince] with
+     *   that prayer highlighted and the Chronometer counting up.
+     * - Otherwise → [Countdown.CountingDown] to the next prayer.
      */
-    private fun resolveCountdown(prayers: List<PrayerTime>, now: LocalTime): Countdown {
+    private fun resolveCountdown(prayers: List<PrayerTime>, now: LocalTime, today: LocalDate): Countdown {
+        val zone  = ZoneId.systemDefault()
+        val nowMs = System.currentTimeMillis()
+
+        val lastPassed = prayers.lastOrNull { !it.time.isAfter(now) }
+        if (lastPassed != null) {
+            val passedMs = ZonedDateTime.of(today, lastPassed.time, zone).toInstant().toEpochMilli()
+            val elapsed  = nowMs - passedMs
+            if (elapsed in 0..ELAPSED_WINDOW_MS) {
+                return Countdown.ElapsedSince(lastPassed, elapsed)
+            }
+        }
+
         val next = prayers.firstOrNull { it.time.isAfter(now) } ?: prayers.first()
-        val ms   = Duration.between(now, next.time).let { d ->
-            if (d.isNegative) d.plusDays(1) else d
-        }.toMillis().coerceAtLeast(0L)
-        return Countdown(next, ms)
+        var triggerMs = ZonedDateTime.of(today, next.time, zone).toInstant().toEpochMilli()
+        if (triggerMs <= nowMs) triggerMs += 86_400_000L
+        return Countdown.CountingDown(next, (triggerMs - nowMs).coerceAtLeast(0L))
     }
 
     // ── Root layout ───────────────────────────────────────────────────────────
@@ -156,9 +230,9 @@ class PrayerWidget : GlanceAppWidget() {
             val side = GlanceModifier.defaultWeight().fillMaxHeight()
             if (isRtl) {
                 PrayerList(prayers, countdown.prayer.name, isRtl, side)
-                CountdownPanel(countdown, isRtl, side)
+                CountdownPanel(countdown, side)
             } else {
-                CountdownPanel(countdown, isRtl, side)
+                CountdownPanel(countdown, side)
                 PrayerList(prayers, countdown.prayer.name, isRtl, side)
             }
         }
@@ -167,13 +241,28 @@ class PrayerWidget : GlanceAppWidget() {
     // ── Countdown panel ───────────────────────────────────────────────────────
 
     @Composable
-    private fun CountdownPanel(countdown: Countdown, isRtl: Boolean, modifier: GlanceModifier) {
+    private fun CountdownPanel(countdown: Countdown, modifier: GlanceModifier) {
         val context = LocalContext.current
+        val isRtl   = LocaleManager.savedTag(context)?.startsWith("ar") == true
         val bgRes   = if (isRtl) R.drawable.widget_countdown_rtl_bg
         else       R.drawable.widget_countdown_ltr_bg
 
-        val label = if (isRtl) "باقي على ${prayerName(countdown.prayer.name, context, isRtl)}"
-        else       "Till ${prayerName(countdown.prayer.name, context, isRtl)}"
+        val prayerLabel = prayerName(countdown.prayer.name, context, isRtl)
+        val label = when {
+            countdown is Countdown.ElapsedSince && isRtl  -> "مضى على $prayerLabel"
+            countdown is Countdown.ElapsedSince            -> "Since $prayerLabel"
+            isRtl                                          -> "باقي على $prayerLabel"
+            else                                           -> "Till $prayerLabel"
+        }
+
+        // ElapsedSince: Chronometer counts up from (now - elapsed).
+        // CountingDown: Chronometer counts down from (now + remaining).
+        val (chronometerBase, countingDown) = when (countdown) {
+            is Countdown.ElapsedSince  ->
+                SystemClock.elapsedRealtime() - countdown.msElapsed to false
+            is Countdown.CountingDown ->
+                SystemClock.elapsedRealtime() + countdown.msRemaining to true
+        }
 
         AndroidRemoteViews(
             modifier    = modifier,
@@ -181,14 +270,8 @@ class PrayerWidget : GlanceAppWidget() {
                 setInt(R.id.countdown_root, "setBackgroundResource", bgRes)
                 setImageViewResource(R.id.prayer_icon, prayerIcon(countdown.prayer.name))
                 setTextViewText(R.id.prayer_label, label)
-                // Base is always in the future — Chronometer counts down, never negative.
-                setChronometer(
-                    R.id.chrono,
-                    SystemClock.elapsedRealtime() + countdown.msRemaining,
-                    null,
-                    true,
-                )
-                setChronometerCountDown(R.id.chrono, true)
+                setChronometer(R.id.chrono, chronometerBase, null, true)
+                setChronometerCountDown(R.id.chrono, countingDown)
             },
         )
     }
@@ -236,7 +319,7 @@ class PrayerWidget : GlanceAppWidget() {
      * result is correct regardless of which process is running the widget.
      */
     private fun prayerName(name: String, context: Context, isRtl: Boolean): String {
-        if (!isRtl) return name   // English name from the engine is already correct
+        if (!isRtl) return name
         return when (name.lowercase()) {
             "fajr"    -> context.getString(R.string.prayer_fajr)
             "sunrise" -> context.getString(R.string.prayer_sunrise)

@@ -34,7 +34,7 @@ object LocaleManager {
     // null = follow system
     fun setLocale(tag: String?) {
         appContext?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            ?.edit()?.putString(KEY, tag)?.apply()
+            ?.edit { putString(KEY, tag) }
         val list = if (tag.isNullOrEmpty()) LocaleListCompat.getEmptyLocaleList()
         else LocaleListCompat.forLanguageTags(tag)
         AppCompatDelegate.setApplicationLocales(list)

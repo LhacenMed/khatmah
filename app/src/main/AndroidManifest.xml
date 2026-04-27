@@ -7,6 +7,10 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- Required by android.location.Geocoder for city name resolution -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Exact alarms: API 33+ (auto-granted for alarm/prayer apps) -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- Exact alarms: API 31-32 (user may need to grant in battery settings) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:name=".App"
@@ -41,6 +45,11 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/prayer_widget_info" />
         </receiver>
+
+        <!-- Receives exact-alarm broadcasts to trigger widget refresh at each prayer time -->
+        <receiver
+            android:name=".widget.PrayerAlarmReceiver"
+            android:exported="false" />
 
     </application>
 
