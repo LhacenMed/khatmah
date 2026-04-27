@@ -8,6 +8,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -19,6 +20,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -38,6 +41,14 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private const val ANIM_MS = 280
+
+// Invert RGB channels, preserve alpha.
+private val InvertMatrix = ColorMatrix(floatArrayOf(
+    -1f,  0f,  0f, 0f, 255f,
+    0f, -1f,  0f, 0f, 255f,
+    0f,  0f, -1f, 0f, 255f,
+    0f,  0f,  0f, 1f,   0f,
+))
 
 // Keys shared with QuranSearchScreen — written there, read here via SavedStateHandle.
 internal const val KEY_JUMP_SURA = "jumpSura"
@@ -174,6 +185,7 @@ private fun QuranPager(
  * Each page renders assets/quran/{pageNum}.jpg filling the full screen.
  * Jump-to-aya from search and index tab works via the same [QuranViewModel.pendingJump]
  * mechanism — the VM resolves (suraNum, ayaNum) → mushaf page index via page_aya.
+ * In dark theme the image colors are inverted so white paper becomes dark.
  */
 @Composable
 private fun QuranImagePager(
@@ -188,6 +200,7 @@ private fun QuranImagePager(
     ) { pageCount }
 
     var barsVisible by remember { mutableStateOf(true) }
+    val isDark      = isSystemInDarkTheme()
 
     LaunchedEffect(pagerState.settledPage) { vm.savePage(pagerState.settledPage) }
 
@@ -199,19 +212,19 @@ private fun QuranImagePager(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(if (isDark) Color.Black else Color.White)
             .pointerInput(Unit) { detectTapGestures { barsVisible = !barsVisible } },
     ) {
         HorizontalPager(
             state    = pagerState,
             modifier = Modifier
-                .fillMaxSize()
-                .systemBarsPadding(),
+                .fillMaxSize(),
         ) { idx ->
             AsyncImage(
                 model              = "file:///android_asset/quran/${idx + 1}.jpg",
                 contentDescription = null,
                 contentScale       = ContentScale.FillBounds,
+                colorFilter        = if (isDark) ColorFilter.colorMatrix(InvertMatrix) else null,
                 modifier           = Modifier.fillMaxSize(),
             )
         }
