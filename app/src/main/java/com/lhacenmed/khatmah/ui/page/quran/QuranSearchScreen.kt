@@ -1,5 +1,6 @@
 package com.lhacenmed.khatmah.ui.page.quran
 
+import android.app.Application
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,30 +21,75 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.lhacenmed.khatmah.data.quran.QuranRepository
 import com.lhacenmed.khatmah.data.quran.SearchResult
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.ui.theme.WarshFamily
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+// ── ViewModel ─────────────────────────────────────────────────────────────────
+
+class QuranSearchViewModel(app: Application) : AndroidViewModel(app) {
+
+    data class State(
+        val query:   String             = "",
+        val results: List<SearchResult> = emptyList(),
+        val loading: Boolean            = false,
+    )
+
+    private val repo   = QuranRepository(app)
+    private val _state = MutableStateFlow(State())
+    val state: StateFlow<State> = _state.asStateFlow()
+
+    private var searchJob: Job? = null
+
+    /**
+     * Updates the query and triggers a debounced (300 ms) search.
+     * Clears results immediately when [query] is blank.
+     */
+    fun onQueryChange(query: String) {
+        _state.update { it.copy(query = query) }
+        searchJob?.cancel()
+        if (query.isBlank()) {
+            _state.update { it.copy(results = emptyList(), loading = false) }
+            return
+        }
+        searchJob = viewModelScope.launch {
+            delay(300)
+            _state.update { it.copy(loading = true) }
+            val results = repo.search(query)
+            _state.update { it.copy(results = results, loading = false) }
+        }
+    }
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 /**
  * Full-screen Quran search page.
  *
  * Navigation contract:
- *  - Opened by [QuranReaderScreen] via [Route.QURAN_SEARCH].
- *  - On result selection, writes [KEY_JUMP_SURA] + [KEY_JUMP_AYA] to the
- *    reader's [SavedStateHandle] before popping, so the reader can scroll
- *    to the correct page without re-creating its ViewModel.
- *  - Back gesture / back button with non-empty query → clears query (stays on page).
- *  - Back gesture / back button with empty query → normal pop (returns to reader).
+ *   Opened by [QuranReaderScreen] via [Route.QURAN_SEARCH].
+ *   On result selection, writes [KEY_JUMP_SURA] + [KEY_JUMP_AYA] to the reader's
+ *   SavedStateHandle before popping, so the reader scrolls to the correct page.
+ *   Back with non-empty query → clears query. Back with empty query → pops.
  */
 @Composable
 fun QuranSearchPage() {
-    val vm:    QuranSearchViewModel = viewModel()
-    val state  by vm.state.collectAsState()
-    val nav    = LocalNavController.current
-    val focus  = remember { FocusRequester() }
+    val vm:   QuranSearchViewModel = viewModel()
+    val state by vm.state.collectAsState()
+    val nav   = LocalNavController.current
+    val focus = remember { FocusRequester() }
 
-    // Clear query on back when not empty; otherwise allow normal pop.
     BackHandler(enabled = state.query.isNotEmpty()) { vm.onQueryChange("") }
 
     Scaffold(
@@ -69,7 +115,6 @@ fun QuranSearchPage() {
         )
     }
 
-    // Auto-focus so the keyboard opens immediately when the page enters.
     LaunchedEffect(Unit) { focus.requestFocus() }
 }
 
@@ -82,10 +127,7 @@ private fun SearchBar(
     onBack:         () -> Unit,
     focusRequester: FocusRequester,
 ) {
-    Surface(
-        color           = MaterialTheme.colorScheme.surfaceContainer,
-        shadowElevation = 4.dp,
-    ) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer, shadowElevation = 4.dp) {
         Row(
             modifier          = Modifier
                 .fillMaxWidth()
@@ -94,18 +136,13 @@ private fun SearchBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
-                Icon(
-                    imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = null,
-                    tint               = MaterialTheme.colorScheme.onSurface,
-                )
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface)
             }
             TextField(
                 value         = query,
                 onValueChange = onQueryChange,
-                modifier      = Modifier
-                    .weight(1f)
-                    .focusRequester(focusRequester),
+                modifier      = Modifier.weight(1f).focusRequester(focusRequester),
                 placeholder   = {
                     Text(
                         text  = "ابحث في القرآن الكريم",
@@ -113,16 +150,13 @@ private fun SearchBar(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 },
-                singleLine    = true,
-                trailingIcon  = {
+                singleLine   = true,
+                trailingIcon = {
                     if (query.isNotEmpty()) {
                         IconButton(onClick = { onQueryChange("") }) {
-                            Icon(
-                                imageVector        = Icons.Default.Close,
-                                contentDescription = null,
-                                modifier           = Modifier.size(18.dp),
-                                tint               = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            Icon(Icons.Default.Close, contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint     = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 },
@@ -148,21 +182,15 @@ private fun SearchContent(
 ) {
     when {
         state.loading -> {
-            Box(
-                modifier         = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
+            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         }
         state.query.isNotEmpty() && state.results.isEmpty() -> {
-            Box(
-                modifier         = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text  = "لا توجد نتائج",
+            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(text  = "لا توجد نتائج",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         else -> {
@@ -170,10 +198,7 @@ private fun SearchContent(
                 modifier       = modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 16.dp),
             ) {
-                items(
-                    items = state.results,
-                    key   = { "${it.suraNum}:${it.ayaNum}" },
-                ) { result ->
+                items(items = state.results, key = { "${it.suraNum}:${it.ayaNum}" }) { result ->
                     SearchResultRow(result = result, onClick = { onSelected(result) })
                     HorizontalDivider(
                         modifier  = Modifier.padding(horizontal = 16.dp),
@@ -189,17 +214,14 @@ private fun SearchContent(
 // ── Result row ────────────────────────────────────────────────────────────────
 
 /**
- * Displays the vocalized aya text (Warsh font, up to 3 lines) with the surah name
- * and aya number below. The surah ordinal appears as a leading label.
- *
- * When [SearchResult.spansPair] is true the text shows two ayas joined by ۝,
- * indicating the search hit crossed an aya boundary.
+ * Vocalized aya text (Warsh, up to 3 lines) with surah name + aya number below.
+ * When [SearchResult.spansPair] is true, two ayas joined by ۝ are shown.
  */
 @Composable
 private fun SearchResultRow(result: SearchResult, onClick: () -> Unit) {
     ListItem(
-        modifier          = Modifier.clickable(onClick = onClick),
-        headlineContent   = {
+        modifier        = Modifier.clickable(onClick = onClick),
+        headlineContent = {
             Text(
                 text     = result.ayaText,
                 style    = TextStyle(
@@ -220,7 +242,7 @@ private fun SearchResultRow(result: SearchResult, onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.primary,
             )
         },
-        leadingContent    = {
+        leadingContent = {
             Text(
                 text  = toArNums(result.suraNum),
                 style = MaterialTheme.typography.labelMedium,
@@ -229,8 +251,3 @@ private fun SearchResultRow(result: SearchResult, onClick: () -> Unit) {
         },
     )
 }
-
-// ── Utilities ─────────────────────────────────────────────────────────────────
-
-private fun toArNums(n: Int): String =
-    n.toString().map { "٠١٢٣٤٥٦٧٨٩"[it - '0'] }.joinToString("")

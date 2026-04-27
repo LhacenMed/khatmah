@@ -1,4 +1,3 @@
-// data/quran/QuranRepository.kt
 package com.lhacenmed.khatmah.data.quran
 
 import android.content.Context
