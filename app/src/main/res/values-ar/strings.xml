@@ -77,6 +77,11 @@
     <string name="more_instagram">تابعنا على إنستغرام</string>
     <string name="more_share_app">مشاركة التطبيق</string>
     <string name="more_rate_khatmah">قيّم ختمة</string>
+    <string name="more_reader_style">طريقة عرض القرآن</string>
+    <string name="reader_style_text">نص</string>
+    <string name="reader_style_text_desc">نص القرآن الكريم مع إمكانية البحث والتنقل</string>
+    <string name="reader_style_images">صفحات المصحف</string>
+    <string name="reader_style_images_desc">صفحات المصحف المصوّرة، صفحة تلو الأخرى</string>
 
     <!-- Index tab -->
     <string name="index_read_quran">قراءة القرآن</string>

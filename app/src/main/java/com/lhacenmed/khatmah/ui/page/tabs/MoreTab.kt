@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AlternateEmail
+import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.DarkMode
@@ -24,24 +25,30 @@ import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.SkipPrevious
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.WbSunny
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.data.prefs.AppPrefs
 import com.lhacenmed.khatmah.ui.common.Route
+import com.lhacenmed.khatmah.ui.component.OptionSelectBottomSheet
 import com.lhacenmed.khatmah.ui.component.PreferenceItem
 import com.lhacenmed.khatmah.ui.component.PreferenceSubtitle
 import com.lhacenmed.khatmah.ui.component.PreferenceSwitch
+import com.lhacenmed.khatmah.ui.component.SheetOption
 import com.lhacenmed.khatmah.ui.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.ui.nav.NavScreen
 
@@ -56,14 +63,34 @@ val MoreTab = NavScreen(
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MoreScreen(padding: PaddingValues) {
+    val context = LocalContext.current
+
     // ── Alarm switch states ────────────────────────────────────────────────────
     // Persisted across recompositions; drives enabled state on paired time items.
     var dayAdhkarOn      by rememberSaveable { mutableStateOf(true) }
     var nightAdhkarOn    by rememberSaveable { mutableStateOf(true) }
     var alMulkAlarmOn    by rememberSaveable { mutableStateOf(false) }
     var alBaqarahAlarmOn by rememberSaveable { mutableStateOf(false) }
+
+    // ── Reader style bottom sheet ──────────────────────────────────────────────
+    var showReaderStyleSheet by rememberSaveable { mutableStateOf(false) }
+    val readerStyle by AppPrefs.readerStyle.collectAsState()
+
+    val readerStyleOptions = listOf(
+        SheetOption(
+            key      = AppPrefs.ReaderStyle.TEXT,
+            title    = stringResource(R.string.reader_style_text),
+            subtitle = stringResource(R.string.reader_style_text_desc),
+        ),
+        SheetOption(
+            key      = AppPrefs.ReaderStyle.IMAGES,
+            title    = stringResource(R.string.reader_style_images),
+            subtitle = stringResource(R.string.reader_style_images_desc),
+        ),
+    )
 
     val listState   = rememberLazyListState()
     val scrollToTop = LocalScrollToTop.current
@@ -245,6 +272,23 @@ private fun MoreScreen(padding: PaddingValues) {
         item { PreferenceSubtitle(text = stringResource(R.string.more_khatmah_app)) }
         item {
             PreferenceItem(
+                title        = stringResource(R.string.more_reader_style),
+                icon         = Icons.Outlined.AutoStories,
+                trailingIcon = {
+                    TrailingLabelText(
+                        label = stringResource(
+                            when (readerStyle) {
+                                AppPrefs.ReaderStyle.TEXT   -> R.string.reader_style_text
+                                AppPrefs.ReaderStyle.IMAGES -> R.string.reader_style_images
+                            }
+                        )
+                    )
+                },
+                onClick = { showReaderStyleSheet = true },
+            )
+        }
+        item {
+            PreferenceItem(
                 title = stringResource(R.string.more_language),
                 icon  = Icons.Outlined.Language,
             )
@@ -280,6 +324,21 @@ private fun MoreScreen(padding: PaddingValues) {
             )
         }
     }
+
+    // ── Reader Style Sheet ────────────────────────────────────────────────────
+    // Rendered outside the LazyColumn so it overlays correctly.
+    if (showReaderStyleSheet) {
+        OptionSelectBottomSheet(
+            title    = stringResource(R.string.more_reader_style),
+            options  = readerStyleOptions,
+            selected = readerStyle,
+            onSelect = { style ->
+                AppPrefs.setReaderStyle(context, style)
+                showReaderStyleSheet = false
+            },
+            onDismiss = { showReaderStyleSheet = false },
+        )
+    }
 }
 
 // ─── Private composables ──────────────────────────────────────────────────────
@@ -313,5 +372,17 @@ private fun TrailingTimeText(time: String, enabled: Boolean) {
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
             .copy(alpha = if (enabled) 1f else 0.38f),
+    )
+}
+
+/**
+ * Trailing label for preference rows that show the current selection value.
+ */
+@Composable
+private fun TrailingLabelText(label: String) {
+    Text(
+        text  = label,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
