@@ -8,6 +8,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
@@ -85,7 +86,7 @@ fun IconButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     size: Dp = 40.dp,
-    anchorExtraBottom: Dp = 0.dp,
+    anchorExtraBottom: Dp = 40.dp,
     content: @Composable () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -180,7 +181,9 @@ fun IconButton(
     // measurement constraints: the anchor overflows downward by [anchorExtraBottom]
     // without contributing to the Box's intrinsic size or shifting the icon.
     Box(
-        modifier         = modifier.size(size),
+        modifier         = modifier
+            .padding(horizontal = 4.dp)
+            .size(size),
         contentAlignment = Alignment.Center,
     ) {
         // NoOpHapticFeedback suppresses the duplicate haptic combinedClickable emits

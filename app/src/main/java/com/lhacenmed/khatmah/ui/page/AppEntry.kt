@@ -19,7 +19,7 @@ import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.lhacenmed.khatmah.ui.component.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -256,7 +256,10 @@ private fun MainScreen(
                     if (isAdhkarTab) {
                         if (inAdhkarSelect) {
                             // Select-all toggle
-                            IconButton(onClick = adhkarVm::toggleSelectAll) {
+                            IconButton(
+                                onClick     = adhkarVm::toggleSelectAll,
+                                tooltipText = stringResource(R.string.select_all),
+                            ) {
                                 Icon(
                                     imageVector        = if (adhkarState.allSelected)
                                         Icons.Default.CheckBox
@@ -274,13 +277,19 @@ private fun MainScreen(
                             }
                         } else {
                             // Add new adhkar category
-                            IconButton(onClick = { nav.navigate(Route.adhkarEditor()) }) {
+                            IconButton(
+                                onClick     = { nav.navigate(Route.adhkarEditor()) },
+                                tooltipText = stringResource(R.string.add_adhkar),
+                            ) {
                                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_adhkar))
                             }
                         }
                     } else if (isPrayersTab) {
                         // Qibla button (TODO: wire to Qibla screen)
-                        IconButton(onClick = { /* TODO: Qibla screen */ }) {
+                        IconButton(
+                            onClick     = { /* TODO: Qibla screen */ },
+                            tooltipText = stringResource(R.string.prayers_qibla),
+                        ) {
                             Icon(
                                 painter            = painterResource(R.drawable.ic_kaaba),
                                 contentDescription = stringResource(R.string.prayers_qibla),
@@ -288,7 +297,10 @@ private fun MainScreen(
                             )
                         }
                         // Prayer settings
-                        IconButton(onClick = { nav.navigate(Route.PRAYER_SETTINGS) }) {
+                        IconButton(
+                            onClick     = { nav.navigate(Route.PRAYER_SETTINGS) },
+                            tooltipText = stringResource(R.string.prayers_settings),
+                        ) {
                             Icon(
                                 imageVector        = Icons.Outlined.Settings,
                                 contentDescription = stringResource(R.string.prayers_settings),

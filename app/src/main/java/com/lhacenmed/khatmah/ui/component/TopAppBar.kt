@@ -67,7 +67,10 @@ fun AppTopBar(
         },
         navigationIcon = {
             if (!isTopLevel) {
-                IconButton(onClick = onBack) {
+                IconButton(
+                    onClick     = onBack,
+                    tooltipText = stringResource(R.string.navigate_up),
+                ) {
                     Icon(
                         imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = stringResource(R.string.navigate_up),
