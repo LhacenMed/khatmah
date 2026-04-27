@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -128,7 +129,9 @@ fun PreferenceItem(
                     color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                     thickness = 1.dp,
                 )
-                it.invoke()
+                Box(modifier = Modifier.padding(end = 8.dp)) {
+                    it.invoke()
+                }
             }
         }
     }

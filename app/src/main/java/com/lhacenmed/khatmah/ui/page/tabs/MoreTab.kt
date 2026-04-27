@@ -320,6 +320,13 @@ private fun MoreScreen(padding: PaddingValues) {
             PreferenceItem(
                 title = stringResource(R.string.more_language),
                 icon  = Icons.Outlined.Language,
+                trailingIcon = {
+                    val currentTag = LocaleManager.getCurrentTag()
+                    TrailingLabelText(
+                        label = languageOptions.find { it.key == currentTag }?.title
+                            ?: stringResource(R.string.language_system_default)
+                    )
+                },
                 onClick = { showLanguageSheet.value = true },
             )
         }
