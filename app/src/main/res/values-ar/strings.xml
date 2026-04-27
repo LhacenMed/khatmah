@@ -14,6 +14,12 @@
     <string name="theme_system">إعداد النظام</string>
     <string name="theme_light">فاتح</string>
     <string name="theme_dark">داكن</string>
+    <string name="theme_dark_settings_group">إعدادات الوضع الداكن</string>
+    <string name="theme_high_contrast">تباين عالٍ</string>
+    <string name="theme_high_contrast_desc">خلفية سوداء بالكامل في الوضع الداكن</string>
+    <string name="theme_dynamic_color">ألوان ديناميكية</string>
+    <string name="theme_dynamic_color_desc">استخدام ألوان من خلفية الشاشة (أندرويد 12+)</string>
+    <string name="theme_palette_group">لوحة الألوان</string>
 
     <!-- Language settings -->
     <string name="language_settings">اللغة</string>

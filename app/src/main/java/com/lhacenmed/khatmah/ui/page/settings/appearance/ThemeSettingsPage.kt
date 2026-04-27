@@ -3,20 +3,21 @@ package com.lhacenmed.khatmah.ui.page.settings.appearance
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -25,14 +26,17 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -48,6 +52,7 @@ import com.lhacenmed.khatmah.ui.component.PreferenceSwitch
 import com.lhacenmed.khatmah.ui.component.IconButton
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.ui.nav.NavPage
+import com.lhacenmed.khatmah.ui.theme.ThemeColor
 import com.lhacenmed.khatmah.ui.theme.colorPreferences
 import com.lhacenmed.khatmah.util.ThemeManager
 
@@ -64,6 +69,7 @@ val ThemeSettingsPage = NavPage(route = Route.THEME_SETTINGS) {
     val isDynamicColor by ThemeManager.dynamicColor.collectAsState()
     val selectedColor  by ThemeManager.colorIndex.collectAsState()
     val themeMode      by ThemeManager.mode.collectAsState()
+    val isDark         = isSystemInDarkTheme()
 
     // Tooltip anchor tracks the bar's actual height
     val tooltipAnchorBottom = lerp(20.dp, 55.dp, scrollBehavior.state.collapsedFraction)
@@ -120,41 +126,73 @@ val ThemeSettingsPage = NavPage(route = Route.THEME_SETTINGS) {
 
             PreferenceSubtitle(text = stringResource(R.string.theme_palette_group))
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                colorPreferences.forEach { themeColor ->
-                    val isSelected = !isDynamicColor && selectedColor == themeColor.index
-                    val color = if (isSystemInDarkTheme()) themeColor.primaryDark else themeColor.primaryLight
+                itemsIndexed(colorPreferences) { index, themeColor ->
+                    ColorButton(
+                        themeColor  = themeColor,
+                        isDark      = isDark,
+                        isSelected  = !isDynamicColor && selectedColor == index,
+                        onClick     = {
+                            ThemeManager.setDynamicColorEnabled(context, false)
+                            ThemeManager.setColorIndex(context, index)
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
 
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(color)
-                            .border(
-                                width = 3.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.outline else Color.Transparent,
-                                shape = CircleShape
-                            )
-                            .clickable {
-                                ThemeManager.setDynamicColorEnabled(context, false)
-                                ThemeManager.setColorIndex(context, themeColor.index)
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isSelected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = if (isSystemInDarkTheme()) Color.Black else Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
+@Composable
+private fun ColorButton(
+    themeColor: ThemeColor,
+    isDark: Boolean,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    val primaryColor  = if (isDark) themeColor.primaryDark else themeColor.primaryLight
+    val containerSize by animateDpAsState(
+        targetValue = if (isSelected) 28.dp else 0.dp, label = "container"
+    )
+    val iconSize by animateDpAsState(
+        targetValue = if (isSelected) 16.dp else 0.dp, label = "icon"
+    )
+
+    Surface(
+        onClick   = onClick,
+        modifier  = Modifier.padding(4.dp).size(64.dp),
+        shape     = RoundedCornerShape(16.dp),
+        color     = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier         = Modifier.fillMaxSize(),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .drawBehind { drawCircle(primaryColor) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .size(containerSize)
+                        .drawBehind {
+                            drawCircle(Color.Black.copy(alpha = 0.2f))
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector        = Icons.Default.Check,
+                        contentDescription = null,
+                        modifier           = Modifier.size(iconSize),
+                        tint               = Color.White,
+                    )
                 }
             }
         }
