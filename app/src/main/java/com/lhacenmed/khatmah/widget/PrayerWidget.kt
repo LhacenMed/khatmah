@@ -50,34 +50,19 @@ import java.time.format.DateTimeFormatter
 @SuppressLint("RestrictedApi")
 class PrayerWidget : GlanceAppWidget() {
 
-    // ── Countdown mode ────────────────────────────────────────────────────────
-
     /**
-     * Determines how the countdown panel renders at any given moment.
-     *
-     * [Till]  — prayer is upcoming; Chronometer counts down to it.
-     * [Since] — prayer just passed (within [SINCE_WINDOW_MS]); Chronometer counts up
-     *           from when it started. A one-shot worker is scheduled for exactly when
-     *           the window closes, automatically switching back to [Till] for the
-     *           next prayer without any app relaunch or manual widget refresh.
+     * The next upcoming prayer and how many milliseconds remain until it starts.
+     * Always represents a future prayer — never negative, never "since".
      */
-    private sealed class CountdownMode {
-        abstract val prayer: PrayerTime
-        data class Till(override val prayer: PrayerTime, val msRemaining: Long) : CountdownMode()
-        data class Since(override val prayer: PrayerTime, val msPassed: Long)   : CountdownMode()
-    }
+    private data class Countdown(val prayer: PrayerTime, val msRemaining: Long)
 
     companion object {
-        /** Duration to show "Since [prayer]" before switching to the next countdown. */
-        private const val SINCE_WINDOW_MS = 15 * 60 * 1000L
-
-        // Highlight color (#FFEB3B) for the active prayer row — matches the original design.
+        // Highlight color (#FFEB3B) for the active prayer row.
         private val COLOR_HIGHLIGHT = android.graphics.Color.argb(255, 255, 235, 59)
-        private const val COLOR_NORMAL    = android.graphics.Color.WHITE
+        private const val COLOR_NORMAL = android.graphics.Color.WHITE
 
         private val TIME_FMT = DateTimeFormatter.ofPattern("HH:mm")
 
-        // Parallel arrays indexed by prayer order (0 = Fajr … 5 = Isha).
         private val ROW_IDS   = intArrayOf(
             R.id.prayer_row_0,   R.id.prayer_row_1,   R.id.prayer_row_2,
             R.id.prayer_row_3,   R.id.prayer_row_4,   R.id.prayer_row_5,
@@ -95,76 +80,49 @@ class PrayerWidget : GlanceAppWidget() {
     // ── Entry point ───────────────────────────────────────────────────────────
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        // Ensure settings are loaded in case this runs outside the app process.
         PrayerSettings.init(context)
 
         val location = OnboardingPrefs.location(context)
-        val prayers = location?.let { loc ->
+        val prayers  = location?.let { loc ->
             runCatching {
                 PrayerEngine.calculate(
                     loc.lat, loc.lng, LocalDate.now(),
-                    PrayerSettings.get().resolve(loc.countryCode)
+                    PrayerSettings.get().resolve(loc.countryCode),
                 )
             }.getOrDefault(emptyList())
         } ?: emptyList()
 
-        val mode: CountdownMode? = if (prayers.isNotEmpty()) {
-            resolveMode(prayers, LocalTime.now())
-        } else null
-
-        // When in Since mode, fire a one-shot update at the exact moment the 15-min
-        // window closes so the label and Chronometer switch to the next prayer
-        // automatically — no app relaunch or manual refresh required.
-        if (mode is CountdownMode.Since) {
-            val msUntilSwitch = SINCE_WINDOW_MS - mode.msPassed
-            if (msUntilSwitch > 0) PrayerWidgetWorker.scheduleOneShot(context, msUntilSwitch)
-        }
+        val countdown: Countdown? = prayers.takeIf { it.isNotEmpty() }
+            ?.let { resolveCountdown(it, LocalTime.now()) }
 
         provideContent {
-            GlanceTheme { Content(prayers, mode) }
+            GlanceTheme { Content(prayers, countdown) }
         }
     }
 
-    // ── Mode resolution ───────────────────────────────────────────────────────
+    // ── Countdown resolution ──────────────────────────────────────────────────
 
     /**
-     * Resolves [CountdownMode] for the current moment:
+     * Finds the next upcoming prayer and returns a [Countdown] with a guaranteed
+     * non-negative [Countdown.msRemaining].
      *
-     * - If a prayer passed within the last [SINCE_WINDOW_MS] → [CountdownMode.Since]
-     *   pointing at that prayer (the most recent if several qualify, though in practice
-     *   prayer times are spaced far enough apart that only one can qualify).
-     * - Otherwise → [CountdownMode.Till] pointing at the next upcoming prayer,
-     *   wrapping to Fajr if all prayers for today have passed.
+     * If all prayers for today have passed, wraps to tomorrow's Fajr so the
+     * Chronometer always counts forward — never negative.
      */
-    private fun resolveMode(prayers: List<PrayerTime>, now: LocalTime): CountdownMode {
-        val recentlyPassed = prayers.lastOrNull { prayer ->
-            val elapsed = Duration.between(prayer.time, now)
-            !elapsed.isNegative && elapsed.toMillis() < SINCE_WINDOW_MS
-        }
-
-        if (recentlyPassed != null) {
-            return CountdownMode.Since(
-                prayer   = recentlyPassed,
-                msPassed = Duration.between(recentlyPassed.time, now).toMillis(),
-            )
-        }
-
+    private fun resolveCountdown(prayers: List<PrayerTime>, now: LocalTime): Countdown {
         val next = prayers.firstOrNull { it.time.isAfter(now) } ?: prayers.first()
         val ms   = Duration.between(now, next.time).let { d ->
             if (d.isNegative) d.plusDays(1) else d
-        }.toMillis()
-        return CountdownMode.Till(prayer = next, msRemaining = ms)
+        }.toMillis().coerceAtLeast(0L)
+        return Countdown(next, ms)
     }
 
     // ── Root layout ───────────────────────────────────────────────────────────
 
     @Composable
-    private fun Content(prayers: List<PrayerTime>, mode: CountdownMode?) {
+    private fun Content(prayers: List<PrayerTime>, countdown: Countdown?) {
         val context = LocalContext.current
 
-        // Tapping anywhere on the widget opens the app directly on the Prayers tab.
-        // FLAG_ACTIVITY_SINGLE_TOP: reuses an existing MainActivity instead of stacking
-        // a new instance, so onNewIntent is called when the app is already open.
         val openPrayersAction = actionStartActivity(
             Intent(context, MainActivity::class.java).apply {
                 action = WidgetAction.OPEN_PRAYERS
@@ -172,145 +130,124 @@ class PrayerWidget : GlanceAppWidget() {
             }
         )
 
-        if (prayers.isEmpty() || mode == null) {
+        if (prayers.isEmpty() || countdown == null) {
             Box(
-                modifier = GlanceModifier.fillMaxSize()
+                modifier         = GlanceModifier.fillMaxSize()
                     .background(ImageProvider(R.drawable.widget_bg))
                     .clickable(openPrayersAction),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text  = "Open the app to set your location",
-                    style = TextStyle(color = ColorProvider(Color.White), fontSize = 30.sp)
+                    style = TextStyle(color = ColorProvider(Color.White), fontSize = 30.sp),
                 )
             }
             return
         }
 
-        val isRtl = LocaleManager.getCurrentTag()?.startsWith("ar") == true
+        val isRtl = LocaleManager.savedTag(context)?.startsWith("ar") == true
 
-        // Outer rounded container — the rounded drawable clips both child panels.
         Row(
-            modifier = GlanceModifier.fillMaxSize()
+            modifier          = GlanceModifier.fillMaxSize()
                 .background(ImageProvider(R.drawable.widget_bg))
                 .clickable(openPrayersAction),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             val side = GlanceModifier.defaultWeight().fillMaxHeight()
             if (isRtl) {
-                PrayerList(prayers, mode.prayer.name, isRtl, side)
-                CountdownPanel(mode, isRtl, side)
+                PrayerList(prayers, countdown.prayer.name, isRtl, side)
+                CountdownPanel(countdown, isRtl, side)
             } else {
-                CountdownPanel(mode, isRtl, side)
-                PrayerList(prayers, mode.prayer.name, isRtl, side)
+                CountdownPanel(countdown, isRtl, side)
+                PrayerList(prayers, countdown.prayer.name, isRtl, side)
             }
         }
     }
 
     // ── Countdown panel ───────────────────────────────────────────────────────
-    //
-    // Rendered entirely as a native RemoteViews layout so that gravity="center"
-    // on the root LinearLayout controls alignment — Glance's horizontalAlignment
-    // does not propagate into AndroidRemoteViews children reliably.
 
     @Composable
-    private fun CountdownPanel(
-        mode: CountdownMode,
-        isRtl: Boolean,
-        modifier: GlanceModifier
-    ) {
+    private fun CountdownPanel(countdown: Countdown, isRtl: Boolean, modifier: GlanceModifier) {
         val context = LocalContext.current
-        val bgRes = if (isRtl) R.drawable.widget_countdown_rtl_bg
+        val bgRes   = if (isRtl) R.drawable.widget_countdown_rtl_bg
         else       R.drawable.widget_countdown_ltr_bg
 
-        val label = when (mode) {
-            is CountdownMode.Till  ->
-                if (isRtl) "باقي على ${arabicName(mode.prayer.name, context)}"
-                else       "Till ${mode.prayer.name}"
-            is CountdownMode.Since ->
-                if (isRtl) "منذ ${arabicName(mode.prayer.name, context)}"
-                else       "Since ${mode.prayer.name}"
-        }
+        val label = if (isRtl) "باقي على ${prayerName(countdown.prayer.name, context, isRtl)}"
+        else       "Till ${prayerName(countdown.prayer.name, context, isRtl)}"
 
         AndroidRemoteViews(
-            modifier = modifier,
+            modifier    = modifier,
             remoteViews = RemoteViews(context.packageName, R.layout.widget_countdown).apply {
-                // Background — rounded on the outer edge only.
                 setInt(R.id.countdown_root, "setBackgroundResource", bgRes)
-                // Icon.
-                setImageViewResource(R.id.prayer_icon, prayerIcon(mode.prayer.name))
-                // Label — "Till X" or "Since X".
+                setImageViewResource(R.id.prayer_icon, prayerIcon(countdown.prayer.name))
                 setTextViewText(R.id.prayer_label, label)
-                // Chronometer direction and base depend on mode:
-                //   Till  → count DOWN to the prayer (base is in the future).
-                //   Since → count UP from the prayer  (base is in the past).
-                // The Chronometer ticks every second with zero battery overhead.
-                when (mode) {
-                    is CountdownMode.Till  -> {
-                        setChronometer(R.id.chrono, SystemClock.elapsedRealtime() + mode.msRemaining, null, true)
-                        setChronometerCountDown(R.id.chrono, true)
-                    }
-                    is CountdownMode.Since -> {
-                        setChronometer(R.id.chrono, SystemClock.elapsedRealtime() - mode.msPassed, null, true)
-                        setChronometerCountDown(R.id.chrono, false)
-                    }
-                }
-            }
+                // Base is always in the future — Chronometer counts down, never negative.
+                setChronometer(
+                    R.id.chrono,
+                    SystemClock.elapsedRealtime() + countdown.msRemaining,
+                    null,
+                    true,
+                )
+                setChronometerCountDown(R.id.chrono, true)
+            },
         )
     }
 
     // ── Prayer list panel ─────────────────────────────────────────────────────
-    //
-    // Rendered as RemoteViews using widget_prayer_list.xml.
-    //
-    // Bold highlight: setTextViewText accepts CharSequence, and SpannableString with
-    // StyleSpan(BOLD) is a ParcelableSpan — it survives the RemoteViews IPC boundary
-    // without any API-level restrictions or extra style resources.
 
     @Composable
     private fun PrayerList(
-        prayers: List<PrayerTime>,
+        prayers:       List<PrayerTime>,
         highlightName: String,
-        isRtl: Boolean,
-        modifier: GlanceModifier
+        isRtl:         Boolean,
+        modifier:      GlanceModifier,
     ) {
         val context = LocalContext.current
         AndroidRemoteViews(
-            modifier = modifier,
+            modifier    = modifier,
             remoteViews = RemoteViews(context.packageName, R.layout.widget_prayer_list).apply {
                 prayers.forEachIndexed { i, prayer ->
                     val isHighlight = prayer.name == highlightName
                     val color       = if (isHighlight) COLOR_HIGHLIGHT else COLOR_NORMAL
-                    val nameText    = if (isRtl) arabicName(prayer.name, context) else prayer.name
+                    val nameText    = prayerName(prayer.name, context, isRtl)
                     val timeText    = prayer.time.format(TIME_FMT)
 
-                    // In LTR: left = name, right = time.
-                    // In RTL: left = time, right = name (mirrors natural reading direction).
                     val leftText  = if (isRtl) timeText else nameText
                     val rightText = if (isRtl) nameText else timeText
 
-                    // Highlighted prayer gets bold weight; normal prayers use plain strings.
                     setTextViewText(LEFT_IDS[i],  if (isHighlight) boldOf(leftText)  else leftText)
                     setTextViewText(RIGHT_IDS[i], if (isHighlight) boldOf(rightText) else rightText)
                     setTextColor(LEFT_IDS[i],  color)
                     setTextColor(RIGHT_IDS[i], color)
                     setViewVisibility(ROW_IDS[i], View.VISIBLE)
                 }
-                // Hide rows beyond the actual prayer count (safety net).
                 for (i in prayers.size until ROW_IDS.size) {
                     setViewVisibility(ROW_IDS[i], View.GONE)
                 }
-            }
+            },
         )
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /**
-     * Wraps [text] in a [SpannableString] with a bold [StyleSpan] covering the full
-     * string. [StyleSpan] implements [android.text.ParcelableSpan], so it survives
-     * the RemoteViews serialization boundary on all supported API levels.
+     * Returns the localized prayer name.
+     * Uses the string resource (Arabic when [isRtl], English otherwise) so the
+     * result is correct regardless of which process is running the widget.
      */
+    private fun prayerName(name: String, context: Context, isRtl: Boolean): String {
+        if (!isRtl) return name   // English name from the engine is already correct
+        return when (name.lowercase()) {
+            "fajr"    -> context.getString(R.string.prayer_fajr)
+            "sunrise" -> context.getString(R.string.prayer_sunrise)
+            "dhuhr"   -> context.getString(R.string.prayer_dhuhr)
+            "asr"     -> context.getString(R.string.prayer_asr)
+            "maghrib" -> context.getString(R.string.prayer_maghrib)
+            "isha"    -> context.getString(R.string.prayer_isha)
+            else      -> name
+        }
+    }
+
     private fun boldOf(text: String): SpannableString =
         SpannableString(text).apply {
             setSpan(StyleSpan(Typeface.BOLD), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -324,15 +261,5 @@ class PrayerWidget : GlanceAppWidget() {
         "maghrib" -> R.drawable.ic_maghrib
         "isha"    -> R.drawable.ic_isha
         else      -> R.drawable.ic_dhuhr
-    }
-
-    private fun arabicName(name: String, context: Context): String = when (name.lowercase()) {
-        "fajr"    -> context.getString(R.string.prayer_fajr)
-        "sunrise" -> context.getString(R.string.prayer_sunrise)
-        "dhuhr"   -> context.getString(R.string.prayer_dhuhr)
-        "asr"     -> context.getString(R.string.prayer_asr)
-        "maghrib" -> context.getString(R.string.prayer_maghrib)
-        "isha"    -> context.getString(R.string.prayer_isha)
-        else      -> name
     }
 }

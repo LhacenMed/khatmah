@@ -8,6 +8,7 @@ import coil.ImageLoader
 import coil.decode.SvgDecoder
 import com.google.android.material.color.DynamicColors
 import com.lhacenmed.khatmah.data.prayer.PrayerSettings
+import com.lhacenmed.khatmah.util.LocaleManager
 import com.lhacenmed.khatmah.util.ThemeManager
 import com.lhacenmed.khatmah.widget.PrayerWidgetWorker
 
@@ -18,11 +19,11 @@ class App : Application() {
         super.onCreate()
         ThemeManager.apply(this)
         DynamicColors.applyToActivitiesIfAvailable(this)
+        // Must be called before setLocale so the widget's savedTag() always has a value.
+        LocaleManager.init(this)
         // Load persisted prayer calculation settings before any UI is created.
         PrayerSettings.init(this)
         PrayerWidgetWorker.enqueue(this)
-        // Locale is restored automatically by AppCompatDelegate on process start
-        // via the persisted per-app locale; no manual call needed here.
         // Register SVG decoder so FlagCDN SVGs render via AsyncImage.
         // Coil's default disk + memory cache handles flag caching automatically.
         Coil.setImageLoader {
