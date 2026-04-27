@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckBox
@@ -281,8 +282,9 @@ private fun MainScreen(
                         // Qibla button (TODO: wire to Qibla screen)
                         IconButton(onClick = { /* TODO: Qibla screen */ }) {
                             Icon(
-                                painter            = painterResource(R.drawable.ic_mosque),
+                                painter            = painterResource(R.drawable.ic_kaaba),
                                 contentDescription = stringResource(R.string.prayers_qibla),
+                                modifier           = Modifier.size(26.dp),
                             )
                         }
                         // Prayer settings
