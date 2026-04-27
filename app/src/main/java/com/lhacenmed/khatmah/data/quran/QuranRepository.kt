@@ -1,10 +1,12 @@
+// data/quran/QuranRepository.kt
 package com.lhacenmed.khatmah.data.quran
 
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-// ── Data ──────────────────────────────────────────────────────────────────────
+// ── Models ────────────────────────────────────────────────────────────────────
 
 data class QuranAya(
     val suraNum: Int,
@@ -27,16 +29,16 @@ data class SearchResult(
 // ── Arabic normalizer ─────────────────────────────────────────────────────────
 
 /**
- * Normalizes Arabic text for search by unifying visually/semantically equivalent
- * characters and stripping diacritics (harakat).
+ * Unifies visually/semantically equivalent Arabic characters and strips diacritics
+ * (harakat) for robust search matching.
  *
  *   أ / إ / آ / ٱ (U+0671) → ا   all alef variants → bare alef
- *   ؤ             → و              waw with hamza
- *   ئ             → ي              yeh with hamza above
- *   ة             → ه              teh marbuta → heh
- *   ى             → ي              alef maqsura → yeh
- *   U+064B–U+065F  stripped        Arabic combining diacritics (harakat)
- *   U+0640         stripped        tatweel / kashida
+ *   ؤ             → و
+ *   ئ             → ي
+ *   ة             → ه
+ *   ى             → ي
+ *   U+064B–U+065F  stripped   harakat
+ *   U+0640         stripped   kashida
  */
 fun String.normalizeArabic(): String {
     val sb = StringBuilder(length)
@@ -52,6 +54,33 @@ fun String.normalizeArabic(): String {
         })
     }
     return sb.toString()
+}
+
+// ── Database (private — used only by this file) ───────────────────────────────
+
+/**
+ * Opens quran.db from app-private storage, copying it from assets on first launch.
+ * Read-only handle is opened once and reused for the app lifetime.
+ */
+private object QuranDb {
+
+    private const val DB_NAME = "quran.db"
+    private const val ASSET   = "databases/quran.db"
+
+    @Volatile private var handle: SQLiteDatabase? = null
+
+    fun open(context: Context): SQLiteDatabase = handle ?: synchronized(this) {
+        handle ?: build(context.applicationContext).also { handle = it }
+    }
+
+    private fun build(ctx: Context): SQLiteDatabase {
+        val dest = ctx.getDatabasePath(DB_NAME)
+        if (!dest.exists()) {
+            dest.parentFile?.mkdirs()
+            ctx.assets.open(ASSET).use { src -> dest.outputStream().use(src::copyTo) }
+        }
+        return SQLiteDatabase.openDatabase(dest.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+    }
 }
 
 // ── Repository ────────────────────────────────────────────────────────────────
@@ -74,7 +103,7 @@ class QuranRepository(private val context: Context) {
         }
 
     private fun buildCache(): List<CacheEntry> =
-        QuranDatabase.open(context).rawQuery(SQL_CACHE, null).use { c ->
+        QuranDb.open(context).rawQuery(SQL_CACHE, null).use { c ->
             buildList {
                 while (c.moveToNext()) add(
                     CacheEntry(
@@ -89,7 +118,7 @@ class QuranRepository(private val context: Context) {
         }
 
     suspend fun allAyas(): List<QuranAya> = withContext(Dispatchers.IO) {
-        QuranDatabase.open(context).rawQuery(SQL_AYAS, null).use { c ->
+        QuranDb.open(context).rawQuery(SQL_AYAS, null).use { c ->
             val iSuraNum = c.getColumnIndexOrThrow("sura_num")
             val iSura    = c.getColumnIndexOrThrow("sura")
             val iAyaNum  = c.getColumnIndexOrThrow("aya_num")
@@ -106,7 +135,7 @@ class QuranRepository(private val context: Context) {
     }
 
     suspend fun surahList(): List<SurahInfo> = withContext(Dispatchers.IO) {
-        QuranDatabase.open(context).rawQuery(SQL_SURAHS, null).use { c ->
+        QuranDb.open(context).rawQuery(SQL_SURAHS, null).use { c ->
             buildList {
                 while (c.moveToNext())
                     add(SurahInfo(c.getInt(0), c.getString(1).orEmpty(), c.getInt(2)))
@@ -115,12 +144,12 @@ class QuranRepository(private val context: Context) {
     }
 
     /**
-     * Searches ayas using normalized Arabic matching.
+     * Two-pass normalized Arabic search.
      *
-     * Pass 1 — single ayas: each entry's normalized text contains the normalized query.
-     * Pass 2 — consecutive pairs: for queries that span an aya boundary, the concatenated
-     *          normalized text of [entry[i] + entry[i+1]] is checked. The result points to
-     *          the first aya of the pair with [SearchResult.spansPair] = true.
+     * Pass 1 — single ayas: entry's normalized text contains the normalized query.
+     * Pass 2 — consecutive pairs: for queries spanning an aya boundary, concatenated
+     *          text of [i] + [i+1] is checked; result points to first aya with
+     *          [SearchResult.spansPair] = true.
      */
     suspend fun search(query: String, limit: Int = 50): List<SearchResult> =
         withContext(Dispatchers.Default) {

@@ -30,6 +30,10 @@ class QuranViewModel(
     private val _state       = MutableStateFlow<State>(State.Loading)
     val state: StateFlow<State> = _state.asStateFlow()
 
+    /**
+     * Non-null while a page jump is pending (triggered by a search result selection).
+     * Consumed by the pager via [consumeJump] once scrolled.
+     */
     private val _pendingJump = MutableStateFlow<Int?>(null)
     val pendingJump: StateFlow<Int?> = _pendingJump.asStateFlow()
 
@@ -37,29 +41,15 @@ class QuranViewModel(
     var savedPage: Int = prefs.getInt(KEY_PAGE, 0)
         private set
 
+    /** Packed (suraNum shl 32 or ayaNum) → page index. Built once after pages are loaded. */
     private var ayaPageIndex: Map<Long, Int> = emptyMap()
 
-    /**
-     * Must be called once from [QuranReaderScreen] after [BoxWithConstraints] resolves
-     * the usable page dimensions. Safe to call multiple times — rebuilds only once.
-     *
-     * [fontScale] is sourced from [LocalDensity.current.fontScale] so StaticLayout
-     * measurements use the same sp→px factor as Compose text rendering.
-     */
-    fun init(pageHeightPx: Int, contentWidthPx: Int, density: Float, fontScale: Float) {
-        if (_state.value !is State.Loading) return
+    init {
         viewModelScope.launch {
             val pages = withContext(Dispatchers.Default) {
-                QuranPaginator.build(
-                    context        = getApplication(),
-                    ayas           = repo.allAyas(),
-                    pageHeightPx   = pageHeightPx,
-                    contentWidthPx = contentWidthPx,
-                    density        = density,
-                    fontScale      = fontScale,
-                )
+                QuranPageBuilder.build(repo.allAyas())
             }
-            ayaPageIndex = buildAyaIndex(pages)
+            ayaPageIndex = buildAyaPageIndex(pages)
 
             val targetSura = handle.get<Int>("suraNum") ?: 0
             savedPage = if (targetSura > 0) {
@@ -77,29 +67,41 @@ class QuranViewModel(
         prefs.edit { putInt(KEY_PAGE, index) }
     }
 
+    /**
+     * Requests an immediate pager scroll to the page containing [suraNum] / [ayaNum].
+     * If the aya is not yet indexed (VM still loading), the request is silently dropped.
+     */
     fun requestJump(suraNum: Int, ayaNum: Int) {
         _pendingJump.value = pageForAya(suraNum, ayaNum)
     }
 
-    fun consumeJump() { _pendingJump.value = null }
+    /** Called by the pager after it has scrolled to the pending page. */
+    fun consumeJump() {
+        _pendingJump.value = null
+    }
 
+    /** Returns the 0-based page index for [suraNum] / [ayaNum], or null if not mapped. */
     fun pageForAya(suraNum: Int, ayaNum: Int): Int? =
         ayaPageIndex[suraNum.toLong() shl 32 or ayaNum.toLong()]
 
-    private fun buildAyaIndex(pages: List<QuranPageData>): Map<Long, Int> {
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    private fun buildAyaPageIndex(pages: List<QuranPageData>): Map<Long, Int> {
         val map = HashMap<Long, Int>(6300)
         pages.forEachIndexed { idx, page ->
             page.segments.forEach { seg ->
-                if (seg is QuranSegment.Aya)
+                if (seg is QuranSegment.Aya) {
                     map[seg.suraNum.toLong() shl 32 or seg.ayaNum.toLong()] = idx
+                }
             }
         }
         return map
     }
 
+    /** Fallback: index of the first page whose header belongs to [suraNum]. */
     private fun findSuraPage(suraNum: Int, pages: List<QuranPageData>): Int =
-        pages.indexOfFirst { p ->
-            p.segments.any { it is QuranSegment.SuraHeader && it.num == suraNum }
+        pages.indexOfFirst { page ->
+            page.segments.any { it is QuranSegment.SuraHeader && it.num == suraNum }
         }.coerceAtLeast(0)
 
     private companion object {
