@@ -1,5 +1,8 @@
 package com.lhacenmed.khatmah.ui.page.quran
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -67,12 +70,12 @@ internal const val KEY_JUMP_AYA  = "jumpAya"
  */
 @Composable
 fun QuranReaderScreen() {
-    val vm:   QuranViewModel = viewModel()
-    val nav   = LocalNavController.current
+    val vm: QuranViewModel = viewModel()
+    val nav = LocalNavController.current
     val state by vm.state.collectAsState()
 
     val backEntry = nav.currentBackStackEntry
-    val jumpSura  by remember(backEntry) {
+    val jumpSura by remember(backEntry) {
         backEntry?.savedStateHandle?.getStateFlow(KEY_JUMP_SURA, 0) ?: MutableStateFlow(0)
     }.collectAsState()
 
@@ -86,19 +89,52 @@ fun QuranReaderScreen() {
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         when (val s = state) {
-            is QuranViewModel.State.Loading    -> LoadingBox()
-            is QuranViewModel.State.Ready      -> QuranPager(
-                pages    = s.pages,
-                vm       = vm,
+            is QuranViewModel.State.Loading -> LoadingBox()
+            is QuranViewModel.State.Ready -> QuranPager(
+                pages = s.pages,
+                vm = vm,
                 onSearch = { nav.navigate(Route.QURAN_SEARCH) },
             )
             is QuranViewModel.State.ImageReady -> QuranImagePager(
                 pageCount = s.pageCount,
-                vm        = vm,
-                onSearch  = { nav.navigate(Route.QURAN_SEARCH) },
+                vm = vm,
+                onSearch = { nav.navigate(Route.QURAN_SEARCH) },
             )
         }
     }
+}
+
+// ── System bars sync ──────────────────────────────────────────────────────────
+
+@Composable
+private fun SyncReaderSystemBars(visible: Boolean) {
+    val view = LocalView.current
+    val controller = remember(view) {
+        view.context.findActivity()?.window?.let { window ->
+            WindowCompat.getInsetsController(window, view)
+        }
+    }
+
+    DisposableEffect(controller, visible) {
+        controller?.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+
+        if (visible) {
+            controller?.show(WindowInsetsCompat.Type.systemBars())
+        } else {
+            controller?.hide(WindowInsetsCompat.Type.systemBars())
+        }
+
+        onDispose {
+            controller?.show(WindowInsetsCompat.Type.systemBars())
+        }
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 // ── Text pager shell ──────────────────────────────────────────────────────────
@@ -115,26 +151,31 @@ fun QuranReaderScreen() {
  * System bars (status bar + navigation bar) are hidden/shown in sync with
  * [barsVisible] via [WindowInsetsControllerCompat].
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun QuranPager(
-    pages:    List<QuranPageData>,
-    vm:       QuranViewModel,
+    pages: List<QuranPageData>,
+    vm: QuranViewModel,
     onSearch: () -> Unit,
 ) {
-    val nav        = LocalNavController.current
-    val scope      = rememberCoroutineScope()
+    val nav = LocalNavController.current
+    val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(
         initialPage = vm.savedPage.coerceIn(0, pages.lastIndex),
     ) { pages.size }
 
     var barsVisible by remember { mutableStateOf(true) }
 
+    SyncReaderSystemBars(barsVisible)
+
     LaunchedEffect(pagerState.settledPage) { vm.savePage(pagerState.settledPage) }
 
     val pendingJump by vm.pendingJump.collectAsState()
     LaunchedEffect(pendingJump) {
-        pendingJump?.let { page -> pagerState.scrollToPage(page); vm.consumeJump() }
+        pendingJump?.let { page ->
+            pagerState.scrollToPage(page)
+            vm.consumeJump()
+        }
     }
 
     val curPage = pages[pagerState.settledPage]
@@ -145,32 +186,39 @@ private fun QuranPager(
             .background(MaterialTheme.colorScheme.background)
             .pointerInput(Unit) { detectTapGestures { barsVisible = !barsVisible } },
     ) {
-        HorizontalPager(
-            state         = pagerState,
-            reverseLayout = false,
-            modifier      = Modifier.fillMaxSize(),
-            key           = { pages[it].pageNum },
-        ) { idx -> PageContent(page = pages[idx]) }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)
+                .windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility),
+        ) {
+            HorizontalPager(
+                state = pagerState,
+                reverseLayout = false,
+                modifier = Modifier.fillMaxSize(),
+                key = { pages[it].pageNum },
+            ) { idx -> PageContent(page = pages[idx]) }
+        }
 
         AnimatedVisibility(
-            visible  = barsVisible,
-            enter    = slideInVertically(tween(ANIM_MS)) { -it } + fadeIn(tween(ANIM_MS)),
-            exit     = slideOutVertically(tween(ANIM_MS)) { -it } + fadeOut(tween(ANIM_MS / 2)),
+            visible = barsVisible,
+            enter = slideInVertically(tween(ANIM_MS)) { -it } + fadeIn(tween(ANIM_MS)),
+            exit = slideOutVertically(tween(ANIM_MS)) { -it } + fadeOut(tween(ANIM_MS / 2)),
             modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
         ) {
             QuranTopBar(page = curPage, onBack = { nav.popBackStack() }, onSearch = onSearch)
         }
 
         AnimatedVisibility(
-            visible  = barsVisible,
-            enter    = slideInVertically(tween(ANIM_MS)) { it } + fadeIn(tween(ANIM_MS)),
-            exit     = slideOutVertically(tween(ANIM_MS)) { it } + fadeOut(tween(ANIM_MS / 2)),
+            visible = barsVisible,
+            enter = slideInVertically(tween(ANIM_MS)) { it } + fadeIn(tween(ANIM_MS)),
+            exit = slideOutVertically(tween(ANIM_MS)) { it } + fadeOut(tween(ANIM_MS / 2)),
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
         ) {
             QuranBottomBar(
                 currentPage = pagerState.currentPage,
-                totalPages  = pages.size,
-                onJump      = { target -> scope.launch { pagerState.scrollToPage(target) } },
+                totalPages = pages.size,
+                onJump = { target -> scope.launch { pagerState.scrollToPage(target) } },
             )
         }
     }
@@ -187,26 +235,32 @@ private fun QuranPager(
  * mechanism — the VM resolves (suraNum, ayaNum) → mushaf page index via page_aya.
  * In dark theme the image colors are inverted so white paper becomes dark.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun QuranImagePager(
     pageCount: Int,
-    vm:        QuranViewModel,
-    onSearch:  () -> Unit,
+    vm: QuranViewModel,
+    onSearch: () -> Unit,
 ) {
-    val nav        = LocalNavController.current
-    val scope      = rememberCoroutineScope()
+    val nav = LocalNavController.current
+    val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(
         initialPage = vm.savedPage.coerceIn(0, pageCount - 1),
     ) { pageCount }
 
     var barsVisible by remember { mutableStateOf(true) }
-    val isDark      = isSystemInDarkTheme()
+    val isDark = isSystemInDarkTheme()
+
+    SyncReaderSystemBars(barsVisible)
 
     LaunchedEffect(pagerState.settledPage) { vm.savePage(pagerState.settledPage) }
 
     val pendingJump by vm.pendingJump.collectAsState()
     LaunchedEffect(pendingJump) {
-        pendingJump?.let { page -> pagerState.scrollToPage(page); vm.consumeJump() }
+        pendingJump?.let { page ->
+            pagerState.scrollToPage(page)
+            vm.consumeJump()
+        }
     }
 
     Box(
@@ -215,43 +269,49 @@ private fun QuranImagePager(
             .background(if (isDark) Color.Black else Color.White)
             .pointerInput(Unit) { detectTapGestures { barsVisible = !barsVisible } },
     ) {
-        HorizontalPager(
-            state    = pagerState,
+        Box(
             modifier = Modifier
-                .fillMaxSize(),
-        ) { idx ->
-            AsyncImage(
-                model              = "file:///android_asset/quran/${idx + 1}.jpg",
-                contentDescription = null,
-                contentScale       = ContentScale.FillBounds,
-                colorFilter        = if (isDark) ColorFilter.colorMatrix(InvertMatrix) else null,
-                modifier           = Modifier.fillMaxSize(),
-            )
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)
+                .windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility),
+        ) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+            ) { idx ->
+                AsyncImage(
+                    model = "file:///android_asset/quran/${idx + 1}.jpg",
+                    contentDescription = null,
+                    contentScale = ContentScale.FillBounds,
+                    colorFilter = if (isDark) ColorFilter.colorMatrix(InvertMatrix) else null,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
 
         AnimatedVisibility(
-            visible  = barsVisible,
-            enter    = slideInVertically(tween(ANIM_MS)) { -it } + fadeIn(tween(ANIM_MS)),
-            exit     = slideOutVertically(tween(ANIM_MS)) { -it } + fadeOut(tween(ANIM_MS / 2)),
+            visible = barsVisible,
+            enter = slideInVertically(tween(ANIM_MS)) { -it } + fadeIn(tween(ANIM_MS)),
+            exit = slideOutVertically(tween(ANIM_MS)) { -it } + fadeOut(tween(ANIM_MS / 2)),
             modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
         ) {
             ImageTopBar(
-                pageNum  = pagerState.settledPage + 1,
-                onBack   = { nav.popBackStack() },
+                pageNum = pagerState.settledPage + 1,
+                onBack = { nav.popBackStack() },
                 onSearch = onSearch,
             )
         }
 
         AnimatedVisibility(
-            visible  = barsVisible,
-            enter    = slideInVertically(tween(ANIM_MS)) { it } + fadeIn(tween(ANIM_MS)),
-            exit     = slideOutVertically(tween(ANIM_MS)) { it } + fadeOut(tween(ANIM_MS / 2)),
+            visible = barsVisible,
+            enter = slideInVertically(tween(ANIM_MS)) { it } + fadeIn(tween(ANIM_MS)),
+            exit = slideOutVertically(tween(ANIM_MS)) { it } + fadeOut(tween(ANIM_MS / 2)),
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
         ) {
             QuranBottomBar(
                 currentPage = pagerState.currentPage,
-                totalPages  = pageCount,
-                onJump      = { target -> scope.launch { pagerState.scrollToPage(target) } },
+                totalPages = pageCount,
+                onJump = { target -> scope.launch { pagerState.scrollToPage(target) } },
             )
         }
     }
@@ -269,17 +329,17 @@ private fun QuranTopBar(page: QuranPageData, onBack: () -> Unit, onSearch: () ->
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, shadowElevation = 4.dp) {
         CenterAlignedTopAppBar(
             modifier = Modifier.statusBarsPadding(),
-            colors   = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
+            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
             title = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text     = page.suraName,
-                        style    = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color    = MaterialTheme.colorScheme.onSurface,
+                        text = page.suraName,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                     )
                     Text(
-                        text  = buildPageLabel(page),
+                        text = buildPageLabel(page),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -287,14 +347,20 @@ private fun QuranTopBar(page: QuranPageData, onBack: () -> Unit, onSearch: () ->
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface)
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
             },
             actions = {
                 IconButton(onClick = onSearch) {
-                    Icon(Icons.Default.Search, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface)
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
             },
         )
@@ -310,24 +376,30 @@ private fun ImageTopBar(pageNum: Int, onBack: () -> Unit, onSearch: () -> Unit) 
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, shadowElevation = 4.dp) {
         CenterAlignedTopAppBar(
             modifier = Modifier.statusBarsPadding(),
-            colors   = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
+            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
             title = {
                 Text(
-                    text  = "صفحة ${toArNums(pageNum)}",
+                    text = "صفحة ${toArNums(pageNum)}",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface)
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
             },
             actions = {
                 IconButton(onClick = onSearch) {
-                    Icon(Icons.Default.Search, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface)
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
             },
         )
@@ -342,31 +414,35 @@ private fun ImageTopBar(pageNum: Int, onBack: () -> Unit, onSearch: () -> Unit) 
  */
 @Composable
 private fun QuranBottomBar(currentPage: Int, totalPages: Int, onJump: (Int) -> Unit) {
-    var sliderVal  by remember { mutableFloatStateOf(0f) }
+    var sliderVal by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentPage) {
-        if (!isDragging)
+        if (!isDragging) {
             sliderVal = if (totalPages > 1) currentPage.toFloat() / (totalPages - 1) else 0f
+        }
     }
 
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, shadowElevation = 4.dp) {
         Box(
-            modifier         = Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center,
         ) {
             Slider(
-                value         = sliderVal,
-                onValueChange = { v -> sliderVal = v; isDragging = true },
+                value = sliderVal,
+                onValueChange = { v ->
+                    sliderVal = v
+                    isDragging = true
+                },
                 onValueChangeFinished = {
                     isDragging = false
                     onJump((sliderVal * (totalPages - 1)).roundToInt().coerceIn(0, totalPages - 1))
                 },
                 valueRange = 0f..1f,
-                modifier   = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
