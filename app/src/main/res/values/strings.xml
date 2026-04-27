@@ -156,6 +156,7 @@
     <string name="prayers_prev_day">Previous day</string>
     <string name="prayers_next_day">Next day</string>
     <string name="prayers_requires_android_8">Prayer times require Android 8.0 or higher</string>
+    <string name="prayers_since">Since %s</string>
 
     <!-- Individual prayer names -->
     <string name="prayer_fajr">Fajr</string>

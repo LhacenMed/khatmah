@@ -2,6 +2,7 @@ package com.lhacenmed.khatmah.ui.component
 
 import android.graphics.Path
 import android.view.animation.PathInterpolator
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -37,6 +38,7 @@ val collapseFraction: (Float) -> Float = {
  * Stateless top app bar used by the main shell (tab screen).
  * Accepts optional [actions] for tab-specific toolbar items (e.g. Adhkar add/delete).
  * [containerColor] can be overridden to signal contextual modes (e.g. selection).
+ * [subtitle] renders a secondary line below the title when non-null.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,9 +48,23 @@ fun AppTopBar(
     onBack: () -> Unit,
     actions: @Composable RowScope.() -> Unit = {},
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    subtitle: String? = null,
 ) {
     TopAppBar(
-        title = { Text(title) },
+        title = {
+            if (subtitle != null) {
+                Column {
+                    Text(title)
+                    Text(
+                        text  = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                Text(title)
+            }
+        },
         navigationIcon = {
             if (!isTopLevel) {
                 IconButton(onClick = onBack) {

@@ -4,6 +4,8 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -11,29 +13,30 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.data.prayer.PrayerRepository
 import com.lhacenmed.khatmah.data.prayer.PrayerTime
 import com.lhacenmed.khatmah.data.prayer.toAmPm
 import com.lhacenmed.khatmah.ui.common.Route
-import com.lhacenmed.khatmah.ui.nav.LocalNavController
+import com.lhacenmed.khatmah.ui.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.ui.nav.NavScreen
 import com.lhacenmed.khatmah.util.HijriDate
 import com.lhacenmed.khatmah.util.OnboardingPrefs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -57,62 +60,101 @@ val PrayersTab = NavScreen(
     }
 }
 
+// Virtual pager page count and the index that maps to today.
+private const val PAGER_TOTAL  = 2001
+private const val PAGER_CENTER = 1000
+
+// How long (ms) to keep the "Since" / elapsed mode active after a prayer passes.
+private const val ELAPSED_WINDOW_MS = 30 * 60 * 1_000L
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun PrayersScreenContent(padding: PaddingValues) {
-    val context = LocalContext.current
-    val nav     = LocalNavController.current
-    val repo    = remember { PrayerRepository(context) }
+    val context    = LocalContext.current
+    val repo       = remember { PrayerRepository(context) }
+    val today      = remember { LocalDate.now() }
+    val scope      = rememberCoroutineScope()
+    val scrollToTop = LocalScrollToTop.current
 
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    var prayers      by remember { mutableStateOf<List<PrayerTime>>(emptyList()) }
-    var now          by remember { mutableStateOf(LocalTime.now()) }
+    // Pager drives date navigation; page PAGER_CENTER = today.
+    val pagerState = rememberPagerState(initialPage = PAGER_CENTER) { PAGER_TOTAL }
 
-    // Alarm state per prayer index — Sunrise (index 1) is off by default.
-    var alarmOn by remember { mutableStateOf(List(6) { i -> i != 1 }) }
+    // Cache: avoids recalculating the same date's prayers on every pager visit.
+    val prayerCache = remember { HashMap<LocalDate, List<PrayerTime>>() }
 
     val cityName = remember {
         OnboardingPrefs.location(context)?.cityName.orEmpty()
     }
 
-    // Reload when the selected date changes.
-    LaunchedEffect(selectedDate, cityName) {
+    // Today's prayers — loaded once; powers the countdown regardless of selectedDate.
+    var todayPrayers by remember { mutableStateOf<List<PrayerTime>>(emptyList()) }
+
+    LaunchedEffect(cityName) {
         if (cityName.isNotBlank()) {
-            prayers = repo.getForDate(selectedDate)
+            todayPrayers = repo.getForDate(today).also { prayerCache[today] = it }
         }
     }
 
-    // Tick every second for the countdown.
+    // Live clock — ticks every second for the countdown.
+    var now by remember { mutableStateOf(LocalTime.now()) }
     LaunchedEffect(Unit) {
-        while (isActive) {
-            now = LocalTime.now()
-            delay(1_000L)
+        while (isActive) { now = LocalTime.now(); delay(1_000L) }
+    }
+
+    // Reset pager to today when the tab button is tapped while already selected.
+    LaunchedEffect(scrollToTop) {
+        scrollToTop.collect {
+            pagerState.animateScrollToPage(PAGER_CENTER)
         }
     }
 
-    val isToday = selectedDate == LocalDate.now()
-
-    // Index of the last prayer whose time ≤ now (the "current" active prayer).
-    val currentIdx: Int? = remember(prayers, now, isToday) {
-        if (!isToday) null
-        else prayers.indexOfLast { it.time <= now }.takeIf { it >= 0 }
+    // ── Elapsed / countdown resolution (mirrors widget logic) ─────────────────
+    // If a prayer passed within ELAPSED_WINDOW_MS → elapsed mode (count up).
+    // Otherwise → countdown to the next prayer.
+    val lastPassedIdx: Int? = remember(todayPrayers, now) {
+        todayPrayers.indexOfLast { it.time <= now }.takeIf { it >= 0 }
     }
 
-    // Index of the first prayer whose time > now (the upcoming prayer).
-    val nextIdx: Int? = remember(prayers, now, isToday) {
-        if (!isToday) null
-        else prayers.indexOfFirst { it.time > now }.takeIf { it >= 0 }
+    // True while we're still inside the 30-min window after the last prayer.
+    val inElapsedWindow: Boolean = remember(todayPrayers, lastPassedIdx, now) {
+        if (lastPassedIdx == null) return@remember false
+        val passedSecs = todayPrayers[lastPassedIdx].time.toSecondOfDay()
+        val nowSecs    = now.toSecondOfDay()
+        val elapsedMs  = (nowSecs - passedSecs).toLong() * 1_000L
+        elapsedMs in 0..ELAPSED_WINDOW_MS
     }
 
-    // Remaining seconds until the next prayer.
-    val countdownSecs: Long = remember(prayers, nextIdx, now) {
+    // The prayer shown in the header: last-passed during window, next otherwise.
+    val headerPrayer: PrayerTime? = remember(todayPrayers, lastPassedIdx, inElapsedWindow, now) {
+        when {
+            todayPrayers.isEmpty()  -> null
+            inElapsedWindow         -> todayPrayers[lastPassedIdx!!]
+            else                    -> todayPrayers.firstOrNull { it.time > now }
+        }
+    }
+
+    // Elapsed seconds since the last prayer (elapsed mode only).
+    val elapsedSecs: Long = remember(todayPrayers, lastPassedIdx, inElapsedWindow, now) {
+        if (!inElapsedWindow || lastPassedIdx == null) return@remember 0L
+        val passedSecs = todayPrayers[lastPassedIdx].time.toSecondOfDay()
+        (now.toSecondOfDay() - passedSecs).toLong().coerceAtLeast(0L)
+    }
+
+    // Remaining seconds until the next prayer (countdown mode only).
+    val nextIdx: Int? = remember(todayPrayers, now) {
+        todayPrayers.indexOfFirst { it.time > now }.takeIf { it >= 0 }
+    }
+    val countdownSecs: Long = remember(todayPrayers, nextIdx, now) {
         nextIdx?.let { i ->
-            val diff = prayers[i].time.toSecondOfDay() - now.toSecondOfDay()
+            val diff = todayPrayers[i].time.toSecondOfDay() - now.toSecondOfDay()
             if (diff >= 0L) diff.toLong() else 0L
         } ?: 0L
     }
+
+    // Alarm state per prayer index — Sunrise (index 1) is off by default.
+    var alarmOn by remember { mutableStateOf(List(6) { i -> i != 1 }) }
 
     Column(
         modifier = Modifier
@@ -120,53 +162,87 @@ private fun PrayersScreenContent(padding: PaddingValues) {
             .padding(top = padding.calculateTopPadding()),
     ) {
         PrayerHeader(
-            cityName        = cityName.ifBlank { stringResource(R.string.prayers_city_unknown) },
-            nextPrayer      = nextIdx?.let { prayers[it] },
-            countdownSecs   = countdownSecs,
-            onQiblaClick    = { /* TODO: Qibla screen */ },
-            // Navigate to the dedicated prayer settings page.
-            onSettingsClick = { nav.navigate(Route.PRAYER_SETTINGS) },
+            prayer        = headerPrayer,
+            inElapsedMode = inElapsedWindow,
+            timerSecs     = if (inElapsedWindow) elapsedSecs else countdownSecs,
         )
 
-        PrayerDateNav(
-            date    = selectedDate,
-            isToday = isToday,
-            onPrev  = { selectedDate = selectedDate.minusDays(1) },
-            onNext  = { selectedDate = selectedDate.plusDays(1) },
-        )
+        // ── Swipeable date navigator ──────────────────────────────────────────
+        HorizontalPager(
+            state            = pagerState,
+            modifier         = Modifier.fillMaxWidth(),
+            beyondViewportPageCount = 1,
+        ) { page ->
+            val pageDate = today.plusDays((page - PAGER_CENTER).toLong())
+            val isToday  = pageDate == today
 
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            // Per-page prayer list state, seeded from cache when available.
+            var prayers by remember { mutableStateOf(prayerCache[pageDate] ?: emptyList()) }
 
-        if (prayers.isEmpty()) {
-            Box(
-                modifier         = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                prayers.forEachIndexed { i, prayer ->
-                    PrayerRow(
-                        prayer        = prayer,
-                        isCurrent     = i == currentIdx,
-                        alarmOn       = alarmOn.getOrElse(i) { false },
-                        onAlarmToggle = {
-                            alarmOn = alarmOn.toMutableList().also { list -> list[i] = !list[i] }
-                        },
-                    )
-                    if (i < prayers.size - 1) {
-                        HorizontalDivider(
-                            modifier  = Modifier.padding(horizontal = 16.dp),
-                            color     = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                            thickness = 0.5.dp,
-                        )
+            // Index of the prayer to highlight on today's page:
+            //  • During the elapsed window → the prayer that just passed.
+            //  • After the window → the last prayer whose time ≤ now (already passed).
+            //  • Other days → no highlight.
+            val currentIdx: Int? = remember(prayers, now, isToday, inElapsedWindow, lastPassedIdx) {
+                if (!isToday || prayers.isEmpty()) return@remember null
+                if (inElapsedWindow) lastPassedIdx
+                else prayers.indexOfLast { it.time <= now }.takeIf { it >= 0 }
+            }
+
+            LaunchedEffect(pageDate, cityName) {
+                if (cityName.isNotBlank() && prayerCache[pageDate] == null) {
+                    val fetched = repo.getForDate(pageDate)
+                    prayerCache[pageDate] = fetched
+                    prayers = fetched
+                } else if (prayerCache[pageDate] != null) {
+                    prayers = prayerCache[pageDate]!!
+                }
+            }
+
+            Column(modifier = Modifier.fillMaxWidth()) {
+                PrayerDateNav(
+                    date    = pageDate,
+                    isToday = isToday,
+                    onPrev  = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } },
+                    onNext  = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                if (prayers.isEmpty()) {
+                    Box(
+                        modifier         = Modifier
+                            .fillMaxWidth()
+                            .height(320.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { CircularProgressIndicator() }
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        prayers.forEachIndexed { i, prayer ->
+                            PrayerRow(
+                                prayer        = prayer,
+                                isCurrent     = i == currentIdx,
+                                alarmOn       = alarmOn.getOrElse(i) { false },
+                                onAlarmToggle = {
+                                    alarmOn = alarmOn.toMutableList().also { list -> list[i] = !list[i] }
+                                },
+                            )
+                            if (i < prayers.size - 1) {
+                                HorizontalDivider(
+                                    modifier  = Modifier.padding(horizontal = 16.dp),
+                                    color     = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                    thickness = 0.5.dp,
+                                )
+                            }
+                        }
+                        // Space so the last row clears the bottom navigation bar.
+                        Spacer(Modifier.height(padding.calculateBottomPadding()))
                     }
                 }
-                // Space so the last row clears the bottom navigation bar.
-                Spacer(Modifier.height(padding.calculateBottomPadding()))
             }
         }
     }
@@ -174,93 +250,67 @@ private fun PrayersScreenContent(padding: PaddingValues) {
 
 // ─── Green header ─────────────────────────────────────────────────────────────
 
+/**
+ * Countdown/elapsed header.
+ *
+ * [inElapsedMode] = true  → counting up (Since Fajr…), [timerSecs] = elapsed.
+ * [inElapsedMode] = false → counting down (Till Dhuhr…), [timerSecs] = remaining.
+ */
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun PrayerHeader(
-    cityName: String,
-    nextPrayer: PrayerTime?,
-    countdownSecs: Long,
-    onQiblaClick: () -> Unit,
-    onSettingsClick: () -> Unit,
+    prayer:        PrayerTime?,
+    inElapsedMode: Boolean,
+    timerSecs:     Long,
 ) {
-    val h = (countdownSecs / 3600).toInt()
-    val m = ((countdownSecs % 3600) / 60).toInt()
-    val s = (countdownSecs % 60).toInt()
+    val h = (timerSecs / 3600).toInt()
+    val m = ((timerSecs % 3600) / 60).toInt()
+    val s = (timerSecs % 60).toInt()
 
-    val onPrimary      = MaterialTheme.colorScheme.onPrimary
+    val onPrimary      = MaterialTheme.colorScheme.onSurface
     val onPrimaryMuted = onPrimary.copy(alpha = 0.75f)
 
-    Surface(color = MaterialTheme.colorScheme.primary) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(
             modifier            = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 20.dp),
+                .padding(horizontal = 20.dp, vertical = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // ── Title row ─────────────────────────────────────────────────────
-            Row(
-                modifier          = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text  = stringResource(R.string.prayers_screen_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = onPrimary,
-                    )
-                    if (cityName.isNotBlank()) {
-                        Text(
-                            text  = cityName,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = onPrimaryMuted,
-                        )
-                    }
-                }
-                IconButton(onClick = onQiblaClick) {
-                    Icon(
-                        painter            = painterResource(R.drawable.ic_mosque),
-                        contentDescription = stringResource(R.string.prayers_qibla),
-                        tint               = onPrimary,
-                    )
-                }
-                IconButton(onClick = onSettingsClick) {
-                    Icon(
-                        imageVector        = Icons.Outlined.Settings,
-                        contentDescription = stringResource(R.string.prayers_settings),
-                        tint               = onPrimary,
-                    )
-                }
-            }
+            if (prayer != null) {
+                val localName = localizedPrayerName(prayer.name)
+                val label = if (inElapsedMode)
+                    stringResource(R.string.prayers_since, localName)
+                else
+                    stringResource(R.string.prayers_till, localName)
 
-            Spacer(Modifier.height(20.dp))
-
-            // ── Countdown ─────────────────────────────────────────────────────
-            if (nextPrayer != null) {
-                val localName = localizedPrayerName(nextPrayer.name)
                 Text(
-                    text  = stringResource(R.string.prayers_till, localName),
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
+                    text  = label,
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                     color = onPrimaryMuted,
                 )
                 Spacer(Modifier.height(4.dp))
-                Row(
-                    verticalAlignment     = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    Text(
-                        text  = "%02d:%02d".format(h, m),
-                        style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold),
-                        color = onPrimary,
-                    )
-                    Text(
-                        text     = " %02d".format(s),
-                        style    = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Medium),
-                        color    = onPrimary,
-                        modifier = Modifier.padding(bottom = 6.dp),
-                    )
+                // Force LTR so the HH:MM SS layout is never mirrored in RTL locales.
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        Text(
+                            text     = "%02d:%02d".format(h, m),
+                            modifier = Modifier.alignByBaseline(),
+                            style    = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold),
+                            color    = onPrimary,
+                        )
+                        Text(
+                            text     = " %02d".format(s),
+                            modifier = Modifier.alignByBaseline(),
+                            style    = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Medium),
+                            color    = onPrimary,
+                        )
+                    }
                 }
             } else {
-                // After Isha — no remaining prayers today.
+                // After Isha and outside the elapsed window — no remaining prayers today.
                 Text(
                     text  = stringResource(R.string.prayers_next_fajr),
                     style = MaterialTheme.typography.titleMedium,

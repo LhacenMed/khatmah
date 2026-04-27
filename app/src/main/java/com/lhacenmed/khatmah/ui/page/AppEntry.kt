@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -202,13 +204,15 @@ private fun MainScreen(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
 ) {
-    val nav      = LocalNavController.current
-    val activity = LocalActivity.current as ComponentActivity
+    val context    = LocalContext.current
+    val nav        = LocalNavController.current
+    val activity   = LocalActivity.current as ComponentActivity
     val adhkarVm: AdhkarViewModel = viewModel(activity)
     val adhkarState by adhkarVm.uiState.collectAsState()
 
     val currentTab     = tabs[selectedIndex]
     val isAdhkarTab    = currentTab.route == Route.ADHKAR
+    val isPrayersTab   = currentTab.route == Route.PRAYERS
     val inAdhkarSelect = isAdhkarTab && adhkarState.selectionMode
 
     BackHandler(enabled = selectedIndex != 0 || inAdhkarSelect) {
@@ -221,9 +225,15 @@ private fun MainScreen(
     val scrollToTopFlows = remember { Array(tabs.size) { MutableSharedFlow<Unit>(extraBufferCapacity = 1) } }
     val anchorViews      = remember { arrayOfNulls<View>(tabs.size) }
 
+    // City name shown as subtitle when the Prayers tab is active.
+    val prayersCityName = remember(isPrayersTab) {
+        if (isPrayersTab) OnboardingPrefs.location(context)?.cityName.orEmpty() else ""
+    }
+
     // Top bar title: show selection count when in selection mode
     val topBarTitle = when {
         inAdhkarSelect -> stringResource(R.string.n_selected, adhkarState.selectedIds.size)
+        isPrayersTab   -> stringResource(R.string.prayers_screen_title)
         else           -> stringResource(currentTab.labelRes)
     }
 
@@ -237,6 +247,7 @@ private fun MainScreen(
         topBar = {
             AppTopBar(
                 title          = topBarTitle,
+                subtitle       = if (isPrayersTab && prayersCityName.isNotBlank()) prayersCityName else null,
                 isTopLevel     = !inAdhkarSelect,
                 onBack         = { if (inAdhkarSelect) adhkarVm.exitSelectionMode() },
                 containerColor = topBarColor,
@@ -265,6 +276,21 @@ private fun MainScreen(
                             IconButton(onClick = { nav.navigate(Route.adhkarEditor()) }) {
                                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_adhkar))
                             }
+                        }
+                    } else if (isPrayersTab) {
+                        // Qibla button (TODO: wire to Qibla screen)
+                        IconButton(onClick = { /* TODO: Qibla screen */ }) {
+                            Icon(
+                                painter            = painterResource(R.drawable.ic_mosque),
+                                contentDescription = stringResource(R.string.prayers_qibla),
+                            )
+                        }
+                        // Prayer settings
+                        IconButton(onClick = { nav.navigate(Route.PRAYER_SETTINGS) }) {
+                            Icon(
+                                imageVector        = Icons.Outlined.Settings,
+                                contentDescription = stringResource(R.string.prayers_settings),
+                            )
                         }
                     }
                 },

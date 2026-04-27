@@ -142,7 +142,7 @@
 
     <!-- Prayers tab screen -->
     <string name="prayers_screen_title">أوقات الصلاة</string>
-    <string name="prayers_till">حتى %s</string>
+    <string name="prayers_till">باقي على أذان %s</string>
     <string name="prayers_city_unknown">موقع غير معروف</string>
     <string name="prayers_settings">إعدادات الصلاة</string>
     <string name="prayers_qibla">اتجاه القبلة</string>
@@ -156,6 +156,7 @@
     <string name="prayers_prev_day">اليوم السابق</string>
     <string name="prayers_next_day">اليوم التالي</string>
     <string name="prayers_requires_android_8">أوقات الصلاة تتطلب Android 8.0 أو أعلى</string>
+    <string name="prayers_since">مضى على أذان %s</string>
 
     <!-- Individual prayer names -->
     <string name="prayer_fajr">الفجر</string>
