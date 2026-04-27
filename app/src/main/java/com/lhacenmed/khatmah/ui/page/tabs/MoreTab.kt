@@ -31,6 +31,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,8 +50,10 @@ import com.lhacenmed.khatmah.ui.component.PreferenceItem
 import com.lhacenmed.khatmah.ui.component.PreferenceSubtitle
 import com.lhacenmed.khatmah.ui.component.PreferenceSwitch
 import com.lhacenmed.khatmah.ui.component.SheetOption
+import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.ui.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.ui.nav.NavScreen
+import com.lhacenmed.khatmah.util.LocaleManager
 
 // Items within this distance from the top animate directly; farther ones jump-then-animate.
 private const val SMOOTH_SCROLL_THRESHOLD = 4
@@ -76,7 +79,10 @@ private fun MoreScreen(padding: PaddingValues) {
     var alBaqarahAlarmOn by rememberSaveable { mutableStateOf(false) }
 
     // ── Reader style bottom sheet ──────────────────────────────────────────────
-    var showReaderStyleSheet by rememberSaveable { mutableStateOf(false) }
+    // Using explicit MutableState (not 'by' delegation) so assignments inside
+    // lambdas are visible to the compiler and suppress the "assigned but never read" warning.
+    val showReaderStyleSheet: MutableState<Boolean> = rememberSaveable { mutableStateOf(false) }
+    val showLanguageSheet: MutableState<Boolean>    = rememberSaveable { mutableStateOf(false) }
     val readerStyle by AppPrefs.readerStyle.collectAsState()
 
     val readerStyleOptions = listOf(
@@ -92,7 +98,23 @@ private fun MoreScreen(padding: PaddingValues) {
         ),
     )
 
+    val languageOptions = listOf<SheetOption<String?>>(
+        SheetOption(
+            key   = null,
+            title = stringResource(R.string.language_system_default),
+        ),
+        SheetOption(
+            key   = "en",
+            title = stringResource(R.string.language_english),
+        ),
+        SheetOption(
+            key   = "ar",
+            title = stringResource(R.string.language_arabic),
+        ),
+    )
+
     val listState   = rememberLazyListState()
+    val nav         = LocalNavController.current
     val scrollToTop = LocalScrollToTop.current
 
     // Two-phase scroll-to-top: instant jump to near the top, then smooth animation
@@ -272,6 +294,13 @@ private fun MoreScreen(padding: PaddingValues) {
         item { PreferenceSubtitle(text = stringResource(R.string.more_khatmah_app)) }
         item {
             PreferenceItem(
+                title        = stringResource(R.string.theme_settings),
+                icon         = Icons.Outlined.AutoStories,
+                onClick      = { nav.navigate(Route.THEME_SETTINGS) },
+            )
+        }
+        item {
+            PreferenceItem(
                 title        = stringResource(R.string.more_reader_style),
                 icon         = Icons.Outlined.AutoStories,
                 trailingIcon = {
@@ -284,13 +313,14 @@ private fun MoreScreen(padding: PaddingValues) {
                         )
                     )
                 },
-                onClick = { showReaderStyleSheet = true },
+                onClick = { showReaderStyleSheet.value = true },
             )
         }
         item {
             PreferenceItem(
                 title = stringResource(R.string.more_language),
                 icon  = Icons.Outlined.Language,
+                onClick = { showLanguageSheet.value = true },
             )
         }
         item {
@@ -327,16 +357,29 @@ private fun MoreScreen(padding: PaddingValues) {
 
     // ── Reader Style Sheet ────────────────────────────────────────────────────
     // Rendered outside the LazyColumn so it overlays correctly.
-    if (showReaderStyleSheet) {
+    if (showReaderStyleSheet.value) {
         OptionSelectBottomSheet(
             title    = stringResource(R.string.more_reader_style),
             options  = readerStyleOptions,
             selected = readerStyle,
             onSelect = { style ->
                 AppPrefs.setReaderStyle(context, style)
-                showReaderStyleSheet = false
+                showReaderStyleSheet.value = false
             },
-            onDismiss = { showReaderStyleSheet = false },
+            onDismiss = { showReaderStyleSheet.value = false },
+        )
+    }
+
+    if (showLanguageSheet.value) {
+        OptionSelectBottomSheet(
+            title    = stringResource(R.string.more_language),
+            options  = languageOptions,
+            selected = LocaleManager.getCurrentTag(),
+            onSelect = { tag ->
+                LocaleManager.setLocale(tag)
+                showLanguageSheet.value = false
+            },
+            onDismiss = { showLanguageSheet.value = false },
         )
     }
 }

@@ -19,6 +19,7 @@ object Route {
 
     // ── General settings sub-pages ────────────────────────────────────────────
     const val THEME_SETTINGS = "theme_settings"
+    const val DARK_THEME     = "dark_theme"
     const val LANGUAGE       = "language"
     const val ABOUT          = "about"
 

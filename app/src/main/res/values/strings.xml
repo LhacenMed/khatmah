@@ -10,10 +10,16 @@
     <string name="more">More</string>
 
     <!-- Theme settings -->
-    <string name="theme_settings">Theme</string>
+    <string name="theme_settings">Appearance</string>
     <string name="theme_system">System Default</string>
     <string name="theme_light">Light</string>
-    <string name="theme_dark">Dark</string>
+    <string name="theme_dark">Dark Theme</string>
+    <string name="theme_dark_settings_group">Dark Theme Settings</string>
+    <string name="theme_high_contrast">High Contrast</string>
+    <string name="theme_high_contrast_desc">Pure black background in dark mode</string>
+    <string name="theme_dynamic_color">Dynamic Color</string>
+    <string name="theme_dynamic_color_desc">Use colors from your wallpaper (Android 12+)</string>
+    <string name="theme_palette_group">Color Palette</string>
 
     <!-- Language settings -->
     <string name="language_settings">Language</string>

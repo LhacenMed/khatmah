@@ -18,7 +18,9 @@ class App : Application() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate() {
         super.onCreate()
-        ThemeManager.apply(this)
+        // init() loads persisted values from SharedPrefs AND calls
+        // AppCompatDelegate.setDefaultNightMode — replaces the old apply() call.
+        ThemeManager.init(this)
         DynamicColors.applyToActivitiesIfAvailable(this)
         // Must be called before setLocale so the widget's savedTag() always has a value.
         LocaleManager.init(this)

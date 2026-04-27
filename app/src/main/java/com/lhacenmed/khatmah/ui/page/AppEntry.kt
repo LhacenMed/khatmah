@@ -52,6 +52,7 @@ import com.lhacenmed.khatmah.ui.onboarding.*
 import com.lhacenmed.khatmah.ui.page.settings.about.AboutPage
 import com.lhacenmed.khatmah.ui.page.settings.appearance.LanguagePage
 import com.lhacenmed.khatmah.ui.page.settings.appearance.ThemeSettingsPage
+import com.lhacenmed.khatmah.ui.page.settings.appearance.DarkThemePage
 import com.lhacenmed.khatmah.ui.page.settings.prayers.*
 import com.lhacenmed.khatmah.ui.page.tabs.*
 import com.lhacenmed.khatmah.ui.page.tabs.adhkar.AdhkarDetailPage
@@ -75,7 +76,7 @@ fun AppEntry() {
     }
 
     val tabs  = listOf(TodayTab, AdhkarTab, PrayersTab, IndexTab, MoreTab)
-    val pages = listOf(ThemeSettingsPage, LanguagePage, AboutPage)
+    val pages = listOf(ThemeSettingsPage, DarkThemePage, LanguagePage, AboutPage)
 
     val navController = rememberNavController()
 

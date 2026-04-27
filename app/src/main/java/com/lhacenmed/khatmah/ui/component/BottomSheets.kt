@@ -37,10 +37,11 @@ import androidx.compose.ui.unit.dp
  * @param title    Primary label shown in the row.
  * @param subtitle Optional secondary label shown below [title].
  */
-data class SheetOption<T>(
+data class SheetOption<out T>(
     val key: T,
     val title: String,
     val subtitle: String? = null,
+    val enabled: Boolean = true,
 )
 
 // ── Bottom Sheet ──────────────────────────────────────────────────────────────
@@ -66,7 +67,7 @@ data class SheetOption<T>(
 @Composable
 fun <T> OptionSelectBottomSheet(
     title: String,
-    options: List<SheetOption<T>>,
+    options: List<SheetOption<out T>>,
     selected: T,
     onSelect: (T) -> Unit,
     onDismiss: () -> Unit,
@@ -87,13 +88,15 @@ fun <T> OptionSelectBottomSheet(
         HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
 
         // ── Options ───────────────────────────────────────────────────────────
-        options.forEach { option ->
+        options.forEachIndexed { index, option ->
             OptionRow(
                 option   = option,
                 checked  = option.key == selected,
                 onSelect = { onSelect(option.key) },
             )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            if (index < options.lastIndex) {
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            }
         }
 
         // Respect nav-bar insets so nothing is clipped on gesture-nav devices.
@@ -112,7 +115,11 @@ private fun <T> OptionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(role = Role.RadioButton, onClick = onSelect)
+            .clickable(
+                enabled = option.enabled,
+                role    = Role.RadioButton,
+                onClick = onSelect
+            )
             .padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment     = Alignment.CenterVertically,
@@ -127,15 +134,20 @@ private fun <T> OptionRow(
             Text(
                 text  = option.title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (checked) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface,
+                color = when {
+                    !option.enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    checked -> MaterialTheme.colorScheme.primary
+                    else -> MaterialTheme.colorScheme.onSurface
+                },
                 fontWeight = if (checked) FontWeight.Medium else FontWeight.Normal,
             )
             if (option.subtitle != null) {
                 Text(
                     text  = option.subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                        alpha = if (option.enabled) 1f else 0.38f
+                    ),
                 )
             }
         }
@@ -147,7 +159,8 @@ private fun <T> OptionRow(
             Icon(
                 imageVector        = Icons.Default.Check,
                 contentDescription = null,
-                tint               = MaterialTheme.colorScheme.primary,
+                tint               = if (option.enabled) MaterialTheme.colorScheme.primary 
+                                     else MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
                 modifier           = Modifier.size(20.dp),
             )
         }

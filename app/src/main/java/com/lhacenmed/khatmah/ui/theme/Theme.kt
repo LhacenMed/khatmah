@@ -3,43 +3,48 @@ package com.lhacenmed.khatmah.ui.theme
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-)
+import com.lhacenmed.khatmah.util.ThemeManager
+import androidx.appcompat.app.AppCompatDelegate
 
 @Composable
 fun Theme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val context      = LocalContext.current
+    val mode         by ThemeManager.mode.collectAsState()
+    val dynamicColor by ThemeManager.dynamicColor.collectAsState()
+    val colorIndex   by ThemeManager.colorIndex.collectAsState()
+    val highContrast by ThemeManager.highContrast.collectAsState()
+    
+    val isSystemDark = isSystemInDarkTheme()
+    val isDark = when (mode) {
+        AppCompatDelegate.MODE_NIGHT_YES -> true
+        AppCompatDelegate.MODE_NIGHT_NO  -> false
+        else -> isSystemDark
+    }
+
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else      -> LightColorScheme
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+            if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        else -> colorPreferences
+            .getOrElse(colorIndex) { colorPreferences[0] }
+            .run { if (isDark) darkScheme else lightScheme }
+    }.let { scheme ->
+        if (highContrast && isDark)
+            scheme.copy(surface = Color.Black, background = Color.Black)
+        else scheme
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,    // uses TextDirection.Content for RTL support
-        content = content
+        typography  = Typography,
+        content     = content,
     )
 }
