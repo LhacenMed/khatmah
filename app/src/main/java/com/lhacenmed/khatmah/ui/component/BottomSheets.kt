@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -26,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 // ── Data ──────────────────────────────────────────────────────────────────────
@@ -76,16 +78,23 @@ fun <T> OptionSelectBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState       = sheetState,
+        dragHandle       = {
+            BottomSheetDefaults.DragHandle(
+                width  = 32.dp,
+                height = 3.dp,
+            )
+        }
     ) {
         // ── Header ────────────────────────────────────────────────────────────
         Text(
-            text     = title,
-            style    = MaterialTheme.typography.titleMedium,
+            text       = title,
+            style      = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+            textAlign  = TextAlign.Center,
+            modifier   = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp),
         )
-
-        HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
 
         // ── Options ───────────────────────────────────────────────────────────
         options.forEachIndexed { index, option ->
