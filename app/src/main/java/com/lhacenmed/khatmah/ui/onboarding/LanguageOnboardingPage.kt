@@ -47,7 +47,7 @@ fun LanguageOnboardingPage() {
             modifier           = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            LANGUAGES.forEach { option ->
+            LANGUAGES.forEachIndexed { index, option ->
                 SingleChoiceItem(
                     label    = stringResource(option.labelRes),
                     selected = matchesTag(currentTag, option.tag),
@@ -56,7 +56,9 @@ fun LanguageOnboardingPage() {
                         LocaleManager.setLocale(option.tag)
                     },
                 )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+                if (index < LANGUAGES.lastIndex) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+                }
             }
         }
     }

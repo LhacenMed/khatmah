@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MenuBook
@@ -97,16 +98,18 @@ private fun IndexScreen(padding: PaddingValues) {
         }
 
         // ── Surah list ────────────────────────────────────────────────────────
-        items(surahs, key = { it.num }) { surah ->
+        itemsIndexed(surahs, key = { _, surah -> surah.num }) { index, surah ->
             SurahRow(
                 surah   = surah,
                 onClick = { nav.navigate(Route.quranReader(suraNum = surah.num)) },
             )
-            HorizontalDivider(
-                modifier  = Modifier.padding(horizontal = 16.dp),
-                thickness = 0.5.dp,
-                color     = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-            )
+            if (index < surahs.lastIndex) {
+                HorizontalDivider(
+                    modifier  = Modifier.padding(horizontal = 16.dp),
+                    thickness = 0.5.dp,
+                    color     = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
+            }
         }
     }
 }
