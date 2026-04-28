@@ -3,7 +3,6 @@ package com.lhacenmed.khatmah.ui.page.quran
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -43,13 +42,11 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
-import androidx.compose.ui.res.stringResource
 
 private const val ANIM_MS = 280
 
@@ -149,7 +146,7 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
  * Root layout: pager fills the screen; bars float above it.
  *
  * Tap anywhere (including aya text) toggles bar visibility.
- * Long-pressing an aya highlights it and starts audio playback.
+ * Long-pressing an aya highlights it and starts audio download + playback.
  * The bottom bar is a [Column] of [AyaPlayerBar] (animated) + [QuranBottomBar].
  *
  * [selectedAya] is kept in sync with [AyaAudioManager.state] so that when
@@ -165,7 +162,6 @@ private fun QuranPager(
     val nav        = LocalNavController.current
     val context    = LocalContext.current
     val scope      = rememberCoroutineScope()
-    val audioNotAvailableMsg = stringResource(R.string.audio_not_available)
     val pagerState = rememberPagerState(
         initialPage = vm.savedPage.coerceIn(0, pages.lastIndex),
     ) { pages.size }
@@ -187,6 +183,11 @@ private fun QuranPager(
         if (audioState.active) {
             selectedAya = audioState.suraNum to audioState.ayaNum
         }
+    }
+
+    // Clear selection highlight when audio stops/errors.
+    LaunchedEffect(audioState.active) {
+        if (!audioState.active) selectedAya = null
     }
 
     val pendingJump by vm.pendingJump.collectAsState()
@@ -241,15 +242,8 @@ private fun QuranPager(
                             ?.name
                             ?: pages[idx].suraName
 
-                        val ok = AyaAudioManager.play(context, suraNum, ayaNum, surahName)
-                        if (!ok) {
-                            Toast.makeText(
-                                context,
-                                audioNotAvailableMsg,
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                            selectedAya = null
-                        }
+                        // play() is now fire-and-forget; errors surface via audioState.loadState.
+                        AyaAudioManager.play(context, suraNum, ayaNum, surahName)
                     },
                 )
             }
@@ -483,7 +477,15 @@ private fun ImageTopBar(pageNum: Int, onBack: () -> Unit, onSearch: () -> Unit) 
 
 /**
  * Compact player bar that sits directly above the page slider.
- * Layout: thin progress line at top · play/pause · reader name + aya number · close.
+ *
+ * Progress indicator behaviour driven by [AyaAudioState.loadState]:
+ *   • [AudioLoadState.Connecting]           → LinearProgressIndicator (indeterminate)
+ *   • [AudioLoadState.Downloading(< 0)]     → LinearProgressIndicator (indeterminate)
+ *   • [AudioLoadState.Downloading(0f..1f)]  → LinearProgressIndicator with real progress
+ *   • [AudioLoadState.Ready]                → LinearProgressIndicator showing playback position
+ *   • [AudioLoadState.Error]                → thin error-colored bar at full width
+ *
+ * Layout: progress line at top · play/pause · reader name + aya number · close.
  */
 @Composable
 private fun AyaPlayerBar(
@@ -491,45 +493,107 @@ private fun AyaPlayerBar(
     onToggle: () -> Unit,
     onClose:  () -> Unit,
 ) {
+    val primary   = MaterialTheme.colorScheme.primary
+    val trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+
     Surface(
         color           = MaterialTheme.colorScheme.secondaryContainer,
         shadowElevation = 4.dp,
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            LinearProgressIndicator(
-                progress   = { state.progress },
-                modifier   = Modifier.fillMaxWidth(),
-                color      = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-            )
+
+            // ── Progress / download indicator ─────────────────────────────────
+            when (val ls = state.loadState) {
+                is AudioLoadState.Connecting,
+                is AudioLoadState.Idle ->
+                    LinearProgressIndicator(
+                        modifier   = Modifier.fillMaxWidth(),
+                        color      = primary,
+                        trackColor = trackColor,
+                    )
+
+                is AudioLoadState.Downloading -> {
+                    if (ls.progress < 0f) {
+                        // Indeterminate: Content-Length unknown.
+                        LinearProgressIndicator(
+                            modifier   = Modifier.fillMaxWidth(),
+                            color      = primary,
+                            trackColor = trackColor,
+                        )
+                    } else {
+                        LinearProgressIndicator(
+                            progress   = { ls.progress },
+                            modifier   = Modifier.fillMaxWidth(),
+                            color      = primary,
+                            trackColor = trackColor,
+                        )
+                    }
+                }
+
+                is AudioLoadState.Ready ->
+                    LinearProgressIndicator(
+                        progress   = { state.progress },
+                        modifier   = Modifier.fillMaxWidth(),
+                        color      = primary,
+                        trackColor = trackColor,
+                    )
+
+                is AudioLoadState.Error ->
+                    LinearProgressIndicator(
+                        progress   = { 1f },
+                        modifier   = Modifier.fillMaxWidth(),
+                        color      = MaterialTheme.colorScheme.error,
+                        trackColor = trackColor,
+                    )
+            }
+
             Row(
                 modifier          = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onToggle) {
+                // Play/pause only available once Ready.
+                IconButton(
+                    onClick  = onToggle,
+                    enabled  = state.loadState is AudioLoadState.Ready,
+                ) {
                     Icon(
                         imageVector        = if (state.isPlaying) Icons.Default.Pause
                         else Icons.Default.PlayArrow,
                         contentDescription = null,
-                        tint               = MaterialTheme.colorScheme.onSecondaryContainer,
+                        tint               = MaterialTheme.colorScheme.onSecondaryContainer
+                            .copy(alpha = if (state.loadState is AudioLoadState.Ready) 1f else 0.4f),
                     )
                 }
+
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text     = state.readerName,
+                        text     = when (val ls = state.loadState) {
+                            is AudioLoadState.Connecting             -> "جارٍ الاتصال…"
+                            is AudioLoadState.Downloading            -> if (ls.progress >= 0f)
+                                "جارٍ التحميل… ${(ls.progress * 100).toInt()}٪"
+                            else "جارٍ التحميل…"
+                            is AudioLoadState.Error                  -> ls.message
+                            else                                     -> state.readerName
+                        },
                         style    = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color    = MaterialTheme.colorScheme.onSecondaryContainer,
+                        color    = if (state.loadState is AudioLoadState.Error)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.onSecondaryContainer,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(
-                        text  = "آية ${toArNums(state.ayaNum)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                    )
+                    if (state.ayaNum > 0) {
+                        Text(
+                            text  = "آية ${toArNums(state.ayaNum)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                        )
+                    }
                 }
+
                 IconButton(onClick = onClose) {
                     Icon(
                         imageVector        = Icons.Default.Close,

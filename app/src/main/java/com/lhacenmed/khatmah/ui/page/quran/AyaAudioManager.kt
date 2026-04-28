@@ -2,6 +2,10 @@ package com.lhacenmed.khatmah.ui.page.quran
 
 import android.content.Context
 import android.media.MediaPlayer
+import com.lhacenmed.khatmah.data.audio.DownloadState
+import com.lhacenmed.khatmah.data.audio.DriveAudioRepository
+import com.lhacenmed.khatmah.data.audio.TranscriptSegment
+import com.lhacenmed.khatmah.data.prefs.AppPrefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -11,104 +15,120 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.File
 
 // ── Models ────────────────────────────────────────────────────────────────────
 
 data class AyaAudioState(
-    val suraNum:    Int     = 0,
-    val ayaNum:     Int     = 0,
-    val readerName: String  = "",
-    val isPlaying:  Boolean = false,
+    val suraNum:    Int            = 0,
+    val ayaNum:     Int            = 0,
+    val readerName: String         = "",
+    val isPlaying:  Boolean        = false,
     /** 0f–1f progress across the full surah audio file. */
-    val progress:   Float   = 0f,
-    val active:     Boolean = false,
+    val progress:   Float          = 0f,
+    val active:     Boolean        = false,
+    val loadState:  AudioLoadState = AudioLoadState.Idle,
 )
+
+sealed class AudioLoadState {
+    object Idle       : AudioLoadState()
+    /** Connecting to Drive or waiting for auth. Progress bar is indeterminate. */
+    object Connecting : AudioLoadState()
+    /**
+     * Downloading files from Drive.
+     * [progress] is 0f–1f for real progress; -1f means indeterminate
+     * (e.g. Content-Length absent on the response).
+     */
+    data class Downloading(val progress: Float) : AudioLoadState()
+    object Ready                                : AudioLoadState()
+    data class Error(val message: String)       : AudioLoadState()
+}
 
 // ── Manager ───────────────────────────────────────────────────────────────────
 
 /**
  * Singleton audio manager for aya-level Quran playback.
  *
- * Asset layout:
- *   readers/{reader}/سورة {surahName}/{reader} - سورة {surahName}.mp3
- *   readers/{reader}/سورة {surahName}/{reader} - سورة {surahName}.txt
- *
- * The surahName passed in from the page is already stripped of the "سورة " prefix
- * (done by QuranPageBuilder / QuranRepository). We re-add it here to match the
- * asset folder/file naming convention.
- *
- * LRC format per line: [mm:ss.mmm]ayaNum
- * The [length:…] header line is ignored via the regex.
+ * Files are fetched from Google Drive via [DriveAudioRepository] and cached to
+ * internal storage. The selected reader is resolved from [AppPrefs.audioReaderId],
+ * falling back to the first reader in the manifest.
  *
  * Progress covers the full surah file (0 → 1). The progress loop also watches
  * for the next aya boundary and auto-advances [state] so the caller can highlight
  * the correct aya without restarting the MediaPlayer.
+ *
+ * Download progress is surfaced through [AyaAudioState.loadState]:
+ *   Idle → Connecting → Downloading(0f..1f) → Ready  (or Error)
  */
 object AyaAudioManager {
-
-    // The only reader that currently has audio assets.
-    const val READER_NAME = "الشيخ محمد لغظف ولد محمد سيدي"
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val _state = MutableStateFlow(AyaAudioState())
     val state: StateFlow<AyaAudioState> = _state.asStateFlow()
 
-    private var player:      MediaPlayer?          = null
-    private var progressJob: Job?                  = null
+    private var player:      MediaPlayer?         = null
+    private var progressJob: Job?                 = null
+    private var downloadJob: Job?                 = null
 
-    /**
-     * Sorted list of (ayaNum, startMs) pairs for the currently loaded surah.
-     * Used to compute per-aya boundaries and drive auto-advance.
-     */
-    private var ayaTimeline: List<Pair<Int, Int>>  = emptyList()
+    /** Sorted (ayaNum, startMs) pairs for the currently loaded surah. */
+    private var ayaTimeline: List<Pair<Int, Int>> = emptyList()
 
     // ── Public API ────────────────────────────────────────────────────────────
 
     /**
-     * Resolves the asset for [suraNum]/[ayaNum], seeks to the aya timestamp,
-     * and begins playback. Returns false if no asset is found for this surah.
+     * Initiates download (if needed) then playback for [suraNum]/[ayaNum].
+     * [surahName] is the bare name without "سورة " prefix (kept for future use).
      *
-     * [surahName] must be the bare name without the "سورة " prefix, e.g. "الأعلى".
+     * Emits [AudioLoadState] updates through [state.loadState] during the
+     * download phase. Returns immediately — playback starts asynchronously.
      */
-    fun play(context: Context, suraNum: Int, ayaNum: Int, surahName: String): Boolean {
-        // Asset folders and filenames use the full prefixed name "سورة الأعلى".
-        val fullName  = "سورة $surahName"
-        val readerDir = "readers/$READER_NAME/$fullName"
-        val mp3Asset  = "$readerDir/$READER_NAME - $fullName.mp3"
-        val lrcAsset  = "$readerDir/$READER_NAME - $fullName.txt"
-
-        val timestamps = parseLrc(context, lrcAsset) ?: return false
-        val startMs    = timestamps[ayaNum]           ?: return false
-
-        // Build sorted timeline once per surah load.
-        ayaTimeline = timestamps.entries
-            .sortedBy { it.value }
-            .map { it.key to it.value }
-
+    fun play(context: Context, suraNum: Int, ayaNum: Int, @Suppress("UNUSED_PARAMETER") surahName: String) {
+        downloadJob?.cancel()
         releasePlayer()
 
-        val afd = runCatching { context.assets.openFd(mp3Asset) }.getOrNull() ?: return false
+        val repo    = DriveAudioRepository(context)
+        val readers = repo.readers().readers
+        val savedId = AppPrefs.audioReaderId.value
+        val reader  = readers.firstOrNull { it.id == savedId } ?: readers.firstOrNull()
 
-        player = MediaPlayer().apply {
-            setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
-            prepare()
-            seekTo(startMs)
-            start()
-            setOnCompletionListener { onPlaybackEnded() }
+        if (reader == null) {
+            _state.value = AyaAudioState(
+                active    = true,
+                loadState = AudioLoadState.Error("No readers configured"),
+            )
+            return
         }
 
         _state.value = AyaAudioState(
             suraNum    = suraNum,
             ayaNum     = ayaNum,
-            readerName = READER_NAME,
-            isPlaying  = true,
-            progress   = 0f,
+            readerName = reader.name,
             active     = true,
+            loadState  = AudioLoadState.Connecting,
         )
 
-        startProgressUpdates()
-        return true
+        downloadJob = scope.launch {
+            repo.prepareSurah(reader.id, reader.folderId, suraNum).collect { dlState ->
+                when (dlState) {
+                    DownloadState.Connecting ->
+                        _state.value = _state.value.copy(loadState = AudioLoadState.Connecting)
+
+                    is DownloadState.Downloading ->
+                        _state.value = _state.value.copy(
+                            loadState = AudioLoadState.Downloading(dlState.progress)
+                        )
+
+                    is DownloadState.Ready ->
+                        startPlayback(dlState.mp3, dlState.transcript, suraNum, ayaNum, reader.name, repo)
+
+                    is DownloadState.Error ->
+                        _state.value = _state.value.copy(
+                            loadState = AudioLoadState.Error(dlState.message)
+                        )
+                }
+            }
+        }
     }
 
     fun togglePlayPause() {
@@ -125,12 +145,42 @@ object AyaAudioManager {
     }
 
     fun stop() {
+        downloadJob?.cancel()
         releasePlayer()
-        ayaTimeline = emptyList()
+        ayaTimeline  = emptyList()
         _state.value = AyaAudioState()
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
+    // ── Playback ──────────────────────────────────────────────────────────────
+
+    private fun startPlayback(
+        mp3:        File,
+        transcript: List<TranscriptSegment>,
+        suraNum:    Int,
+        ayaNum:     Int,
+        readerName: String,
+        repo:       DriveAudioRepository,
+    ) {
+        val source  = repo.resolvePlayback(transcript, suraNum, ayaNum)
+        ayaTimeline = source.timeline
+
+        player = MediaPlayer().apply {
+            setDataSource(mp3.absolutePath)
+            prepare()
+            seekTo(source.seekMs)
+            start()
+            setOnCompletionListener { onPlaybackEnded() }
+        }
+
+        _state.value = _state.value.copy(
+            ayaNum    = ayaNum,
+            isPlaying = true,
+            progress  = 0f,
+            loadState = AudioLoadState.Ready,
+        )
+
+        startProgressUpdates()
+    }
 
     private fun startProgressUpdates() {
         progressJob?.cancel()
@@ -143,14 +193,11 @@ object AyaAudioManager {
                 val duration = p.duration.takeIf { it > 0 } ?: break
                 val progress = (pos.toFloat() / duration).coerceIn(0f, 1f)
 
-                // Auto-advance: find the aya whose window covers [pos].
+                // Auto-advance: find the aya whose time window covers [pos].
                 val current = _state.value
-                val nextAya = resolveAyaAt(pos)
-                if (nextAya != null && nextAya != current.ayaNum) {
-                    _state.value = current.copy(
-                        ayaNum   = nextAya,
-                        progress = progress,
-                    )
+                val curAya  = resolveAyaAt(pos)
+                if (curAya != null && curAya != current.ayaNum) {
+                    _state.value = current.copy(ayaNum = curAya, progress = progress)
                 } else {
                     _state.value = current.copy(progress = progress)
                 }
@@ -183,27 +230,5 @@ object AyaAudioManager {
             if (posMs >= startMs) result = ayaNum else break
         }
         return result
-    }
-
-    /**
-     * Parses an LRC-style asset file.
-     * Returns ayaNum → start time in milliseconds, or null if unreadable/empty.
-     * The [length:…] header and any non-matching lines are silently skipped.
-     */
-    private fun parseLrc(context: Context, assetPath: String): Map<Int, Int>? {
-        val lines = runCatching {
-            context.assets.open(assetPath).bufferedReader().readLines()
-        }.getOrNull() ?: return null
-
-        val regex = Regex("""^\[(\d{2}):(\d{2})\.(\d{3})](\d+)$""")
-        val map   = mutableMapOf<Int, Int>()
-
-        for (line in lines) {
-            val m = regex.matchEntire(line.trim()) ?: continue
-            val (mm, ss, ms, aya) = m.destructured
-            map[aya.toInt()] = mm.toInt() * 60_000 + ss.toInt() * 1_000 + ms.toInt()
-        }
-
-        return map.ifEmpty { null }
     }
 }

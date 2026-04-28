@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Centralized, SharedPreferences-backed store for user preferences that span
- * multiple screens (reader style, and future additions).
+ * multiple screens (reader style, selected audio reader, and future additions).
  *
  * Follows the same pattern as [ThemeManager] and [LocaleManager]:
  *  - Singleton object, no DI required.
@@ -17,8 +17,9 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 object AppPrefs {
 
-    private const val PREFS_FILE       = "app_prefs"
-    private const val KEY_READER_STYLE = "reader_style"
+    private const val PREFS_FILE        = "app_prefs"
+    private const val KEY_READER_STYLE  = "reader_style"
+    private const val KEY_AUDIO_READER  = "audio_reader_id"
 
     // ── Reader Style ──────────────────────────────────────────────────────────
 
@@ -31,6 +32,16 @@ object AppPrefs {
 
     private val _readerStyle = MutableStateFlow(ReaderStyle.TEXT)
     val readerStyle: StateFlow<ReaderStyle> = _readerStyle.asStateFlow()
+
+    // ── Audio Reader ──────────────────────────────────────────────────────────
+
+    /**
+     * ID of the currently selected Quran audio reader.
+     * Matches [ReaderInfo.id] from assets/readers.json.
+     * Empty string means "use the first reader in the manifest".
+     */
+    private val _audioReaderId = MutableStateFlow("")
+    val audioReaderId: StateFlow<String> = _audioReaderId.asStateFlow()
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -45,6 +56,8 @@ object AppPrefs {
         _readerStyle.value = prefs.getString(KEY_READER_STYLE, null)
             ?.let { runCatching { ReaderStyle.valueOf(it) }.getOrNull() }
             ?: ReaderStyle.TEXT
+
+        _audioReaderId.value = prefs.getString(KEY_AUDIO_READER, "") ?: ""
     }
 
     // ── Setters ───────────────────────────────────────────────────────────────
@@ -54,5 +67,12 @@ object AppPrefs {
             .getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
             .edit { putString(KEY_READER_STYLE, style.name) }
         _readerStyle.value = style
+    }
+
+    fun setAudioReaderId(context: Context, id: String) {
+        context.applicationContext
+            .getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
+            .edit { putString(KEY_AUDIO_READER, id) }
+        _audioReaderId.value = id
     }
 }
