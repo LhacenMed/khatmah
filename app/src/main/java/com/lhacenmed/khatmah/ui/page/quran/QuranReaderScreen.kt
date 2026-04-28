@@ -49,6 +49,7 @@ import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import androidx.compose.ui.res.stringResource
 
 private const val ANIM_MS = 280
 
@@ -150,6 +151,9 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
  * Tap anywhere (including aya text) toggles bar visibility.
  * Long-pressing an aya highlights it and starts audio playback.
  * The bottom bar is a [Column] of [AyaPlayerBar] (animated) + [QuranBottomBar].
+ *
+ * [selectedAya] is kept in sync with [AyaAudioManager.state] so that when
+ * playback auto-advances to the next aya the highlight follows automatically.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -161,6 +165,7 @@ private fun QuranPager(
     val nav        = LocalNavController.current
     val context    = LocalContext.current
     val scope      = rememberCoroutineScope()
+    val audioNotAvailableMsg = stringResource(R.string.audio_not_available)
     val pagerState = rememberPagerState(
         initialPage = vm.savedPage.coerceIn(0, pages.lastIndex),
     ) { pages.size }
@@ -175,6 +180,14 @@ private fun QuranPager(
 
     // Clear aya selection when the user swipes to a different page.
     LaunchedEffect(pagerState.settledPage) { selectedAya = null }
+
+    // Sync highlight with auto-advance: when the manager moves to the next aya
+    // (without the user long-pressing), update selectedAya to match.
+    LaunchedEffect(audioState.suraNum, audioState.ayaNum) {
+        if (audioState.active) {
+            selectedAya = audioState.suraNum to audioState.ayaNum
+        }
+    }
 
     val pendingJump by vm.pendingJump.collectAsState()
     LaunchedEffect(pendingJump) {
@@ -232,7 +245,7 @@ private fun QuranPager(
                         if (!ok) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.audio_not_available),
+                                audioNotAvailableMsg,
                                 Toast.LENGTH_SHORT,
                             ).show()
                             selectedAya = null

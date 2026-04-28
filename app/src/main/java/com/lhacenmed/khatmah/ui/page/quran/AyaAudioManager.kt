@@ -19,7 +19,7 @@ data class AyaAudioState(
     val ayaNum:     Int     = 0,
     val readerName: String  = "",
     val isPlaying:  Boolean = false,
-    /** 0f–1f progress within the aya's segment (aya start → file end). */
+    /** 0f–1f progress across the full surah audio file. */
     val progress:   Float   = 0f,
     val active:     Boolean = false,
 )
@@ -39,6 +39,10 @@ data class AyaAudioState(
  *
  * LRC format per line: [mm:ss.mmm]ayaNum
  * The [length:…] header line is ignored via the regex.
+ *
+ * Progress covers the full surah file (0 → 1). The progress loop also watches
+ * for the next aya boundary and auto-advances [state] so the caller can highlight
+ * the correct aya without restarting the MediaPlayer.
  */
 object AyaAudioManager {
 
@@ -50,9 +54,14 @@ object AyaAudioManager {
     private val _state = MutableStateFlow(AyaAudioState())
     val state: StateFlow<AyaAudioState> = _state.asStateFlow()
 
-    private var player:      MediaPlayer? = null
-    private var progressJob: Job?         = null
-    private var ayaStartMs:  Int          = 0
+    private var player:      MediaPlayer?          = null
+    private var progressJob: Job?                  = null
+
+    /**
+     * Sorted list of (ayaNum, startMs) pairs for the currently loaded surah.
+     * Used to compute per-aya boundaries and drive auto-advance.
+     */
+    private var ayaTimeline: List<Pair<Int, Int>>  = emptyList()
 
     // ── Public API ────────────────────────────────────────────────────────────
 
@@ -64,16 +73,20 @@ object AyaAudioManager {
      */
     fun play(context: Context, suraNum: Int, ayaNum: Int, surahName: String): Boolean {
         // Asset folders and filenames use the full prefixed name "سورة الأعلى".
-        val fullName   = "سورة $surahName"
-        val readerDir  = "readers/$READER_NAME/$fullName"
-        val mp3Asset   = "$readerDir/$READER_NAME - $fullName.mp3"
-        val lrcAsset   = "$readerDir/$READER_NAME - $fullName.txt"
+        val fullName  = "سورة $surahName"
+        val readerDir = "readers/$READER_NAME/$fullName"
+        val mp3Asset  = "$readerDir/$READER_NAME - $fullName.mp3"
+        val lrcAsset  = "$readerDir/$READER_NAME - $fullName.txt"
 
         val timestamps = parseLrc(context, lrcAsset) ?: return false
         val startMs    = timestamps[ayaNum]           ?: return false
 
+        // Build sorted timeline once per surah load.
+        ayaTimeline = timestamps.entries
+            .sortedBy { it.value }
+            .map { it.key to it.value }
+
         releasePlayer()
-        ayaStartMs = startMs
 
         val afd = runCatching { context.assets.openFd(mp3Asset) }.getOrNull() ?: return false
 
@@ -113,6 +126,7 @@ object AyaAudioManager {
 
     fun stop() {
         releasePlayer()
+        ayaTimeline = emptyList()
         _state.value = AyaAudioState()
     }
 
@@ -124,10 +138,23 @@ object AyaAudioManager {
             while (true) {
                 val p = player ?: break
                 if (!p.isPlaying) break
-                val total    = (p.duration - ayaStartMs).toFloat()
-                val elapsed  = (p.currentPosition - ayaStartMs).coerceAtLeast(0).toFloat()
-                val progress = if (total > 0f) (elapsed / total).coerceIn(0f, 1f) else 0f
-                _state.value = _state.value.copy(progress = progress)
+
+                val pos      = p.currentPosition
+                val duration = p.duration.takeIf { it > 0 } ?: break
+                val progress = (pos.toFloat() / duration).coerceIn(0f, 1f)
+
+                // Auto-advance: find the aya whose window covers [pos].
+                val current = _state.value
+                val nextAya = resolveAyaAt(pos)
+                if (nextAya != null && nextAya != current.ayaNum) {
+                    _state.value = current.copy(
+                        ayaNum   = nextAya,
+                        progress = progress,
+                    )
+                } else {
+                    _state.value = current.copy(progress = progress)
+                }
+
                 delay(200)
             }
         }
@@ -142,6 +169,20 @@ object AyaAudioManager {
         progressJob?.cancel()
         player?.apply { if (isPlaying) stop(); release() }
         player = null
+    }
+
+    /**
+     * Returns the ayaNum whose time window contains [posMs], or null if the
+     * timeline is empty. An aya's window is [startMs, nextStartMs).
+     */
+    private fun resolveAyaAt(posMs: Int): Int? {
+        val timeline = ayaTimeline
+        if (timeline.isEmpty()) return null
+        var result = timeline.first().first
+        for ((ayaNum, startMs) in timeline) {
+            if (posMs >= startMs) result = ayaNum else break
+        }
+        return result
     }
 
     /**
