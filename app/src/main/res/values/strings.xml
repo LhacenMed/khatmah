@@ -313,4 +313,5 @@
     <string name="color_picker_title">Pick a color</string>
 
     <string name="audio_not_available">لا يوجد تلاوة لهذه السورة</string>
+    <string name="quran_reader_select">Choose the reader</string>
 </resources>

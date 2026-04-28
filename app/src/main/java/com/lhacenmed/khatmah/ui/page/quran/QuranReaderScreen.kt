@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -33,16 +34,23 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.lhacenmed.khatmah.R
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.lhacenmed.khatmah.data.audio.DriveAudioRepository
+import com.lhacenmed.khatmah.data.prefs.AppPrefs
 import com.lhacenmed.khatmah.ui.common.Route
+import com.lhacenmed.khatmah.ui.component.OptionSelectBottomSheet
+import com.lhacenmed.khatmah.ui.component.SheetOption
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -199,6 +207,8 @@ private fun QuranPager(
     }
 
     val curPage = pages[pagerState.settledPage]
+    val readers = remember { DriveAudioRepository(context).readers().readers }
+    val showReaderSheet = remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -273,9 +283,10 @@ private fun QuranPager(
                     exit    = slideOutVertically { it } + fadeOut(),
                 ) {
                     AyaPlayerBar(
-                        state    = audioState,
-                        onToggle = { AyaAudioManager.togglePlayPause() },
-                        onClose  = {
+                        state         = audioState,
+                        onToggle      = { AyaAudioManager.togglePlayPause() },
+                        onReaderClick = { showReaderSheet.value = true },
+                        onClose       = {
                             selectedAya = null
                             AyaAudioManager.stop()
                         },
@@ -288,6 +299,29 @@ private fun QuranPager(
                 )
             }
         }
+    }
+
+    if (showReaderSheet.value) {
+        val currentReaderId by AppPrefs.audioReaderId.collectAsState()
+        OptionSelectBottomSheet(
+            title     = stringResource(R.string.quran_reader_select),
+            options   = readers.map { SheetOption(it.id, it.name) },
+            selected  = currentReaderId,
+            onDismiss = { showReaderSheet.value = false },
+            onSelect  = { readerId ->
+                AppPrefs.setAudioReaderId(context, readerId)
+                showReaderSheet.value = false
+                // Restart playback with the new reader
+                if (audioState.active) {
+                    val surahName = pages[pagerState.currentPage].segments
+                        .filterIsInstance<QuranSegment.SuraHeader>()
+                        .firstOrNull { it.num == audioState.suraNum }
+                        ?.name ?: pages[pagerState.currentPage].suraName
+
+                    AyaAudioManager.play(context, audioState.suraNum, audioState.ayaNum, surahName)
+                }
+            }
+        )
     }
 }
 
@@ -489,9 +523,10 @@ private fun ImageTopBar(pageNum: Int, onBack: () -> Unit, onSearch: () -> Unit) 
  */
 @Composable
 private fun AyaPlayerBar(
-    state:    AyaAudioState,
-    onToggle: () -> Unit,
-    onClose:  () -> Unit,
+    state:         AyaAudioState,
+    onToggle:      () -> Unit,
+    onReaderClick: () -> Unit,
+    onClose:       () -> Unit,
 ) {
     val primary   = MaterialTheme.colorScheme.primary
     val trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
@@ -567,7 +602,12 @@ private fun AyaPlayerBar(
                     )
                 }
 
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(onClick = onReaderClick, role = Role.Button)
+                        .padding(vertical = 4.dp)
+                ) {
                     Text(
                         text     = when (val ls = state.loadState) {
                             is AudioLoadState.Connecting             -> "جارٍ الاتصال…"
