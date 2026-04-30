@@ -124,7 +124,7 @@ private fun buildHitRegions(
  * [highlightColor] — semi-transparent fill for the selected aya region.
  */
 @Composable
-internal fun QuranSvgPage(
+internal fun QuranXmlPage(
     pageData:       WarshPageData,
     selectedAya:    Pair<Int, Int>?,
     highlightColor: Color,

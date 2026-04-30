@@ -33,6 +33,7 @@ object Route {
 
     // ── Quran ─────────────────────────────────────────────────────────────────
     // suraNum = 0 → open at last-read page (SharedPrefs).
+    const val DEBUG_WARSH = "debug_warsh"
     // suraNum > 0 → open at the first page of that surah.
     // ayaNum  > 0 → open at that specific aya within the surah (used by search).
     const val QURAN_READER = "quran_reader?suraNum={suraNum}&ayaNum={ayaNum}"

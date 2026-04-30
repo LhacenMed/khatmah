@@ -36,7 +36,6 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.data.audio.DriveAudioRepository
 import com.lhacenmed.khatmah.data.prefs.AppPrefs
@@ -52,6 +51,14 @@ import com.lhacenmed.khatmah.ui.page.quran.component.QuranBottomBar
 import com.lhacenmed.khatmah.ui.page.quran.component.QuranTopBar
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 
 private const val ANIM_MS = 280
 
@@ -112,7 +119,7 @@ fun QuranReaderScreen() {
                 vm        = vm,
                 onSearch  = { nav.navigate(Route.QURAN_SEARCH) },
             )
-            is QuranViewModel.State.SvgReady   -> QuranSvgPager(
+            is QuranViewModel.State.XmlReady   -> QuranXmlPager(
                 pageCount = s.pageCount,
                 vm        = vm,
                 onSearch  = { nav.navigate(Route.QURAN_SEARCH) },
@@ -298,6 +305,44 @@ private fun QuranPager(
     }
 }
 
+// ── Mushaf image cache ────────────────────────────────────────────────────────
+
+private fun mushafFile(context: Context, pageNum: Int): File =
+    File(context.filesDir, "mushaf/$pageNum.jpg")
+
+private suspend fun ensureMushafPage(context: Context, pageNum: Int): File =
+    withContext(Dispatchers.IO) {
+        mushafFile(context, pageNum).also { file ->
+            if (!file.exists()) {
+                file.parentFile?.mkdirs()
+                context.assets.open("quran/$pageNum.jpg")
+                    .use { src -> file.outputStream().use(src::copyTo) }
+            }
+        }
+    }
+
+@Composable
+private fun MushhafPage(pageNum: Int, isDark: Boolean, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val bmp by produceState<ImageBitmap?>(null, pageNum) {
+        value = runCatching {
+            val file = ensureMushafPage(context, pageNum)
+            BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
+        }.getOrNull()
+    }
+    if (bmp != null) {
+        Image(
+            bitmap             = bmp!!,
+            contentDescription = null,
+            contentScale       = ContentScale.FillBounds,
+            colorFilter        = if (isDark) ColorFilter.colorMatrix(InvertMatrix) else null,
+            modifier           = modifier,
+        )
+    } else {
+        Box(modifier, Alignment.Center) { CircularProgressIndicator() }
+    }
+}
+
 // ── Image pager shell ─────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -341,15 +386,14 @@ private fun QuranImagePager(
                 .windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility),
         ) {
             HorizontalPager(
-                state    = pagerState,
-                modifier = Modifier.fillMaxSize(),
+                state         = pagerState,
+                reverseLayout = false,
+                modifier      = Modifier.fillMaxSize(),
             ) { idx ->
-                AsyncImage(
-                    model              = "file:///android_asset/quran/${idx + 1}.jpg",
-                    contentDescription = null,
-                    contentScale       = ContentScale.FillBounds,
-                    colorFilter        = if (isDark) ColorFilter.colorMatrix(InvertMatrix) else null,
-                    modifier           = Modifier.fillMaxSize(),
+                MushhafPage(
+                    pageNum  = idx + 1,
+                    isDark   = isDark,
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }
@@ -382,17 +426,17 @@ private fun QuranImagePager(
     }
 }
 
-// ── SVG pager shell ───────────────────────────────────────────────────────────
+// ── Xml pager shell ───────────────────────────────────────────────────────────
 
 /**
- * Full-screen pager for the Warsh SVG mushaf.
+ * Full-screen pager for the Warsh Xml mushaf.
  *
- * Each page is rendered in its own [QuranSvgPage] using an [android.graphics.Picture]
+ * Each page is rendered in its own [QuranXmlPage] using an [android.graphics.Picture]
  * (vector display list) — no fixed-resolution Bitmap, no WebView. The picture is drawn
  * via [android.graphics.Canvas.drawPicture] scaled to fill the composable at the device's
  * native pixel density, giving true vector sharpness on all screens.
  *
- * Adjacent pages are pre-fetched via [WarshSvgRepository.prefetch] to keep swiping smooth.
+ * Adjacent pages are pre-fetched via [WarshXmlRepository.prefetch] to keep swiping smooth.
  *
  * Aya tap → audio: tapping any polygon highlights that aya and starts playback
  * via [AyaAudioManager], exactly like the text reader's long-press.
@@ -401,7 +445,7 @@ private fun QuranImagePager(
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
-private fun QuranSvgPager(
+private fun QuranXmlPager(
     pageCount: Int,
     vm:        QuranViewModel,
     onSearch:  () -> Unit,
@@ -497,7 +541,7 @@ private fun QuranSvgPager(
                         CircularProgressIndicator()
                     }
                 } else {
-                    QuranSvgPage(
+                    QuranXmlPage(
                         pageData       = pageData,
                         selectedAya    = selectedAya,
                         highlightColor = primary,

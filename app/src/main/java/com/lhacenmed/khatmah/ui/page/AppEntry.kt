@@ -60,6 +60,7 @@ import com.lhacenmed.khatmah.ui.page.tabs.adhkar.AdhkarEditorPage
 import com.lhacenmed.khatmah.ui.page.tabs.adhkar.AdhkarViewModel
 import com.lhacenmed.khatmah.ui.page.quran.QuranReaderScreen
 import com.lhacenmed.khatmah.ui.page.quran.QuranSearchPage
+import com.lhacenmed.khatmah.ui.page.quran.DebugWarshPage
 import com.lhacenmed.khatmah.util.OnboardingPrefs
 import com.lhacenmed.khatmah.widget.WidgetNavRequest
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -157,6 +158,7 @@ fun AppEntry() {
                 ),
             ) { QuranReaderScreen() }
             animatedComposable(Route.QURAN_SEARCH) { QuranSearchPage() }
+            animatedComposable(Route.DEBUG_WARSH) { DebugWarshPage() }
 
             // ── Adhkar editor (create + edit) ─────────────────────────────────
             // categoryId empty → create mode; non-empty → edit mode.

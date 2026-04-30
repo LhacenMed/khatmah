@@ -87,6 +87,9 @@ private fun TodayScreen(padding: PaddingValues) {
             TextButton(onClick = { nav.navigate(Route.LANGUAGE) }) {
                 Text(stringResource(R.string.language_settings))
             }
+            TextButton(onClick = { nav.navigate(Route.DEBUG_WARSH) }) {
+                Text("Debug Warsh 001")
+            }
             Spacer(Modifier.height(24.dp))
 
             if (refreshing) {

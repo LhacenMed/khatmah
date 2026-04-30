@@ -26,8 +26,8 @@ class QuranViewModel(
         data class Ready(val pages: List<QuranPageData>) : State()
         /** Image reader mode: 604 mushaf pages, no text rendering. */
         data class ImageReady(val pageCount: Int)        : State()
-        /** Warsh SVG reader mode: 604 vector mushaf pages rendered via VectorDrawable. */
-        data class SvgReady(val pageCount: Int)          : State()
+        /** Warsh XML reader mode: 604 vector mushaf pages rendered via VectorDrawable. */
+        data class XmlReady(val pageCount: Int)          : State()
     }
 
     private val repo  = QuranRepository(app)
@@ -54,7 +54,7 @@ class QuranViewModel(
         viewModelScope.launch {
             when (AppPrefs.readerStyle.value) {
                 AppPrefs.ReaderStyle.IMAGES    -> initImageMode()
-                AppPrefs.ReaderStyle.SVG_WARSH -> initSvgMode()
+                AppPrefs.ReaderStyle.SVG_WARSH -> initXmlMode()
                 else                           -> initTextMode()
             }
         }
@@ -74,7 +74,7 @@ class QuranViewModel(
         _state.value = State.ImageReady(MUSHAF_PAGE_COUNT)
     }
 
-    private suspend fun initSvgMode() {
+    private suspend fun initXmlMode() {
         val warshRepo = WarshXmlRepository(getApplication())
         if (!warshRepo.isFullyDownloaded()) {
             // Files not downloaded yet — fall back to text reader.
@@ -82,11 +82,11 @@ class QuranViewModel(
             return
         }
 
-        // SVG mode does not use the DB mushaf-page map for jump-to-aya (Warsh page
+        // Xml mode does not use the DB mushaf-page map for jump-to-aya (Warsh page
         // numbering differs from the Hafs DB). Aya-index is left empty; jumps via
         // search will land on page 1 as a safe default until Warsh mapping is added.
         savedPage = savedPage.coerceIn(0, WarshXmlRepository.PAGE_COUNT - 1)
-        _state.value = State.SvgReady(WarshXmlRepository.PAGE_COUNT)
+        _state.value = State.XmlReady(WarshXmlRepository.PAGE_COUNT)
     }
 
     private suspend fun initTextMode() {
