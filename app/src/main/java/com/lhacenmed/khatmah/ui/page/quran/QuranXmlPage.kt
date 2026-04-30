@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
+import androidx.core.graphics.PathParser
 import com.lhacenmed.khatmah.data.quran.WarshAyaRegion
 import com.lhacenmed.khatmah.data.quran.WarshPageData
 
@@ -43,9 +44,6 @@ private fun parsePoints(polygon: String): List<PointF> =
 /**
  * Builds an [android.graphics.Path] from polygon points scaled from the 0–235
  * viewport coordinate space to screen pixel space.
- *
- * [scaleX] = composable width  / viewportW (235)
- * [scaleY] = composable height / viewportH (235)
  */
 private fun buildScaledPath(points: List<PointF>, scaleX: Float, scaleY: Float): Path {
     val path = Path()
@@ -58,7 +56,6 @@ private fun buildScaledPath(points: List<PointF>, scaleX: Float, scaleY: Float):
 
 /**
  * Returns true if [touchX]/[touchY] (in pixels) lies inside [scaledPath].
- * Uses [android.graphics.Region] which is the standard Android polygon hit-test.
  */
 private fun pathContains(scaledPath: Path, touchX: Float, touchY: Float, bounds: RectF): Boolean {
     if (bounds.isEmpty) return false
@@ -72,7 +69,6 @@ private fun pathContains(scaledPath: Path, touchX: Float, touchY: Float, bounds:
 
 /**
  * Pre-computed hit region for one aya polygon, already scaled to screen pixels.
- * Built once per page when the composable size is first known.
  */
 private data class HitRegion(
     val surahNum: Int,
@@ -98,26 +94,41 @@ private fun buildHitRegions(
     }
 }
 
+// ── Per-path paint cache ──────────────────────────────────────────────────────
+
+/**
+ * Builds one [android.graphics.Paint] per [VectorPath].
+ * Called once per page load — avoids allocating paints inside the draw loop.
+ */
+private fun buildPaints(
+    paths:  List<VectorPath>,
+    isDark: Boolean,
+): List<android.graphics.Paint> = paths.map { vp ->
+    android.graphics.Paint().apply {
+        isAntiAlias = true
+        style       = android.graphics.Paint.Style.FILL
+        // Dark mode: invert RGB by XOR-ing with white, keep alpha.
+        color = if (isDark) (vp.fillColor xor 0x00FFFFFF) or (vp.fillColor and 0xFF000000.toInt())
+        else vp.fillColor
+        alpha = (vp.fillAlpha * 255).toInt().coerceIn(0, 255)
+    }
+}
+
 // ── Composable ────────────────────────────────────────────────────────────────
 
 /**
- * Renders one Warsh mushaf page natively in Compose — no WebView, no Bitmap.
+ * Renders one Warsh mushaf page natively in Compose — no WebView, no Bitmap,
+ * no VectorDrawable API (avoids the XmlBlock$Parser ClassCastException).
  *
  * Drawing:
- *   The drawable is set to bounds (0, 0, 235, 235) — matching the viewport and
- *   polygon coordinate space — then drawn onto a native Canvas that is pre-scaled
- *   by a [Matrix] mapping those 235×235 units to the composable's pixel dimensions.
- *   This gives true vector sharpness at any screen density.
+ *   Each <path> from the parsed [ParsedVector] is converted via [PathParser] to an
+ *   [android.graphics.Path], then drawn with a pre-built [android.graphics.Paint]
+ *   scaled to fill the composable. This is identical to [VectorFileCanvas] but
+ *   integrated with the aya-highlight and hit-test system.
  *
- * Alignment guarantee:
- *   [WarshPageData.viewportW/H] are always 235f (set by the repository, not from
- *   drawable.intrinsicWidth which is density-dependent). setBounds uses the same
- *   235 value. JSON polygon coordinates are also in 0–235 space. Result: the drawn
- *   content and the hit regions are always perfectly aligned on all devices.
- *
- * Layers (bottom → top, all on one Canvas):
- *  1. Vector drawable scaled to fill the composable.
- *  2. Aya highlight fill for [selectedAya] (drawn only when non-null).
+ * Dark mode:
+ *   RGB channels are inverted per-paint (XOR with 0xFFFFFF), keeping the alpha.
+ *   No saveLayer needed — avoids the GPU overdraw of the old ColorMatrix approach.
  *
  * [onAyaPress]     — tap or long-press inside a polygon (surahNum, ayahNum).
  * [onBaresTap]     — tap outside all polygons (toggles top/bottom bars).
@@ -133,9 +144,40 @@ internal fun QuranXmlPage(
     modifier:       Modifier = Modifier,
 ) {
     var composableSize by remember { mutableStateOf(IntSize.Zero) }
+    val isDark = isSystemInDarkTheme()
+
+    // Pre-built android Paths from pathData strings — rebuilt only when page changes.
+    val androidPaths: List<Path> = remember(pageData.pageNum) {
+        pageData.vector.paths.map { vp ->
+            PathParser.createPathFromPathData(vp.pathData) ?: Path()
+        }
+    }
+
+    // Per-path paints — rebuilt when page or dark mode changes.
+    val paints: List<android.graphics.Paint> = remember(pageData.pageNum, isDark) {
+        buildPaints(pageData.vector.paths, isDark)
+    }
+
+    // Scale matrix: maps 0–235 viewport units → composable pixels.
+    val scaleMatrix: Matrix = remember(pageData.pageNum, composableSize) {
+        if (composableSize == IntSize.Zero) Matrix() else Matrix().also {
+            it.setScale(
+                composableSize.width  / pageData.viewportW,
+                composableSize.height / pageData.viewportH,
+            )
+        }
+    }
+
+    // Scaled paths for rendering — rebuilt when size or page changes.
+    val scaledPaths: List<Path> = remember(pageData.pageNum, composableSize) {
+        if (composableSize == IntSize.Zero) emptyList()
+        else androidPaths.map { src ->
+            Path().also { dst -> src.transform(scaleMatrix, dst) }
+        }
+    }
 
     // Hit regions scaled to screen pixels — rebuilt only when size changes.
-    val hitRegions by remember(pageData.pageNum, composableSize) {
+    val hitRegions: List<HitRegion> by remember(pageData.pageNum, composableSize) {
         derivedStateOf {
             if (composableSize == IntSize.Zero) emptyList()
             else {
@@ -146,7 +188,7 @@ internal fun QuranXmlPage(
     }
 
     // Highlight path for the currently selected aya.
-    val highlightPath by remember(selectedAya, hitRegions) {
+    val highlightPath: Path? by remember(selectedAya, hitRegions) {
         derivedStateOf {
             selectedAya?.let { (sura, aya) ->
                 hitRegions.firstOrNull { it.surahNum == sura && it.ayahNum == aya }?.path
@@ -154,41 +196,12 @@ internal fun QuranXmlPage(
         }
     }
 
-    val isDark         = isSystemInDarkTheme()
     val highlightArgb  = highlightColor.copy(alpha = 0.18f).toArgb()
     val highlightPaint = remember(highlightArgb) {
         android.graphics.Paint().apply {
             color       = highlightArgb
             style       = android.graphics.Paint.Style.FILL
             isAntiAlias = true
-        }
-    }
-
-    // Invert paint for dark mode — applied as a ColorFilter layer over the drawable.
-    val invertPaint = remember(isDark) {
-        if (isDark) {
-            android.graphics.Paint().apply {
-                colorFilter = android.graphics.ColorMatrixColorFilter(
-                    android.graphics.ColorMatrix(floatArrayOf(
-                        -1f,  0f,  0f, 0f, 255f,
-                        0f, -1f,  0f, 0f, 255f,
-                        0f,  0f, -1f, 0f, 255f,
-                        0f,  0f,  0f, 1f,   0f,
-                    ))
-                )
-            }
-        } else null
-    }
-
-    // Scale matrix: maps 0–235 viewport units → composable pixels.
-    val scaleMatrix = remember(pageData.pageNum, composableSize) {
-        if (composableSize == IntSize.Zero) Matrix() else {
-            Matrix().also {
-                it.setScale(
-                    composableSize.width  / pageData.viewportW,
-                    composableSize.height / pageData.viewportH,
-                )
-            }
         }
     }
 
@@ -211,7 +224,6 @@ internal fun QuranXmlPage(
                         onLongPress = { offset ->
                             val hit = hitAt(hitRegions, offset)
                             if (hit != null) onAyaPress(hit.surahNum, hit.ayahNum)
-                            // Long-press outside polygons: no action
                         },
                     )
                 },
@@ -219,33 +231,13 @@ internal fun QuranXmlPage(
             drawIntoCanvas { canvas ->
                 val native = canvas.nativeCanvas
 
-                // Layer 1: Vector drawable in viewport space (0–235), scaled to fill.
-                native.save()
-                native.concat(scaleMatrix)
-
-                // setBounds must match the viewport dimensions so VectorDrawable scales
-                // its path data (which is in 0–235 space) to fill exactly these bounds.
-                pageData.drawable.setBounds(
-                    0, 0,
-                    pageData.viewportW.toInt(),
-                    pageData.viewportH.toInt(),
-                )
-
-                if (invertPaint != null) {
-                    // saveLayer applies the invert ColorFilter to the entire drawable.
-                    native.saveLayer(0f, 0f, pageData.viewportW, pageData.viewportH, invertPaint)
-                    pageData.drawable.draw(native)
-                    native.restore()
-                } else {
-                    pageData.drawable.draw(native)
+                // Layer 1: all vector paths, already scaled to composable pixels.
+                scaledPaths.forEachIndexed { i, path ->
+                    native.drawPath(path, paints[i])
                 }
 
-                native.restore()
-
-                // Layer 2: aya highlight in screen-pixel space (no matrix needed).
-                highlightPath?.let { path ->
-                    native.drawPath(path, highlightPaint)
-                }
+                // Layer 2: aya highlight on top.
+                highlightPath?.let { native.drawPath(it, highlightPaint) }
             }
         }
     }

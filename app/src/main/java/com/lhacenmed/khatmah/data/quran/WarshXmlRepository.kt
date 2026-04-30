@@ -1,8 +1,6 @@
 package com.lhacenmed.khatmah.data.quran
 
 import android.content.Context
-import android.graphics.drawable.Drawable
-import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat
 import com.lhacenmed.khatmah.data.audio.DriveAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -23,6 +21,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.concurrent.atomic.AtomicInteger
+import com.lhacenmed.khatmah.ui.page.quran.ParsedVector
+import com.lhacenmed.khatmah.ui.page.quran.VectorXmlParser
 
 // ── Models ────────────────────────────────────────────────────────────────────
 
@@ -47,7 +47,7 @@ data class WarshAyaRegion(
  */
 data class WarshPageData(
     val pageNum:   Int,
-    val drawable:  Drawable,
+    val vector:    ParsedVector,
     val viewportW: Float,
     val viewportH: Float,
     val regions:   List<WarshAyaRegion>,
@@ -161,12 +161,13 @@ class WarshXmlRepository(private val context: Context) {
         val stem     = "%03d".format(pageNum)
         val xmlFile  = File(xmlDir,  "$stem.xml")
         val jsonFile = File(jsonDir, "$stem.json")
+        val vector   = parseVector(xmlFile)
 
         val data = WarshPageData(
             pageNum   = pageNum,
-            drawable  = parseDrawable(xmlFile),
-            viewportW = VIEWPORT,
-            viewportH = VIEWPORT,
+            vector    = vector,
+            viewportW = vector.viewportWidth,
+            viewportH = vector.viewportHeight,
             regions   = parseRegions(jsonFile),
         )
 
@@ -416,20 +417,9 @@ class WarshXmlRepository(private val context: Context) {
 
     // ── Parsing ───────────────────────────────────────────────────────────────
 
-    /**
-     * Parses an Android <vector> XML file into a [Drawable].
-     *
-     * [VectorDrawableCompat.createFromXml] returns a compat wrapper on all API
-     * levels, avoiding the ClassCastException that would occur with a direct
-     * `as VectorDrawableCompat` cast on API 24+ where the framework VectorDrawable
-     * is returned instead.
-     */
-    private fun parseDrawable(xmlFile: File): Drawable {
-        val parser = android.util.Xml.newPullParser()
-        xmlFile.inputStream().use { parser.setInput(it, null) }
-        return VectorDrawableCompat.createFromXml(context.resources, parser)
-            ?: error("Failed to parse drawable: ${xmlFile.name}")
-    }
+    /** Parses an Android <vector> XML file into a [ParsedVector] via stream-safe XmlPullParser. */
+    private fun parseVector(xmlFile: File): ParsedVector =
+        xmlFile.inputStream().use { VectorXmlParser.parse(it) }
 
     /**
      * Parses JSON polygon data for one page.
@@ -469,14 +459,6 @@ class WarshXmlRepository(private val context: Context) {
          * bringing the total drawables to 722 — but only full-page files are shown.
          */
         const val PAGE_COUNT = 604
-
-        /**
-         * Viewport dimension for all Warsh drawable pages (235×235).
-         * JSON polygon coordinates are in this same 0–235 space.
-         * Using this constant instead of drawable.intrinsicWidth (which is
-         * density-dependent) ensures correct hit-test alignment on all devices.
-         */
-        private const val VIEWPORT = 235f
 
         /** Max parallel download coroutines — balances speed vs. connection limits. */
         private const val CONCURRENCY     = 8
