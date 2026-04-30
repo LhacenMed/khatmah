@@ -467,10 +467,15 @@ private fun QuranXmlPager(
     // Cache of page data keyed by 1-based page number.
     val pageCache = remember { mutableStateMapOf<Int, WarshPageData>() }
 
+    var isZoomed by remember { mutableStateOf(false) }
+
     SyncReaderSystemBars(barsVisible)
 
-    LaunchedEffect(pagerState.settledPage) { vm.savePage(pagerState.settledPage) }
-    LaunchedEffect(pagerState.settledPage) { selectedAya = null }
+    LaunchedEffect(pagerState.settledPage) {
+        vm.savePage(pagerState.settledPage)
+        selectedAya = null
+        isZoomed = false
+    }
 
     // Sync highlight with audio auto-advance.
     LaunchedEffect(audioState.suraNum, audioState.ayaNum) {
@@ -524,6 +529,7 @@ private fun QuranXmlPager(
                 modifier = Modifier.fillMaxSize(),
                 // Each page gets a stable key so UI instances are reused correctly.
                 key      = { it },
+                userScrollEnabled = !isZoomed,
             ) { idx ->
                 val pageNum  = idx + 1   // 1-based
                 val pageData = pageCache[pageNum]
@@ -546,6 +552,7 @@ private fun QuranXmlPager(
                         selectedAya    = selectedAya,
                         highlightColor = primary,
                         onBaresTap     = { barsVisible = !barsVisible },
+                        onZoomChanged  = { isZoomed = it },
                         onAyaPress     = { surahNum, ayahNum ->
                             if (selectedAya?.first == surahNum && selectedAya?.second == ayahNum) {
                                 // Second tap on same aya → deselect and stop.

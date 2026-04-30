@@ -7,6 +7,8 @@ import android.graphics.RectF
 import android.graphics.Region
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -24,6 +26,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.core.graphics.PathParser
 import com.lhacenmed.khatmah.data.quran.WarshAyaRegion
 import com.lhacenmed.khatmah.data.quran.WarshPageData
+import androidx.core.graphics.withSave
 
 // ── Polygon hit-testing helpers ───────────────────────────────────────────────
 
@@ -94,12 +97,28 @@ private fun buildHitRegions(
     }
 }
 
-// ── Per-path paint cache ──────────────────────────────────────────────────────
+// ── Zoom hit-test inverse transform ──────────────────────────────────────────
 
 /**
- * Builds one [android.graphics.Paint] per [VectorPath].
- * Called once per page load — avoids allocating paints inside the draw loop.
+ * Maps a screen-space tap point back to pre-zoom composable pixel space.
+ *
+ * Forward transform applied during draw:
+ *   P' = scale * (P − center) + center + pan
+ *      = scale * P + center * (1 − scale) + pan
+ * Inverse:
+ *   P  = (P' − center * (1 − scale) − pan) / scale
  */
+private fun inverseZoom(point: Offset, scale: Float, pan: Offset, size: IntSize): Offset {
+    val cx = size.width  / 2f
+    val cy = size.height / 2f
+    return Offset(
+        (point.x - cx * (1f - scale) - pan.x) / scale,
+        (point.y - cy * (1f - scale) - pan.y) / scale,
+    )
+}
+
+// ── Per-path paint cache ──────────────────────────────────────────────────────
+
 private fun buildPaints(
     paths:  List<VectorPath>,
     isDark: Boolean,
@@ -107,7 +126,6 @@ private fun buildPaints(
     android.graphics.Paint().apply {
         isAntiAlias = true
         style       = android.graphics.Paint.Style.FILL
-        // Dark mode: invert RGB by XOR-ing with white, keep alpha.
         color = if (isDark) (vp.fillColor xor 0x00FFFFFF) or (vp.fillColor and 0xFF000000.toInt())
         else vp.fillColor
         alpha = (vp.fillAlpha * 255).toInt().coerceIn(0, 255)
@@ -120,36 +138,50 @@ private fun buildPaints(
  * Renders one Warsh mushaf page natively in Compose — no WebView, no Bitmap,
  * no VectorDrawable API (avoids the XmlBlock$Parser ClassCastException).
  *
- * Drawing:
- *   Each <path> from the parsed [ParsedVector] is converted via [PathParser] to an
- *   [android.graphics.Path], then drawn with a pre-built [android.graphics.Paint]
- *   scaled to fill the composable. This is identical to [VectorFileCanvas] but
- *   integrated with the aya-highlight and hit-test system.
- *
- * Dark mode:
- *   RGB channels are inverted per-paint (XOR with 0xFFFFFF), keeping the alpha.
- *   No saveLayer needed — avoids the GPU overdraw of the old ColorMatrix approach.
+ * Zoom: pinch-to-zoom (1×–4×) with constrained panning. Pager scroll is
+ * suppressed while zoomed via [onZoomChanged]; restores automatically on reset.
+ * Hit regions are inverse-transformed so aya tap accuracy is maintained at
+ * any zoom level.
  *
  * [onAyaPress]     — tap or long-press inside a polygon (surahNum, ayahNum).
  * [onBaresTap]     — tap outside all polygons (toggles top/bottom bars).
+ * [onZoomChanged]  — emitted when zoom crosses the 1× boundary.
  * [highlightColor] — semi-transparent fill for the selected aya region.
  */
 @Composable
 internal fun QuranXmlPage(
+    modifier:       Modifier = Modifier,
     pageData:       WarshPageData,
     selectedAya:    Pair<Int, Int>?,
     highlightColor: Color,
     onAyaPress:     (surahNum: Int, ayahNum: Int) -> Unit,
     onBaresTap:     () -> Unit,
-    modifier:       Modifier = Modifier,
+    onZoomChanged:  (Boolean) -> Unit = {},
 ) {
     var composableSize by remember { mutableStateOf(IntSize.Zero) }
     val isDark = isSystemInDarkTheme()
 
-    // Pre-built android Paths from pathData strings — rebuilt only when page changes.
+    // ── Zoom state ────────────────────────────────────────────────────────────
+    var scale     by remember { mutableFloatStateOf(1f) }
+    var panOffset by remember { mutableStateOf(Offset.Zero) }
+
+    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+        val newScale = (scale * zoomChange).coerceIn(1f, 4f)
+        val maxPanX  = composableSize.width  * (newScale - 1f) / 2f
+        val maxPanY  = composableSize.height * (newScale - 1f) / 2f
+        val newPan   = if (newScale > 1f) Offset(
+            (panOffset.x + panChange.x).coerceIn(-maxPanX, maxPanX),
+            (panOffset.y + panChange.y).coerceIn(-maxPanY, maxPanY),
+        ) else Offset.Zero
+        if ((newScale > 1f) != (scale > 1f)) onZoomChanged(newScale > 1f)
+        scale     = newScale
+        panOffset = newPan
+    }
+
+    // ── Pre-built android Paths ───────────────────────────────────────────────
     val androidPaths: List<Path> = remember(pageData.pageNum) {
         pageData.vector.paths.map { vp ->
-            PathParser.createPathFromPathData(vp.pathData) ?: Path()
+            PathParser.createPathFromPathData(vp.pathData)
         }
     }
 
@@ -214,15 +246,20 @@ internal fun QuranXmlPage(
                 .fillMaxSize(0.95f)
                 .aspectRatio(pageData.viewportW / pageData.viewportH)
                 .onSizeChanged { composableSize = it }
-                .pointerInput(hitRegions) {
+                // Pinch-to-zoom: only intercepts pan gestures when zoomed in,
+                // so the pager can still handle horizontal swipes at 1×.
+                .transformable(state = transformState, canPan = { scale > 1f })
+                .pointerInput(hitRegions, scale, panOffset) {
                     detectTapGestures(
-                        onTap = { offset ->
-                            val hit = hitAt(hitRegions, offset)
+                        onTap = { raw ->
+                            val p   = inverseZoom(raw, scale, panOffset, composableSize)
+                            val hit = hitAt(hitRegions, p)
                             if (hit != null) onAyaPress(hit.surahNum, hit.ayahNum)
                             else             onBaresTap()
                         },
-                        onLongPress = { offset ->
-                            val hit = hitAt(hitRegions, offset)
+                        onLongPress = { raw ->
+                            val p   = inverseZoom(raw, scale, panOffset, composableSize)
+                            val hit = hitAt(hitRegions, p)
                             if (hit != null) onAyaPress(hit.surahNum, hit.ayahNum)
                         },
                     )
@@ -230,14 +267,23 @@ internal fun QuranXmlPage(
         ) {
             drawIntoCanvas { canvas ->
                 val native = canvas.nativeCanvas
+                native.withSave {
 
-                // Layer 1: all vector paths, already scaled to composable pixels.
-                scaledPaths.forEachIndexed { i, path ->
-                    native.drawPath(path, paints[i])
+                    // Apply zoom centered on composable center with pan offset.
+                    val cx = composableSize.width / 2f
+                    val cy = composableSize.height / 2f
+                    translate(panOffset.x, panOffset.y)
+                    scale(scale, scale, cx, cy)
+
+                    // Layer 1: all vector paths, already scaled to composable pixels.
+                    scaledPaths.forEachIndexed { i, path ->
+                        drawPath(path, paints[i])
+                    }
+
+                    // Layer 2: aya highlight on top.
+                    highlightPath?.let { drawPath(it, highlightPaint) }
+
                 }
-
-                // Layer 2: aya highlight on top.
-                highlightPath?.let { native.drawPath(it, highlightPaint) }
             }
         }
     }
