@@ -307,28 +307,20 @@ private fun QuranPager(
 
 // ── Mushaf image cache ────────────────────────────────────────────────────────
 
+/** On-disk path for [pageNum] inside the WarshImageRepository cache. */
 private fun mushafFile(context: Context, pageNum: Int): File =
-    File(context.filesDir, "mushaf/$pageNum.jpg")
-
-private suspend fun ensureMushafPage(context: Context, pageNum: Int): File =
-    withContext(Dispatchers.IO) {
-        mushafFile(context, pageNum).also { file ->
-            if (!file.exists()) {
-                file.parentFile?.mkdirs()
-                context.assets.open("quran/$pageNum.jpg")
-                    .use { src -> file.outputStream().use(src::copyTo) }
-            }
-        }
-    }
+    File(context.filesDir, "warsh-images/%03d.jpg".format(pageNum))
 
 @Composable
 private fun MushhafPage(pageNum: Int, isDark: Boolean, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val bmp by produceState<ImageBitmap?>(null, pageNum) {
-        value = runCatching {
-            val file = ensureMushafPage(context, pageNum)
-            BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
-        }.getOrNull()
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                BitmapFactory.decodeFile(mushafFile(context, pageNum).absolutePath)
+                    ?.asImageBitmap()
+            }.getOrNull()
+        }
     }
     if (bmp != null) {
         Image(

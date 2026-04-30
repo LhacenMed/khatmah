@@ -68,6 +68,8 @@ import com.lhacenmed.khatmah.ui.nav.NavScreen
 import com.lhacenmed.khatmah.util.LocaleManager
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import com.lhacenmed.khatmah.data.quran.WarshImageRepository
+import com.lhacenmed.khatmah.data.quran.WarshImageDownloadState
 
 // Items within this distance from the top animate directly; farther ones jump-then-animate.
 private const val SMOOTH_SCROLL_THRESHOLD = 4
@@ -101,6 +103,9 @@ private fun MoreScreen(padding: PaddingValues) {
 
     val warshRepo = remember { WarshXmlRepository(context) }
     val warshState by warshRepo.downloadState.collectAsState()
+    val warshImageRepo  = remember { WarshImageRepository(context) }
+    val warshImageState by warshImageRepo.downloadState.collectAsState()
+
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -111,14 +116,15 @@ private fun MoreScreen(padding: PaddingValues) {
             subtitle = stringResource(R.string.reader_style_text_desc),
         ),
         SheetOption(
-            key      = AppPrefs.ReaderStyle.IMAGES,
-            title    = stringResource(R.string.reader_style_images),
-            subtitle = stringResource(R.string.reader_style_images_desc),
+            key               = AppPrefs.ReaderStyle.IMAGES,
+            title             = stringResource(R.string.reader_style_images),
+            subtitle          = stringResource(R.string.reader_style_images_desc),
+            hasCustomTrailing = true,
         ),
         SheetOption(
-            key      = AppPrefs.ReaderStyle.SVG_WARSH,
-            title    = stringResource(R.string.reader_style_svg_warsh),
-            subtitle = stringResource(R.string.reader_style_svg_warsh_desc),
+            key               = AppPrefs.ReaderStyle.SVG_WARSH,
+            title             = stringResource(R.string.reader_style_svg_warsh),
+            subtitle          = stringResource(R.string.reader_style_svg_warsh_desc),
             hasCustomTrailing = true,
         ),
     )
@@ -395,60 +401,98 @@ private fun MoreScreen(padding: PaddingValues) {
             options    = readerStyleOptions,
             selected   = readerStyle,
             sheetState = sheetState,
-            onSelect   = { style ->
-                if (style == AppPrefs.ReaderStyle.SVG_WARSH && warshState !is WarshDownloadState.Downloaded) {
-                    if (warshState !is WarshDownloadState.Downloading && warshState !is WarshDownloadState.Connecting) {
-                        scope.launch {
-                            warshRepo.downloadAll().collectLatest { /* Internal state updates */ }
+            onSelect = { style ->
+                when {
+                    style == AppPrefs.ReaderStyle.IMAGES && warshImageState !is WarshImageDownloadState.Downloaded -> {
+                        if (warshImageState !is WarshImageDownloadState.Downloading &&
+                            warshImageState !is WarshImageDownloadState.Connecting) {
+                            scope.launch {
+                                warshImageRepo.downloadAll().collectLatest { /* state updates internally */ }
+                            }
                         }
                     }
-                } else {
-                    scope.launch {
-                        sheetState.hide()
-                        AppPrefs.setReaderStyle(context, style)
-                        showReaderStyleSheet.value = false
+                    style == AppPrefs.ReaderStyle.SVG_WARSH && warshState !is WarshDownloadState.Downloaded -> {
+                        if (warshState !is WarshDownloadState.Downloading &&
+                            warshState !is WarshDownloadState.Connecting) {
+                            scope.launch {
+                                warshRepo.downloadAll().collectLatest { /* state updates internally */ }
+                            }
+                        }
+                    }
+                    else -> {
+                        scope.launch {
+                            sheetState.hide()
+                            AppPrefs.setReaderStyle(context, style)
+                            showReaderStyleSheet.value = false
+                        }
                     }
                 }
             },
             onDismiss = { showReaderStyleSheet.value = false },
             optionTrailingContent = { option ->
-                if (option.key == AppPrefs.ReaderStyle.SVG_WARSH) {
-                    Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
-                        when (val state = warshState) {
-                            is WarshDownloadState.NotDownloaded, is WarshDownloadState.Error -> {
-                                Icon(
-                                    imageVector = Icons.Outlined.CloudDownload,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            is WarshDownloadState.Connecting -> {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            is WarshDownloadState.Downloading -> {
-                                CircularProgressIndicator(
-                                    progress = { state.progress },
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            is WarshDownloadState.Downloaded -> {
-                                if (readerStyle == AppPrefs.ReaderStyle.SVG_WARSH) {
+                Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                    when (option.key) {
+                        AppPrefs.ReaderStyle.IMAGES -> when (val s = warshImageState) {
+                            is WarshImageDownloadState.NotDownloaded,
+                            is WarshImageDownloadState.Error -> Icon(
+                                imageVector        = Icons.Outlined.CloudDownload,
+                                contentDescription = null,
+                                tint               = MaterialTheme.colorScheme.primary,
+                                modifier           = Modifier.size(20.dp),
+                            )
+                            is WarshImageDownloadState.Connecting -> CircularProgressIndicator(
+                                modifier    = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color       = MaterialTheme.colorScheme.primary,
+                            )
+                            is WarshImageDownloadState.Downloading -> CircularProgressIndicator(
+                                progress    = { s.progress },
+                                modifier    = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color       = MaterialTheme.colorScheme.primary,
+                            )
+                            is WarshImageDownloadState.Downloaded -> {
+                                if (readerStyle == AppPrefs.ReaderStyle.IMAGES) {
                                     Icon(
-                                        imageVector = Icons.Default.Check,
+                                        imageVector        = Icons.Default.Check,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
+                                        tint               = MaterialTheme.colorScheme.primary,
+                                        modifier           = Modifier.size(20.dp),
                                     )
                                 }
                             }
                         }
+                        AppPrefs.ReaderStyle.SVG_WARSH -> when (val s = warshState) {
+                            is WarshDownloadState.NotDownloaded,
+                            is WarshDownloadState.Error -> Icon(
+                                imageVector        = Icons.Outlined.CloudDownload,
+                                contentDescription = null,
+                                tint               = MaterialTheme.colorScheme.primary,
+                                modifier           = Modifier.size(20.dp),
+                            )
+                            is WarshDownloadState.Connecting -> CircularProgressIndicator(
+                                modifier    = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color       = MaterialTheme.colorScheme.primary,
+                            )
+                            is WarshDownloadState.Downloading -> CircularProgressIndicator(
+                                progress    = { s.progress },
+                                modifier    = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color       = MaterialTheme.colorScheme.primary,
+                            )
+                            is WarshDownloadState.Downloaded -> {
+                                if (readerStyle == AppPrefs.ReaderStyle.SVG_WARSH) {
+                                    Icon(
+                                        imageVector        = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint               = MaterialTheme.colorScheme.primary,
+                                        modifier           = Modifier.size(20.dp),
+                                    )
+                                }
+                            }
+                        }
+                        else -> Unit
                     }
                 }
             }
