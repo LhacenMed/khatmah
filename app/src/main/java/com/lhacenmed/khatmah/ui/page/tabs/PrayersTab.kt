@@ -126,12 +126,48 @@ private fun PrayersScreenContent(padding: PaddingValues) {
         elapsedMs in 0..ELAPSED_WINDOW_MS
     }
 
-    // The prayer shown in the header: last-passed during window, next otherwise.
-    val headerPrayer: PrayerTime? = remember(todayPrayers, lastPassedIdx, inElapsedWindow, now) {
+    // True when all of today's prayers have passed AND the elapsed window is over.
+    // Drives automatic next-day switch in both the header and the pager.
+    val isPostDay: Boolean = remember(todayPrayers, inElapsedWindow, now) {
+        todayPrayers.isNotEmpty() &&
+                !inElapsedWindow &&
+                todayPrayers.all { it.time <= now }
+    }
+
+    // Tomorrow's prayers — loaded lazily once post-day state is reached.
+    var tomorrowPrayers by remember { mutableStateOf<List<PrayerTime>>(emptyList()) }
+
+    LaunchedEffect(isPostDay, cityName) {
+        if (!isPostDay) { tomorrowPrayers = emptyList(); return@LaunchedEffect }
+        if (cityName.isBlank()) return@LaunchedEffect
+        val tomorrow = today.plusDays(1)
+        val cached   = prayerCache[tomorrow]
+        if (cached != null) {
+            tomorrowPrayers = cached
+        } else {
+            val fetched = repo.getForDate(tomorrow)
+            prayerCache[tomorrow] = fetched
+            tomorrowPrayers = fetched
+        }
+    }
+
+    // Auto-advance pager to tomorrow when the day rolls into post-day state.
+    LaunchedEffect(isPostDay) {
+        if (isPostDay) pagerState.animateScrollToPage(PAGER_CENTER + 1)
+    }
+
+    // The prayer shown in the header:
+    //  • Elapsed window  → the prayer that just passed.
+    //  • Post-day        → tomorrow's Fajr (countdown to next day).
+    //  • Otherwise       → the next upcoming prayer today.
+    val headerPrayer: PrayerTime? = remember(
+        todayPrayers, lastPassedIdx, inElapsedWindow, now, isPostDay, tomorrowPrayers,
+    ) {
         when {
-            todayPrayers.isEmpty()  -> null
-            inElapsedWindow         -> todayPrayers[lastPassedIdx!!]
-            else                    -> todayPrayers.firstOrNull { it.time > now }
+            todayPrayers.isEmpty() -> null
+            inElapsedWindow        -> todayPrayers[lastPassedIdx!!]
+            isPostDay              -> tomorrowPrayers.firstOrNull()
+            else                   -> todayPrayers.firstOrNull { it.time > now }
         }
     }
 
@@ -146,11 +182,18 @@ private fun PrayersScreenContent(padding: PaddingValues) {
     val nextIdx: Int? = remember(todayPrayers, now) {
         todayPrayers.indexOfFirst { it.time > now }.takeIf { it >= 0 }
     }
-    val countdownSecs: Long = remember(todayPrayers, nextIdx, now) {
-        nextIdx?.let { i ->
-            val diff = todayPrayers[i].time.toSecondOfDay() - now.toSecondOfDay()
-            if (diff >= 0L) diff.toLong() else 0L
-        } ?: 0L
+    val countdownSecs: Long = remember(todayPrayers, nextIdx, now, isPostDay, tomorrowPrayers) {
+        when {
+            isPostDay && tomorrowPrayers.isNotEmpty() -> {
+                // Seconds from now until tomorrow's Fajr = (secs left today) + (fajr secs into tomorrow).
+                val secsUntilMidnight = (24 * 3600 - now.toSecondOfDay()).toLong()
+                secsUntilMidnight + tomorrowPrayers.first().time.toSecondOfDay()
+            }
+            else -> nextIdx?.let { i ->
+                val diff = todayPrayers[i].time.toSecondOfDay() - now.toSecondOfDay()
+                if (diff >= 0L) diff.toLong() else 0L
+            } ?: 0L
+        }
     }
 
     // Alarm state per prayer index — Sunrise (index 1) is off by default.
@@ -173,20 +216,22 @@ private fun PrayersScreenContent(padding: PaddingValues) {
             modifier         = Modifier.fillMaxWidth(),
             beyondViewportPageCount = 1,
         ) { page ->
-            val pageDate = today.plusDays((page - PAGER_CENTER).toLong())
-            val isToday  = pageDate == today
+            val pageDate  = today.plusDays((page - PAGER_CENTER).toLong())
+            val isToday   = pageDate == today
+            val isTomorrow = pageDate == today.plusDays(1)
 
             // Per-page prayer list state, seeded from cache when available.
             var prayers by remember { mutableStateOf(prayerCache[pageDate] ?: emptyList()) }
 
-            // Index of the prayer to highlight on today's page:
-            //  • During the elapsed window → the prayer that just passed.
-            //  • After the window → the last prayer whose time ≤ now (already passed).
-            //  • Other days → no highlight.
-            val currentIdx: Int? = remember(prayers, now, isToday, inElapsedWindow, lastPassedIdx) {
-                if (!isToday || prayers.isEmpty()) return@remember null
-                if (inElapsedWindow) lastPassedIdx
-                else prayers.indexOfLast { it.time <= now }.takeIf { it >= 0 }
+            // Which row to highlight:
+            //  • Today, elapsed window  → prayer that just passed.
+            //  • Today, normal          → last prayer whose time ≤ now.
+            //  • Tomorrow, post-day     → Fajr (index 0) as the upcoming prayer.
+            //  • Other pages            → no highlight.
+            val currentIdx: Int? = remember(prayers, isToday, isTomorrow, isPostDay, headerPrayer) {
+                if (prayers.isEmpty() || headerPrayer == null) return@remember null
+                if (!isToday && !(isTomorrow && isPostDay)) return@remember null
+                prayers.indexOfFirst { it.name == headerPrayer.name }.takeIf { it >= 0 }
             }
 
             LaunchedEffect(pageDate, cityName) {
@@ -310,12 +355,8 @@ private fun PrayerHeader(
                     }
                 }
             } else {
-                // After Isha and outside the elapsed window — no remaining prayers today.
-                Text(
-                    text  = stringResource(R.string.prayers_next_fajr),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = onPrimaryMuted,
-                )
+                // Location not set — reserve header height without showing stale data.
+                Spacer(Modifier.height(80.dp))
             }
         }
     }

@@ -94,23 +94,59 @@ class PrayerWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         PrayerSettings.init(context)
 
-        val location = OnboardingPrefs.location(context)
-        val prayers  = location?.let { loc ->
+        val location  = OnboardingPrefs.location(context)
+        val zone      = ZoneId.systemDefault()
+        val now       = LocalTime.now()
+        val today     = LocalDate.now()
+        val nowMs     = System.currentTimeMillis()
+
+        // Always calculate today's prayers first — needed for alarm scheduling.
+        val todayPrayers: List<PrayerTime> = location?.let { loc ->
             runCatching {
                 PrayerEngine.calculate(
-                    loc.lat, loc.lng, LocalDate.now(),
+                    loc.lat, loc.lng, today,
                     PrayerSettings.get().resolve(loc.countryCode),
                 )
             }.getOrDefault(emptyList())
         } ?: emptyList()
 
-        val countdown: Countdown? = prayers.takeIf { it.isNotEmpty() }
-            ?.let { resolveCountdown(it, LocalTime.now(), LocalDate.now()) }
+        // Post-day: all of today's prayers have passed AND Isha's 30-min window is over.
+        // Switch to tomorrow's prayer list and count down to tomorrow's Fajr.
+        val isPostDay = todayPrayers.isNotEmpty() && run {
+            val lastPrayer = todayPrayers.last()
+            val passedMs   = ZonedDateTime.of(today, lastPrayer.time, zone).toInstant().toEpochMilli()
+            (nowMs - passedMs) > ELAPSED_WINDOW_MS
+        }
 
-        if (prayers.isNotEmpty()) scheduleNextAlarm(context, prayers)
+        val (displayPrayers, countdown) = when {
+            isPostDay && location != null -> {
+                val tomorrow     = today.plusDays(1)
+                val tmrPrayers   = runCatching {
+                    PrayerEngine.calculate(
+                        location.lat, location.lng, tomorrow,
+                        PrayerSettings.get().resolve(location.countryCode),
+                    )
+                }.getOrDefault(emptyList())
+                val fajr = tmrPrayers.firstOrNull()
+                val cd   = fajr?.let {
+                    val fajrMs = ZonedDateTime.of(tomorrow, it.time, zone).toInstant().toEpochMilli()
+                    Countdown.CountingDown(it, (fajrMs - nowMs).coerceAtLeast(0L))
+                }
+                tmrPrayers to cd
+            }
+            todayPrayers.isNotEmpty() -> {
+                val cd = resolveCountdown(todayPrayers, now, today)
+                todayPrayers to cd
+            }
+            else -> emptyList<PrayerTime>() to null
+        }
+
+        // Alarm scheduling always uses today's list — the logic already handles post-day
+        // by wrapping Fajr's epoch to tomorrow when all of today's prayers are in the past.
+        if (todayPrayers.isNotEmpty()) scheduleNextAlarm(context, todayPrayers)
 
         provideContent {
-            GlanceTheme { Content(prayers, countdown) }
+            GlanceTheme { Content(displayPrayers, countdown) }
         }
     }
 
@@ -171,6 +207,8 @@ class PrayerWidget : GlanceAppWidget() {
      * - If a prayer passed within [ELAPSED_WINDOW_MS] → [Countdown.ElapsedSince] with
      *   that prayer highlighted and the Chronometer counting up.
      * - Otherwise → [Countdown.CountingDown] to the next prayer.
+     *
+     * Only called for the current day; post-day countdown is built directly in [provideGlance].
      */
     private fun resolveCountdown(prayers: List<PrayerTime>, now: LocalTime, today: LocalDate): Countdown {
         val zone  = ZoneId.systemDefault()
