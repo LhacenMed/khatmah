@@ -8,6 +8,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.lhacenmed.khatmah.data.prefs.AppPrefs
 import com.lhacenmed.khatmah.data.quran.QuranRepository
+import com.lhacenmed.khatmah.data.quran.WarshXmlRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +26,8 @@ class QuranViewModel(
         data class Ready(val pages: List<QuranPageData>) : State()
         /** Image reader mode: 604 mushaf pages, no text rendering. */
         data class ImageReady(val pageCount: Int)        : State()
+        /** Warsh SVG reader mode: 604 vector mushaf pages rendered via VectorDrawable. */
+        data class SvgReady(val pageCount: Int)          : State()
     }
 
     private val repo  = QuranRepository(app)
@@ -49,10 +52,10 @@ class QuranViewModel(
 
     init {
         viewModelScope.launch {
-            if (AppPrefs.readerStyle.value == AppPrefs.ReaderStyle.IMAGES) {
-                initImageMode()
-            } else {
-                initTextMode()
+            when (AppPrefs.readerStyle.value) {
+                AppPrefs.ReaderStyle.IMAGES    -> initImageMode()
+                AppPrefs.ReaderStyle.SVG_WARSH -> initSvgMode()
+                else                           -> initTextMode()
             }
         }
     }
@@ -69,6 +72,21 @@ class QuranViewModel(
             savedPage.coerceIn(0, MUSHAF_PAGE_COUNT - 1)
         }
         _state.value = State.ImageReady(MUSHAF_PAGE_COUNT)
+    }
+
+    private suspend fun initSvgMode() {
+        val warshRepo = WarshXmlRepository(getApplication())
+        if (!warshRepo.isFullyDownloaded()) {
+            // Files not downloaded yet — fall back to text reader.
+            initTextMode()
+            return
+        }
+
+        // SVG mode does not use the DB mushaf-page map for jump-to-aya (Warsh page
+        // numbering differs from the Hafs DB). Aya-index is left empty; jumps via
+        // search will land on page 1 as a safe default until Warsh mapping is added.
+        savedPage = savedPage.coerceIn(0, WarshXmlRepository.PAGE_COUNT - 1)
+        _state.value = State.SvgReady(WarshXmlRepository.PAGE_COUNT)
     }
 
     private suspend fun initTextMode() {
@@ -132,6 +150,7 @@ class QuranViewModel(
     private companion object {
         const val PREFS             = "quran_reader"
         const val KEY_PAGE          = "last_page"
+        /** Hafs mushaf image page count — used for image reader mode only. */
         const val MUSHAF_PAGE_COUNT = 604
     }
 }

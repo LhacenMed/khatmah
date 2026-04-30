@@ -28,6 +28,8 @@ object AppPrefs {
         TEXT,
         /** Scanned mushaf pages from assets/quran/ (images 1–604). */
         IMAGES,
+        /** Warsh mushaf SVG pages from assets/mushafs/warsh/svg-br/ (1–604). */
+        SVG_WARSH,
     }
 
     private val _readerStyle = MutableStateFlow(ReaderStyle.TEXT)

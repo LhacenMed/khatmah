@@ -80,6 +80,7 @@ fun <T> OptionSelectBottomSheet(
     onSelect: (T) -> Unit,
     onDismiss: () -> Unit,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    optionTrailingContent: @Composable ((SheetOption<out T>) -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -118,10 +119,12 @@ fun <T> OptionSelectBottomSheet(
                 checked  = option.key == selected,
                 onSelect = {
                     scope.launch {
-                        sheetState.hide()
-                        onSelect(option.key)
+                        if (option.enabled) {
+                            onSelect(option.key)
+                        }
                     }
                 },
+                trailingContent = optionTrailingContent?.let { { it(option) } }
             )
             if (index < options.lastIndex) {
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -140,6 +143,7 @@ private fun <T> OptionRow(
     option: SheetOption<T>,
     checked: Boolean,
     onSelect: () -> Unit,
+    trailingContent: @Composable (() -> Unit)? = null,
 ) {
     Row(
         modifier = Modifier
@@ -181,10 +185,10 @@ private fun <T> OptionRow(
             }
         }
 
-        // Check mark — visible only for the selected option.
-        // Sits at the end of the Row; in RTL layouts Compose automatically
-        // mirrors Row direction, so this naturally appears on the leading side.
-        if (checked) {
+        // Trailing content (e.g. download icon/progress) or Check mark.
+        if (trailingContent != null) {
+            trailingContent()
+        } else if (checked) {
             Icon(
                 imageVector        = Icons.Default.Check,
                 contentDescription = null,

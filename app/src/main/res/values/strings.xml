@@ -314,4 +314,7 @@
 
     <string name="audio_not_available">لا يوجد تلاوة لهذه السورة</string>
     <string name="quran_reader_select">Choose the reader</string>
+
+    <string name="reader_style_svg_warsh">Warsh SVG</string>
+    <string name="reader_style_svg_warsh_desc">Interactive vector mushaf pages</string>
 </resources>

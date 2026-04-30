@@ -1,5 +1,6 @@
 package com.lhacenmed.khatmah.ui.page.quran
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -38,6 +40,8 @@ import coil.compose.AsyncImage
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.data.audio.DriveAudioRepository
 import com.lhacenmed.khatmah.data.prefs.AppPrefs
+import com.lhacenmed.khatmah.data.quran.WarshPageData
+import com.lhacenmed.khatmah.data.quran.WarshXmlRepository
 import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.component.OptionSelectBottomSheet
 import com.lhacenmed.khatmah.ui.component.SheetOption
@@ -104,6 +108,11 @@ fun QuranReaderScreen() {
                 onSearch = { nav.navigate(Route.QURAN_SEARCH) },
             )
             is QuranViewModel.State.ImageReady -> QuranImagePager(
+                pageCount = s.pageCount,
+                vm        = vm,
+                onSearch  = { nav.navigate(Route.QURAN_SEARCH) },
+            )
+            is QuranViewModel.State.SvgReady   -> QuranSvgPager(
                 pageCount = s.pageCount,
                 vm        = vm,
                 onSearch  = { nav.navigate(Route.QURAN_SEARCH) },
@@ -370,6 +379,209 @@ private fun QuranImagePager(
                 onJump      = { target -> scope.launch { pagerState.scrollToPage(target) } },
             )
         }
+    }
+}
+
+// ── SVG pager shell ───────────────────────────────────────────────────────────
+
+/**
+ * Full-screen pager for the Warsh SVG mushaf.
+ *
+ * Each page is rendered in its own [QuranSvgPage] using an [android.graphics.Picture]
+ * (vector display list) — no fixed-resolution Bitmap, no WebView. The picture is drawn
+ * via [android.graphics.Canvas.drawPicture] scaled to fill the composable at the device's
+ * native pixel density, giving true vector sharpness on all screens.
+ *
+ * Adjacent pages are pre-fetched via [WarshSvgRepository.prefetch] to keep swiping smooth.
+ *
+ * Aya tap → audio: tapping any polygon highlights that aya and starts playback
+ * via [AyaAudioManager], exactly like the text reader's long-press.
+ * Tapping the same aya again stops playback and clears the highlight.
+ */
+@SuppressLint("ConfigurationScreenWidthHeight")
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+private fun QuranSvgPager(
+    pageCount: Int,
+    vm:        QuranViewModel,
+    onSearch:  () -> Unit,
+) {
+    val nav        = LocalNavController.current
+    val context    = LocalContext.current
+    val scope      = rememberCoroutineScope()
+    val repo       = remember { WarshXmlRepository(context) }
+    val pagerState = rememberPagerState(
+        initialPage = vm.savedPage.coerceIn(0, pageCount - 1),
+    ) { pageCount }
+
+    var barsVisible by remember { mutableStateOf(true) }
+    var selectedAya by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    val audioState  by AyaAudioManager.state.collectAsState()
+    val isDark      = isSystemInDarkTheme()
+    val primary     = MaterialTheme.colorScheme.primary
+
+    // Cache of page data keyed by 1-based page number.
+    val pageCache = remember { mutableStateMapOf<Int, WarshPageData>() }
+
+    SyncReaderSystemBars(barsVisible)
+
+    LaunchedEffect(pagerState.settledPage) { vm.savePage(pagerState.settledPage) }
+    LaunchedEffect(pagerState.settledPage) { selectedAya = null }
+
+    // Sync highlight with audio auto-advance.
+    LaunchedEffect(audioState.suraNum, audioState.ayaNum) {
+        if (audioState.active) selectedAya = audioState.suraNum to audioState.ayaNum
+    }
+    LaunchedEffect(audioState.active) {
+        if (!audioState.active) selectedAya = null
+    }
+
+    val pendingJump by vm.pendingJump.collectAsState()
+    LaunchedEffect(pendingJump) {
+        pendingJump?.let { page ->
+            pagerState.scrollToPage(page)
+            vm.consumeJump()
+        }
+    }
+
+    // Load current page and pre-fetch neighbours.
+    // Picture rendering is resolution-independent — no screen width needed.
+    LaunchedEffect(pagerState.settledPage) {
+        val cur = pagerState.settledPage + 1   // 1-based page number
+        for (p in (cur - 1)..(cur + 1)) {
+            if (p in 1..pageCount && p !in pageCache) {
+                scope.launch {
+                    try {
+                        pageCache[p] = repo.pageData(p)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
+
+    val showReaderSheet = remember { mutableStateOf(false) }
+    val readers         = remember { DriveAudioRepository(context).readers().readers }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(if (isDark) Color.Black else Color.White),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)
+                .windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility),
+        ) {
+            HorizontalPager(
+                state    = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                // Each page gets a stable key so UI instances are reused correctly.
+                key      = { it },
+            ) { idx ->
+                val pageNum  = idx + 1   // 1-based
+                val pageData = pageCache[pageNum]
+
+                if (pageData == null) {
+                    // Trigger load and show spinner while waiting.
+                    LaunchedEffect(pageNum) {
+                        try {
+                            pageCache[pageNum] = repo.pageData(pageNum)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    QuranSvgPage(
+                        pageData       = pageData,
+                        selectedAya    = selectedAya,
+                        highlightColor = primary,
+                        onBaresTap     = { barsVisible = !barsVisible },
+                        onAyaPress     = { surahNum, ayahNum ->
+                            if (selectedAya?.first == surahNum && selectedAya?.second == ayahNum) {
+                                // Second tap on same aya → deselect and stop.
+                                selectedAya = null
+                                AyaAudioManager.stop()
+                            } else {
+                                selectedAya = surahNum to ayahNum
+                                AyaAudioManager.play(context, surahNum, ayahNum, "")
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
+        }
+
+        AnimatedVisibility(
+            visible  = barsVisible,
+            enter    = slideInVertically(tween(ANIM_MS)) { -it } + fadeIn(tween(ANIM_MS)),
+            exit     = slideOutVertically(tween(ANIM_MS)) { -it } + fadeOut(tween(ANIM_MS / 2)),
+            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
+        ) {
+            ImageTopBar(
+                pageNum  = pagerState.settledPage + 1,
+                onBack   = { nav.popBackStack() },
+                onSearch = onSearch,
+            )
+        }
+
+        AnimatedVisibility(
+            visible  = barsVisible,
+            enter    = slideInVertically(tween(ANIM_MS)) { it } + fadeIn(tween(ANIM_MS)),
+            exit     = slideOutVertically(tween(ANIM_MS)) { it } + fadeOut(tween(ANIM_MS / 2)),
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+        ) {
+            Column {
+                AnimatedVisibility(
+                    visible = audioState.active,
+                    enter   = slideInVertically { it } + fadeIn(),
+                    exit    = slideOutVertically { it } + fadeOut(),
+                ) {
+                    AyaPlayerBar(
+                        state         = audioState,
+                        onToggle      = { AyaAudioManager.togglePlayPause() },
+                        onReaderClick = { showReaderSheet.value = true },
+                        onClose       = {
+                            selectedAya = null
+                            AyaAudioManager.stop()
+                        },
+                    )
+                }
+                QuranBottomBar(
+                    currentPage = pagerState.currentPage,
+                    totalPages  = pageCount,
+                    onJump      = { target -> scope.launch { pagerState.scrollToPage(target) } },
+                )
+            }
+        }
+    }
+
+    if (showReaderSheet.value) {
+        val currentReaderId by AppPrefs.audioReaderId.collectAsState()
+        OptionSelectBottomSheet(
+            title     = stringResource(R.string.quran_reader_select),
+            options   = readers.map { SheetOption(it.id, it.name) },
+            selected  = currentReaderId,
+            onDismiss = { showReaderSheet.value = false },
+            onSelect  = { readerId ->
+                AppPrefs.setAudioReaderId(context, readerId)
+                showReaderSheet.value = false
+                if (audioState.active) {
+                    AyaAudioManager.play(
+                        context,
+                        audioState.suraNum,
+                        audioState.ayaNum,
+                        "",
+                    )
+                }
+            },
+        )
     }
 }
 

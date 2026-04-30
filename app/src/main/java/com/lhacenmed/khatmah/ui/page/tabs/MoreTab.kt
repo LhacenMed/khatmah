@@ -1,16 +1,20 @@
 package com.lhacenmed.khatmah.ui.page.tabs
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AlternateEmail
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Explore
@@ -25,18 +29,24 @@ import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.SkipPrevious
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.WbSunny
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -44,6 +54,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.data.prefs.AppPrefs
+import com.lhacenmed.khatmah.data.quran.WarshDownloadState
+import com.lhacenmed.khatmah.data.quran.WarshXmlRepository
 import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.component.OptionSelectBottomSheet
 import com.lhacenmed.khatmah.ui.component.PreferenceItem
@@ -54,6 +66,8 @@ import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.ui.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.ui.nav.NavScreen
 import com.lhacenmed.khatmah.util.LocaleManager
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 // Items within this distance from the top animate directly; farther ones jump-then-animate.
 private const val SMOOTH_SCROLL_THRESHOLD = 4
@@ -85,6 +99,11 @@ private fun MoreScreen(padding: PaddingValues) {
     val showLanguageSheet: MutableState<Boolean>    = rememberSaveable { mutableStateOf(false) }
     val readerStyle by AppPrefs.readerStyle.collectAsState()
 
+    val warshRepo = remember { WarshXmlRepository(context) }
+    val warshState by warshRepo.downloadState.collectAsState()
+    val scope = rememberCoroutineScope()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     val readerStyleOptions = listOf(
         SheetOption(
             key      = AppPrefs.ReaderStyle.TEXT,
@@ -95,6 +114,11 @@ private fun MoreScreen(padding: PaddingValues) {
             key      = AppPrefs.ReaderStyle.IMAGES,
             title    = stringResource(R.string.reader_style_images),
             subtitle = stringResource(R.string.reader_style_images_desc),
+        ),
+        SheetOption(
+            key      = AppPrefs.ReaderStyle.SVG_WARSH,
+            title    = stringResource(R.string.reader_style_svg_warsh),
+            subtitle = stringResource(R.string.reader_style_svg_warsh_desc),
         ),
     )
 
@@ -307,8 +331,9 @@ private fun MoreScreen(padding: PaddingValues) {
                     TrailingLabelText(
                         label = stringResource(
                             when (readerStyle) {
-                                AppPrefs.ReaderStyle.TEXT   -> R.string.reader_style_text
-                                AppPrefs.ReaderStyle.IMAGES -> R.string.reader_style_images
+                                AppPrefs.ReaderStyle.TEXT      -> R.string.reader_style_text
+                                AppPrefs.ReaderStyle.IMAGES    -> R.string.reader_style_images
+                                AppPrefs.ReaderStyle.SVG_WARSH -> R.string.reader_style_svg_warsh
                             }
                         )
                     )
@@ -363,17 +388,69 @@ private fun MoreScreen(padding: PaddingValues) {
     }
 
     // ── Reader Style Sheet ────────────────────────────────────────────────────
-    // Rendered outside the LazyColumn so it overlays correctly.
     if (showReaderStyleSheet.value) {
         OptionSelectBottomSheet(
-            title    = stringResource(R.string.more_reader_style),
-            options  = readerStyleOptions,
-            selected = readerStyle,
-            onSelect = { style ->
-                AppPrefs.setReaderStyle(context, style)
-                showReaderStyleSheet.value = false
+            title      = stringResource(R.string.more_reader_style),
+            options    = readerStyleOptions,
+            selected   = readerStyle,
+            sheetState = sheetState,
+            onSelect   = { style ->
+                if (style == AppPrefs.ReaderStyle.SVG_WARSH && warshState !is WarshDownloadState.Downloaded) {
+                    if (warshState !is WarshDownloadState.Downloading && warshState !is WarshDownloadState.Connecting) {
+                        scope.launch {
+                            warshRepo.downloadAll().collectLatest { /* Internal state updates */ }
+                        }
+                    }
+                } else {
+                    scope.launch {
+                        sheetState.hide()
+                        AppPrefs.setReaderStyle(context, style)
+                        showReaderStyleSheet.value = false
+                    }
+                }
             },
             onDismiss = { showReaderStyleSheet.value = false },
+            optionTrailingContent = { option ->
+                if (option.key == AppPrefs.ReaderStyle.SVG_WARSH) {
+                    Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                        when (val state = warshState) {
+                            is WarshDownloadState.NotDownloaded, is WarshDownloadState.Error -> {
+                                Icon(
+                                    imageVector = Icons.Outlined.CloudDownload,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            is WarshDownloadState.Connecting -> {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            is WarshDownloadState.Downloading -> {
+                                CircularProgressIndicator(
+                                    progress = { state.progress },
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            is WarshDownloadState.Downloaded -> {
+                                if (readerStyle == AppPrefs.ReaderStyle.SVG_WARSH) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         )
     }
 
@@ -404,7 +481,7 @@ private fun CountBadge(count: Int) {
     ) {
         Text(
             text       = count.toString(),
-            modifier   = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            modifier   = androidx.compose.ui.Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             style      = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
             color      = MaterialTheme.colorScheme.onPrimaryContainer,

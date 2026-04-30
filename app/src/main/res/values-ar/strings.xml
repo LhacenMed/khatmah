@@ -311,4 +311,7 @@
 
     <string name="audio_not_available">لا يوجد تلاوة لهذه السورة</string>
     <string name="quran_reader_select">اختر القارئ</string>
+
+    <string name="reader_style_svg_warsh">مصحف الورش SVG</string>
+    <string name="reader_style_svg_warsh_desc">صفحات المصحف التفاعلية</string>
 </resources>
