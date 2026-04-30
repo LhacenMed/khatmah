@@ -194,30 +194,18 @@ fun AdhkarDetailPage(categoryId: String) {
     val isCompletionPage = page >= adhkar.size
     val dhikr            = if (!isCompletionPage) adhkar[page] else null
     val repCount         = session.count
-    val allDone          = isCompletionPage ||
-            dhikr == null ||
-            dhikr.repetitions <= 1 ||
-            repCount >= dhikr.repetitions
+    // allDone only for single-rep and completion page — multi-rep auto-navigates on last tap.
+    val allDone = isCompletionPage || dhikr == null || dhikr.repetitions <= 1
 
     // On every page entry: snap arc to 0 (no animated carry-over from prior page)
     // and reset that page's counter so revisiting always starts fresh.
     val arcAnim = remember { Animatable(0f) }
+    // Guards LaunchedEffect(page) from snapping arc to 0 mid last-rep animation.
+    var isAnimatingLastRep by remember { mutableStateOf(false) }
     // Snap arc instantly to this page's existing progress when navigating.
     LaunchedEffect(page) {
         vm.resetCount()
-        arcAnim.snapTo(0f)
-    }
-
-    // Animate arc only on genuine count increments (repCount > 0).
-    // The LaunchedEffect above resets repCount to 0, but the condition guard below
-    // prevents a redundant animateTo(0) from running after the snap.
-    LaunchedEffect(repCount) {
-        if (repCount > 0 && dhikr != null && dhikr.repetitions > 1) {
-            arcAnim.animateTo(
-                targetValue   = repCount.toFloat() / dhikr.repetitions,
-                animationSpec = tween(400, easing = FastOutSlowInEasing),
-            )
-        }
+        if (!isAnimatingLastRep) arcAnim.snapTo(0f)
     }
 
     // Progress bar: 0 at the first dhikr, grows by 1/N per completed dhikr,
@@ -233,6 +221,31 @@ fun AdhkarDetailPage(categoryId: String) {
     fun goNext() = scope.launch {
         if (page < totalPages - 1) pagerState.animateScrollToPage(page + 1)
         else nav.popBackStack()
+    }
+
+    fun handleTap() {
+        if (isCompletionPage) return
+        val reps = dhikr?.repetitions ?: 1
+        if (reps <= 1) { goNext(); return }
+        val newCount = repCount + 1
+        val isLast   = newCount >= reps
+        vm.recordRead()
+        if (isLast) {
+            isAnimatingLastRep = true
+            scope.launch {
+                arcAnim.animateTo(1f, tween(400, easing = FastOutSlowInEasing))
+                arcAnim.snapTo(0f)
+                isAnimatingLastRep = false
+            }
+            goNext()
+        } else {
+            scope.launch {
+                arcAnim.animateTo(
+                    targetValue   = newCount.toFloat() / reps,
+                    animationSpec = tween(400, easing = FastOutSlowInEasing),
+                )
+            }
+        }
     }
 
     fun share() {
@@ -270,7 +283,8 @@ fun AdhkarDetailPage(categoryId: String) {
                 isCompletionPage = isCompletionPage,
                 onBack           = { nav.popBackStack() },
                 onShare          = ::share,
-                onAction         = { if (allDone) goNext() else vm.recordRead() },
+                onAction         = ::handleTap,
+                onTap            = ::handleTap,
             )
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -285,6 +299,7 @@ fun AdhkarDetailPage(categoryId: String) {
                 current  = minOf(page + 1, adhkar.size),
                 total    = adhkar.size,
                 fraction = barFraction,
+                onClick  = ::handleTap,
             )
 
             Box(
@@ -293,11 +308,7 @@ fun AdhkarDetailPage(categoryId: String) {
                     .clickable(
                         indication        = null,
                         interactionSource = remember { MutableInteractionSource() },
-                    ) {
-                        if (!isCompletionPage) {
-                            if (allDone) goNext() else vm.recordRead()
-                        }
-                    },
+                    ) { handleTap() },
             ) {
                 // All pages stay composed; Compose pager manages lifecycle automatically.
                 HorizontalPager(
@@ -389,10 +400,16 @@ private fun DhikrProgressHeader(
     current: Int,
     total: Int,
     fraction: Float,
+    onClick: () -> Unit,
 ) {
     Row(
         modifier              = Modifier
             .fillMaxWidth()
+            .clickable(
+                indication        = null,
+                interactionSource = remember { MutableInteractionSource() },
+                onClick           = onClick,
+            )
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment     = Alignment.CenterVertically,
@@ -541,10 +558,16 @@ private fun DhikrBottomBar(
     onBack: () -> Unit,
     onShare: () -> Unit,
     onAction: () -> Unit,
+    onTap: () -> Unit,
 ) {
     Surface(
         shadowElevation = 8.dp,
         color           = MaterialTheme.colorScheme.surface,
+        modifier        = Modifier.clickable(
+            indication        = null,
+            interactionSource = remember { MutableInteractionSource() },
+            onClick           = onTap,
+        ),
     ) {
         Column(
             modifier = Modifier
