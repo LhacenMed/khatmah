@@ -50,6 +50,7 @@ data class SheetOption<out T>(
     val title: String,
     val subtitle: String? = null,
     val enabled: Boolean = true,
+    val hasCustomTrailing: Boolean = false,
 )
 
 // ── Bottom Sheet ──────────────────────────────────────────────────────────────
@@ -124,7 +125,9 @@ fun <T> OptionSelectBottomSheet(
                         }
                     }
                 },
-                trailingContent = optionTrailingContent?.let { { it(option) } }
+                trailingContent = if (option.hasCustomTrailing) {
+                    optionTrailingContent?.let { { it(option) } }
+                } else null
             )
             if (index < options.lastIndex) {
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))

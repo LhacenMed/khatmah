@@ -119,6 +119,7 @@ private fun MoreScreen(padding: PaddingValues) {
             key      = AppPrefs.ReaderStyle.SVG_WARSH,
             title    = stringResource(R.string.reader_style_svg_warsh),
             subtitle = stringResource(R.string.reader_style_svg_warsh_desc),
+            hasCustomTrailing = true,
         ),
     )
 
