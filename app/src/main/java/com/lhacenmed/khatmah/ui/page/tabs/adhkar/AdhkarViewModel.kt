@@ -51,6 +51,9 @@ class AdhkarViewModel(app: Application) : AndroidViewModel(app) {
     val uiState: StateFlow<AdhkarUiState> = _uiState.asStateFlow()
 
     private val _session = MutableStateFlow(DhikrSession())
+    // In-memory dhikr cache — written by the detail page on load, read by the editor
+    // on entry so the navigation transition has no IO work to compete with.
+    private val dhikrCache = mutableMapOf<String, List<Dhikr>>()
     val session: StateFlow<DhikrSession> = _session.asStateFlow()
 
     init {
@@ -92,6 +95,7 @@ class AdhkarViewModel(app: Application) : AndroidViewModel(app) {
         if (ids.isEmpty()) return
         viewModelScope.launch {
             repo.deleteCategories(ids)
+            ids.forEach { dhikrCache.remove(it) }   // invalidate
             _uiState.update { it.copy(selectionMode = false, selectedIds = emptySet()) }
             reload()
         }
@@ -122,6 +126,7 @@ class AdhkarViewModel(app: Application) : AndroidViewModel(app) {
     fun resetCategoryToDefaults(categoryId: String) {
         viewModelScope.launch {
             repo.resetCategoryToDefaults(categoryId)
+            dhikrCache.remove(categoryId)   // invalidate
             reload()
         }
     }
@@ -140,6 +145,17 @@ class AdhkarViewModel(app: Application) : AndroidViewModel(app) {
 
     suspend fun getDhikrForCategory(categoryId: String): List<Dhikr> =
         repo.getDhikrForCategory(categoryId)
+
+    /** Stores an already-fetched dhikr list so the editor can read it synchronously. */
+    fun cacheDhikr(categoryId: String, list: List<Dhikr>) {
+        dhikrCache[categoryId] = list
+    }
+
+    /**
+     * Returns the cached dhikr list for [categoryId] if available.
+     * Returns null on a cache miss — caller falls back to async DB fetch.
+     */
+    fun getCachedDhikr(categoryId: String): List<Dhikr>? = dhikrCache[categoryId]
 
     // ── Dhikr session ─────────────────────────────────────────────────────────
 

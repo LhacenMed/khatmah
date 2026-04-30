@@ -164,6 +164,7 @@ fun AdhkarDetailPage(categoryId: String) {
 
     LaunchedEffect(categoryId, state.version) {
         adhkar = vm.getDhikrForCategory(categoryId)
+        vm.cacheDhikr(categoryId, adhkar)
         vm.startSession(categoryId)
         isDhikrLoading = false
     }

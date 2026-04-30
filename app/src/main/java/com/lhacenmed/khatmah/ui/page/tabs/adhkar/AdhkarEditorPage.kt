@@ -83,6 +83,8 @@ import com.lhacenmed.khatmah.ui.component.ColorPickerDialog
 import com.lhacenmed.khatmah.ui.component.LargeTopAppBar
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import java.util.UUID
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 // ── Draft models (composition-scoped, not persisted) ─────────────────────────
 
@@ -160,10 +162,17 @@ fun AdhkarEditorPage(categoryId: String?) {
         categoryId?.let { id -> state.categories.firstOrNull { it.id == id } }
     }
 
-    // Dhikr list requires an async query; null = not yet loaded.
-    var loadedDhikrs by remember { mutableStateOf<List<Dhikr>?>(if (!isEditMode) emptyList() else null) }
+    // Cache hit (navigating from detail page) → instant, no loading state, no transition jank.
+    // Cache miss (deep-link or process restart) → async DB fetch with loading indicator.
+    var loadedDhikrs by remember {
+        mutableStateOf<List<Dhikr>?>(
+            if (!isEditMode) emptyList() else vm.getCachedDhikr(categoryId!!)
+        )
+    }
     LaunchedEffect(categoryId) {
-        if (categoryId != null) loadedDhikrs = vm.getDhikrForCategory(categoryId)
+        if (categoryId != null && loadedDhikrs == null) {
+            loadedDhikrs = vm.getDhikrForCategory(categoryId)
+        }
     }
 
     if (isEditMode && (category == null || loadedDhikrs == null)) {
@@ -176,6 +185,19 @@ fun AdhkarEditorPage(categoryId: String?) {
     // Built-in defaults resolved synchronously from in-memory data.
     val builtInDefaults = remember(categoryId) {
         categoryId?.let { vm.getBuiltInDefaults(it) }
+    }
+
+    // Defer the heavy form composition until the enter transition completes.
+    // During transition the back stack entry is STARTED; the editor is RESUMED
+    // once the animation finishes. This prevents ~168+ mutableStateOf instantiations
+    // and ~84 OutlinedTextField layouts from competing with animation frames.
+    // Cache guarantees zero DB wait once RESUMED, so the form appears instantly.
+    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
+    if (lifecycleState != Lifecycle.State.RESUMED) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
     }
 
     // key() ensures form state resets if categoryId ever changes within the same
