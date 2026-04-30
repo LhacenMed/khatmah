@@ -77,6 +77,8 @@ import com.lhacenmed.khatmah.ui.common.Route
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.ui.theme.WarshFamily
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 
 // ── Font size cycle ───────────────────────────────────────────────────────────
 
@@ -156,8 +158,13 @@ fun AdhkarDetailPage(categoryId: String) {
     var adhkar by remember { mutableStateOf<List<Dhikr>>(emptyList()) }
     var isDhikrLoading by remember { mutableStateOf(true) }
 
+    // Session counts survive configuration changes via the activity-scoped VM.
+    // startSession resets counts when the category or its content changes.
+    val session by vm.session.collectAsState()
+
     LaunchedEffect(categoryId, state.version) {
         adhkar = vm.getDhikrForCategory(categoryId)
+        vm.startSession(categoryId)
         isDhikrLoading = false
     }
 
@@ -183,15 +190,10 @@ fun AdhkarDetailPage(categoryId: String) {
     // Font size persists across configuration changes but resets on new process.
     var fontSize by rememberSaveable { mutableStateOf(DhikrFontSize.MEDIUM) }
 
-    // Pre-fill all counters to 0 so there's never a null → value recompose flash.
-    val repCounts = remember(adhkar) {
-        mutableStateMapOf<Int, Int>().also { map -> repeat(adhkar.size) { map[it] = 0 } }
-    }
-
     val page             = pagerState.currentPage
     val isCompletionPage = page >= adhkar.size
     val dhikr            = if (!isCompletionPage) adhkar[page] else null
-    val repCount         = repCounts[page] ?: 0
+    val repCount         = session.count
     val allDone          = isCompletionPage ||
             dhikr == null ||
             dhikr.repetitions <= 1 ||
@@ -200,9 +202,10 @@ fun AdhkarDetailPage(categoryId: String) {
     // On every page entry: snap arc to 0 (no animated carry-over from prior page)
     // and reset that page's counter so revisiting always starts fresh.
     val arcAnim = remember { Animatable(0f) }
+    // Snap arc instantly to this page's existing progress when navigating.
     LaunchedEffect(page) {
+        vm.resetCount()
         arcAnim.snapTo(0f)
-        if (!isCompletionPage) repCounts[page] = 0
     }
 
     // Animate arc only on genuine count increments (repCount > 0).
@@ -230,11 +233,6 @@ fun AdhkarDetailPage(categoryId: String) {
     fun goNext() = scope.launch {
         if (page < totalPages - 1) pagerState.animateScrollToPage(page + 1)
         else nav.popBackStack()
-    }
-
-    fun countRead() {
-        val reps = dhikr?.repetitions ?: return
-        if (repCount < reps) repCounts[page] = repCount + 1
     }
 
     fun share() {
@@ -272,7 +270,7 @@ fun AdhkarDetailPage(categoryId: String) {
                 isCompletionPage = isCompletionPage,
                 onBack           = { nav.popBackStack() },
                 onShare          = ::share,
-                onAction         = { if (allDone) goNext() else countRead() },
+                onAction         = { if (allDone) goNext() else vm.recordRead() },
             )
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -289,7 +287,18 @@ fun AdhkarDetailPage(categoryId: String) {
                 fraction = barFraction,
             )
 
-            Box(modifier = Modifier.weight(1f)) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(
+                        indication        = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                    ) {
+                        if (!isCompletionPage) {
+                            if (allDone) goNext() else vm.recordRead()
+                        }
+                    },
+            ) {
                 // All pages stay composed; Compose pager manages lifecycle automatically.
                 HorizontalPager(
                     state    = pagerState,

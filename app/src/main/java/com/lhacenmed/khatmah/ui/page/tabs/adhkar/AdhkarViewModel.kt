@@ -31,12 +31,27 @@ data class AdhkarUiState(
         get() = categories.isNotEmpty() && selectedIds.size == categories.size
 }
 
+/**
+ * Per-session read progress for the currently open [AdhkarDetailPage].
+ * Keyed by category ID so that opening a different category always starts fresh.
+ * Counts persist across configuration changes (VM survives rotation).
+ *
+ * [counts] maps page index → number of reads recorded on that page.
+ */
+data class DhikrSession(
+    val categoryId: String = "",
+    val count: Int = 0,
+)
+
 class AdhkarViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = AdhkarRepository(app)
 
     private val _uiState = MutableStateFlow(AdhkarUiState())
     val uiState: StateFlow<AdhkarUiState> = _uiState.asStateFlow()
+
+    private val _session = MutableStateFlow(DhikrSession())
+    val session: StateFlow<DhikrSession> = _session.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -125,6 +140,26 @@ class AdhkarViewModel(app: Application) : AndroidViewModel(app) {
 
     suspend fun getDhikrForCategory(categoryId: String): List<Dhikr> =
         repo.getDhikrForCategory(categoryId)
+
+    // ── Dhikr session ─────────────────────────────────────────────────────────
+
+    /**
+     * Starts a fresh read session for [categoryId].
+     * Called when the detail page opens or when dhikr reloads after an edit/reset.
+     */
+    fun startSession(categoryId: String) {
+        _session.value = DhikrSession(categoryId = categoryId)
+    }
+
+    /** Records one read for the currently visible dhikr. */
+    fun recordRead() {
+        _session.update { it.copy(count = it.count + 1) }
+    }
+
+    /** Resets the count for the current dhikr. Called on every page change. */
+    fun resetCount() {
+        _session.update { it.copy(count = 0) }
+    }
 
     // ── Image ─────────────────────────────────────────────────────────────────
 
