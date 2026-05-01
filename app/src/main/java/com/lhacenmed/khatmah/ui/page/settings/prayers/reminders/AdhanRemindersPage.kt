@@ -94,4 +94,5 @@ private fun soundSubtitle(sound: AdhanSound): String = when (sound) {
     is AdhanSound.Silent -> stringResource(R.string.adhan_sound_silent)
     is AdhanSound.Device -> stringResource(R.string.adhan_sound_device)
     is AdhanSound.Asset  -> sound.filename.removeSuffix(".mp3")
+    is AdhanSound.Custom -> sound.displayName
 }

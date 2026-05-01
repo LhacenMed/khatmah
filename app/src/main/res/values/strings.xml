@@ -340,7 +340,6 @@
     <string name="notif_channel_pre">Pre-adhan alert</string>
 
     <!-- Notification body -->
-    <string name="notif_adhan_body">It’s time for prayer</string>
     <string name="notif_pre_alert_body">%1$d minutes until %2$s</string>
 
     <!-- Sound selection -->
@@ -349,4 +348,10 @@
     <!-- Dialog buttons -->
     <string name="dialog_confirm">OK</string>
     <string name="dialog_cancel">Cancel</string>
+
+    <string name="adhan_sound_custom_section">From Device</string>
+    <string name="adhan_sound_custom_browse">Browse audio files</string>
+
+    <string name="notif_adhan_title">%1$s Adhan %2$s</string>
+    <string name="notif_adhan_body">It\'s now time for %1$s Adhan</string>
 </resources>

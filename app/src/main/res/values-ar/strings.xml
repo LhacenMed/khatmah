@@ -337,7 +337,6 @@
     <string name="notif_channel_pre">تنبيه قبل الأذان</string>
 
     <!-- Notification body -->
-    <string name="notif_adhan_body">حان وقت الصلاة</string>
     <string name="notif_pre_alert_body">%1$d دقيقة على %2$s</string>
 
     <!-- Sound selection -->
@@ -346,4 +345,10 @@
     <!-- Dialog buttons -->
     <string name="dialog_confirm">موافق</string>
     <string name="dialog_cancel">إلغاء</string>
+
+    <string name="adhan_sound_custom_section">من الجهاز</string>
+    <string name="adhan_sound_custom_browse">اختيار ملف صوتي</string>
+
+    <string name="notif_adhan_title">أذان %1$s %2$s</string>
+    <string name="notif_adhan_body">حان الآن موعد أذان %1$s</string>
 </resources>

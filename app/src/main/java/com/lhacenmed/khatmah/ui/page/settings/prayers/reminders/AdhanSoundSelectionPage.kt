@@ -1,8 +1,13 @@
 package com.lhacenmed.khatmah.ui.page.settings.prayers.reminders
 
+import android.content.Intent
 import android.media.MediaPlayer
-import android.os.Build
 import android.media.RingtoneManager
+import android.net.Uri
+import android.os.Build
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,9 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.NotificationsOff
-import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +32,7 @@ import com.lhacenmed.khatmah.notification.AdhanScheduler
 import com.lhacenmed.khatmah.ui.component.AppTopBar
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
 import com.lhacenmed.khatmah.util.AdhanSoundFiles
+import com.lhacenmed.khatmah.util.NotificationHelper
 
 // ── Pre-alert options ─────────────────────────────────────────────────────────
 private val PRE_ALERT_OPTIONS = listOf(0, 5, 10, 15, 20, 25, 30)
@@ -58,16 +62,32 @@ fun AdhanSoundSelectionPage(prayerId: Int) {
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     DisposableEffect(Unit) { onDispose { mediaPlayer?.release() } }
 
+    // ── File picker ───────────────────────────────────────────────────────────
+    val filePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        // Persist access so we can read the file across reboots (notification channel).
+        context.contentResolver.takePersistableUriPermission(
+            uri, Intent.FLAG_GRANT_READ_URI_PERMISSION,
+        )
+        val displayName = context.resolveAudioName(uri)
+        val custom = AdhanSound.Custom(uri.toString(), displayName)
+        NotificationHelper.ensureCustomChannel(context, uri.toString(), displayName)
+        saveSound(context, prayerId, config, custom)
+        AdhanScheduler.schedulePrayer(context, prayerId)
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     fun saveSound(sound: AdhanSound) {
         mediaPlayer?.release(); mediaPlayer = null
-        val updated = config.copy(sound = sound)
-        AdhanPrefs.save(context, prayerId, updated)
+        AdhanPrefs.save(context, prayerId, config.copy(sound = sound))
         AdhanScheduler.schedulePrayer(context, prayerId)
     }
 
     fun savePreAlert(minutes: Int) {
-        val updated = config.copy(preAlertMinutes = minutes)
-        AdhanPrefs.save(context, prayerId, updated)
+        AdhanPrefs.save(context, prayerId, config.copy(preAlertMinutes = minutes))
         AdhanScheduler.schedulePrayer(context, prayerId)
     }
 
@@ -81,6 +101,17 @@ fun AdhanSoundSelectionPage(prayerId: Int) {
             start()
         }
     }
+
+    fun previewCustom(uri: String) {
+        mediaPlayer?.release()
+        mediaPlayer = MediaPlayer().apply {
+            setDataSource(context, Uri.parse(uri))
+            prepare()
+            start()
+        }
+    }
+
+    // ── UI ────────────────────────────────────────────────────────────────────
 
     Scaffold(
         topBar = {
@@ -115,23 +146,22 @@ fun AdhanSoundSelectionPage(prayerId: Int) {
             )
 
             Spacer(Modifier.height(8.dp))
-            HorizontalDivider(thickness = 8.dp, color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            SectionDivider()
 
-            // ── Sound section ─────────────────────────────────────────────────
+            // ── Built-in sound section ────────────────────────────────────────
             SelectionHeader(stringResource(R.string.adhan_sound_section_format, prayerName))
 
-            // Fixed options: Off, Silent, Device
             FixedSoundItem(
-                label     = stringResource(R.string.adhan_sound_stop),
-                icon      = Icons.Outlined.NotificationsOff,
-                selected  = config.sound is AdhanSound.Off,
-                onClick   = { saveSound(AdhanSound.Off) },
+                label    = stringResource(R.string.adhan_sound_stop),
+                icon     = Icons.Outlined.NotificationsOff,
+                selected = config.sound is AdhanSound.Off,
+                onClick  = { saveSound(AdhanSound.Off) },
             )
             FixedSoundItem(
-                label     = stringResource(R.string.adhan_sound_silent),
-                icon      = Icons.AutoMirrored.Outlined.VolumeOff,
-                selected  = config.sound is AdhanSound.Silent,
-                onClick   = { saveSound(AdhanSound.Silent) },
+                label    = stringResource(R.string.adhan_sound_silent),
+                icon     = Icons.AutoMirrored.Outlined.VolumeOff,
+                selected = config.sound is AdhanSound.Silent,
+                onClick  = { saveSound(AdhanSound.Silent) },
             )
             FixedSoundItem(
                 label     = stringResource(R.string.adhan_sound_device),
@@ -160,6 +190,23 @@ fun AdhanSoundSelectionPage(prayerId: Int) {
                 )
             }
 
+            SectionDivider()
+
+            // ── Custom file section ───────────────────────────────────────────
+            SelectionHeader(stringResource(R.string.adhan_sound_custom_section))
+
+            // Show the currently selected custom sound as a selectable item.
+            if (config.sound is AdhanSound.Custom) {
+                CustomSoundItem(
+                    displayName = config.sound.displayName,
+                    selected    = true,
+                    onSelect    = { /* already selected */ },
+                    onPreview   = { previewCustom(config.sound.uri) },
+                )
+            }
+
+            BrowseItem { filePicker.launch(arrayOf("audio/*")) }
+
             Spacer(Modifier.height(16.dp))
         }
     }
@@ -172,6 +219,25 @@ fun AdhanSoundSelectionPage(prayerId: Int) {
             onDismiss      = { showPreDialog = false },
         )
     }
+}
+
+// ── Private helpers ───────────────────────────────────────────────────────────
+
+/** Resolves the display name of a content URI (e.g. "My Adhan.mp3"). */
+private fun android.content.Context.resolveAudioName(uri: Uri): String =
+    contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+        ?.use { if (it.moveToFirst()) it.getString(0) else null }
+        ?: uri.lastPathSegment
+        ?: "Custom"
+
+/** Saves a sound without touching preAlertMinutes — avoids duplicating scheduler call. */
+private fun saveSound(
+    context:  android.content.Context,
+    prayerId: Int,
+    config:   AdhanConfig,
+    sound:    AdhanSound,
+) {
+    AdhanPrefs.save(context, prayerId, config.copy(sound = sound))
 }
 
 // ─── Composables ──────────────────────────────────────────────────────────────
@@ -187,6 +253,14 @@ private fun SelectionHeader(text: String) {
         Text(text, style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+}
+
+@Composable
+private fun SectionDivider() {
+    HorizontalDivider(
+        thickness = 8.dp,
+        color     = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+    )
 }
 
 @Composable
@@ -207,11 +281,8 @@ private fun FixedSoundItem(
         trailingContent   = {
             if (onPreview != null) {
                 IconButton(onClick = onPreview) {
-                    Icon(
-                        Icons.Outlined.PlayArrow,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Icon(Icons.Outlined.PlayArrow, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
                 Icon(icon, contentDescription = null,
@@ -229,22 +300,58 @@ private fun AssetSoundItem(
     onSelect:  () -> Unit,
     onPreview: () -> Unit,
 ) {
-    val label = filename.removeSuffix(".mp3")
     ListItem(
         modifier          = Modifier.clickable { onSelect() },
         headlineContent   = {
-            Text(label, color = if (selected) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurface)
+            Text(filename.removeSuffix(".mp3"),
+                color = if (selected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface)
         },
         leadingContent    = { RadioButton(selected = selected, onClick = null) },
         trailingContent   = {
             IconButton(onClick = onPreview) {
-                Icon(
-                    Icons.Outlined.PlayArrow,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Icon(Icons.Outlined.PlayArrow, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        },
+    )
+}
+
+@Composable
+private fun CustomSoundItem(
+    displayName: String,
+    selected:    Boolean,
+    onSelect:    () -> Unit,
+    onPreview:   () -> Unit,
+) {
+    ListItem(
+        modifier          = Modifier.clickable { onSelect() },
+        headlineContent   = {
+            Text(displayName,
+                color = if (selected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface)
+        },
+        leadingContent    = { RadioButton(selected = selected, onClick = null) },
+        trailingContent   = {
+            IconButton(onClick = onPreview) {
+                Icon(Icons.Outlined.PlayArrow, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+    )
+}
+
+@Composable
+private fun BrowseItem(onClick: () -> Unit) {
+    ListItem(
+        modifier        = Modifier.clickable { onClick() },
+        headlineContent = {
+            Text(stringResource(R.string.adhan_sound_custom_browse),
+                color = MaterialTheme.colorScheme.primary)
+        },
+        leadingContent  = {
+            Icon(Icons.Outlined.FolderOpen, contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary)
         },
     )
 }

@@ -102,7 +102,7 @@ object AdhanScheduler {
         prayerName: String,
         isPre:      Boolean,
     ) {
-        val pi = buildPendingIntent(context, prayerId, prayerName, isPre)
+        val pi = buildPendingIntent(context, prayerId, prayerName, isPre, prayerTimeMs = triggerMs)
         am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMs, pi)
     }
 
@@ -115,12 +115,14 @@ object AdhanScheduler {
         prayerId:   Int,
         prayerName: String,
         isPre:      Boolean,
+        prayerTimeMs:  Long = 0L,
     ): PendingIntent {
         val requestCode = if (isPre) prayerId + 10 else prayerId
         val intent = Intent(context, AdhanReceiver::class.java).apply {
             putExtra(AdhanReceiver.EXTRA_PRAYER_ID,   prayerId)
             putExtra(AdhanReceiver.EXTRA_PRAYER_NAME, prayerName)
             putExtra(AdhanReceiver.EXTRA_IS_PRE,      isPre)
+            putExtra(AdhanReceiver.EXTRA_PRAYER_TIME_MS,  prayerTimeMs)
         }
         return PendingIntent.getBroadcast(
             context, requestCode, intent,

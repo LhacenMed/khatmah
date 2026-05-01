@@ -13,6 +13,7 @@ import com.lhacenmed.khatmah.util.LocaleManager
 import com.lhacenmed.khatmah.util.ThemeManager
 import com.lhacenmed.khatmah.widget.PrayerWidgetWorker
 import com.lhacenmed.khatmah.data.prayer.AdhanPrefs
+import com.lhacenmed.khatmah.data.prayer.AdhanSound
 import com.lhacenmed.khatmah.notification.AdhanScheduler
 import com.lhacenmed.khatmah.util.AdhanSoundFiles
 import com.lhacenmed.khatmah.util.NotificationHelper
@@ -37,6 +38,11 @@ class App : Application() {
         AdhanPrefs.init(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationHelper.ensureChannels(this, AdhanSoundFiles.list(this))
+            // Recreate custom channels that may have been wiped on CH_VERSION bump.
+            AdhanPrefs.get().forEach { cfg ->
+                if (cfg.sound is AdhanSound.Custom)
+                    NotificationHelper.ensureCustomChannel(this, cfg.sound.uri, cfg.sound.displayName)
+            }
             AdhanScheduler.scheduleAll(this)
         }
         PrayerWidgetWorker.enqueue(this)

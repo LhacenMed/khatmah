@@ -28,12 +28,14 @@ class AdhanReceiver : BroadcastReceiver() {
         const val EXTRA_PRAYER_ID   = "prayer_id"
         const val EXTRA_PRAYER_NAME = "prayer_name"
         const val EXTRA_IS_PRE      = "is_pre"
+        const val EXTRA_PRAYER_TIME_MS = "prayer_time_ms"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         val prayerId   = intent.getIntExtra(EXTRA_PRAYER_ID, -1).takeIf { it in 0..5 } ?: return
         val prayerName = intent.getStringExtra(EXTRA_PRAYER_NAME) ?: return
         val isPre      = intent.getBooleanExtra(EXTRA_IS_PRE, false)
+        val prayerTimeMs = intent.getLongExtra(EXTRA_PRAYER_TIME_MS, System.currentTimeMillis())
 
         // Ensure singletons are loaded — process may have been cold-started by the alarm.
         AdhanPrefs.init(context)
@@ -50,7 +52,7 @@ class AdhanReceiver : BroadcastReceiver() {
         } else {
             if (config.sound !is AdhanSound.Off) {
                 NotificationHelper.postAdhanNotification(
-                    context, prayerId, prayerName, config.sound,
+                    context, prayerId, prayerName, prayerTimeMs, config.sound,
                 )
             }
         }

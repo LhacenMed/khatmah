@@ -52,6 +52,7 @@ object NotificationHelper {
         is AdhanSound.Silent -> CH_SILENT
         is AdhanSound.Device -> CH_DEVICE
         is AdhanSound.Asset  -> "adhan_${sound.filename.hashCode()}"
+        is AdhanSound.Custom -> "adhan_custom_${sound.uri.hashCode()}"
     }
 
     // ── Ensure all needed channels exist ─────────────────────────────────────
@@ -129,6 +130,28 @@ object NotificationHelper {
         )
     }
 
+    /**
+     * Creates (or no-ops if already present) a notification channel for a user-picked
+     * audio file. Call this immediately after the user selects a file, and also on
+     * app startup for any already-saved [AdhanSound.Custom] configs (channels are
+     * deleted on [CH_VERSION] bumps and must be recreated).
+     */
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun ensureCustomChannel(context: Context, uri: String, displayName: String) {
+        val nm = context.getSystemService<NotificationManager>() ?: return
+        val id = channelId(AdhanSound.Custom(uri, displayName))
+        if (nm.getNotificationChannel(id) != null) return
+        val audioAttr = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+            .build()
+        nm.createNotificationChannel(
+            NotificationChannel(id, displayName, NotificationManager.IMPORTANCE_HIGH).apply {
+                setSound(Uri.parse(uri), audioAttr)
+            }
+        )
+    }
+
     // ── Post prayer notification ──────────────────────────────────────────────
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -136,15 +159,20 @@ object NotificationHelper {
         context:    Context,
         prayerId:   Int,
         prayerName: String,
+        timeMs:     Long,
         sound:      AdhanSound,
     ) {
         if (sound is AdhanSound.Off) return
         val nm = context.getSystemService<NotificationManager>() ?: return
 
+        val formattedTime = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(timeMs))
+        val title = context.getString(R.string.notif_adhan_title, prayerName, formattedTime)
+        val body  = context.getString(R.string.notif_adhan_body, prayerName)
+
         val notification = NotificationCompat.Builder(context, channelId(sound))
             .setSmallIcon(R.drawable.ic_stat_name)
-            .setContentTitle(prayerName)
-            .setContentText(context.getString(R.string.notif_adhan_body))
+            .setContentTitle(title)
+            .setContentText(body)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             // Channel owns the sound for Asset and Device; only suppress for Silent.
