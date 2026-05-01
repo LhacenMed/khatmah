@@ -18,6 +18,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
@@ -49,6 +50,14 @@ private fun AdhkarScreen(padding: PaddingValues) {
     val state: AdhkarUiState by vm.uiState.collectAsState()
     val scrollToTop = LocalScrollToTop.current
     val gridState   = rememberLazyGridState()
+
+    // Re-resolve category titles whenever the configuration changes (e.g. locale switch).
+    // The ViewModel survives activity recreation so its init block never re-runs;
+    // this ensures titles are re-fetched with the new locale's strings.
+    val configuration = LocalConfiguration.current
+    LaunchedEffect(configuration) {
+        vm.reload()
+    }
 
     // Scroll-to-top signal from tab re-tap
     LaunchedEffect(scrollToTop) {
