@@ -12,6 +12,10 @@ import com.lhacenmed.khatmah.data.prefs.AppPrefs
 import com.lhacenmed.khatmah.util.LocaleManager
 import com.lhacenmed.khatmah.util.ThemeManager
 import com.lhacenmed.khatmah.widget.PrayerWidgetWorker
+import com.lhacenmed.khatmah.data.prayer.AdhanPrefs
+import com.lhacenmed.khatmah.notification.AdhanScheduler
+import com.lhacenmed.khatmah.util.AdhanSoundFiles
+import com.lhacenmed.khatmah.util.NotificationHelper
 
 class App : Application() {
 
@@ -27,6 +31,14 @@ class App : Application() {
         // Load persisted prayer calculation settings before any UI is created.
         PrayerSettings.init(this)
         AppPrefs.init(this)
+        // Init adhan notification prefs and ensure notification channels exist.
+        AdhanPrefs.init(this)
+        // Init adhan notification prefs, channels, and alarms.
+        AdhanPrefs.init(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationHelper.ensureChannels(this, AdhanSoundFiles.list(this))
+            AdhanScheduler.scheduleAll(this)
+        }
         PrayerWidgetWorker.enqueue(this)
         // Register SVG decoder so FlagCDN SVGs render via AsyncImage.
         // Coil's default disk + memory cache handles flag caching automatically.

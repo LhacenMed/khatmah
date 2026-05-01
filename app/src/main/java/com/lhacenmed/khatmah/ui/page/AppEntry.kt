@@ -54,6 +54,7 @@ import com.lhacenmed.khatmah.ui.page.settings.appearance.LanguagePage
 import com.lhacenmed.khatmah.ui.page.settings.appearance.ThemeSettingsPage
 import com.lhacenmed.khatmah.ui.page.settings.appearance.DarkThemePage
 import com.lhacenmed.khatmah.ui.page.settings.prayers.*
+import com.lhacenmed.khatmah.ui.page.settings.prayers.reminders.*
 import com.lhacenmed.khatmah.ui.page.tabs.*
 import com.lhacenmed.khatmah.ui.page.tabs.adhkar.AdhkarDetailPage
 import com.lhacenmed.khatmah.ui.page.tabs.adhkar.AdhkarEditorPage
@@ -148,6 +149,16 @@ fun AppEntry() {
             animatedComposable(Route.PRAYER_DST)                { DstContent()               }
             animatedComposable(Route.PRAYER_MANUAL_CORRECTIONS) { ManualCorrectionsContent() }
             animatedComposable(Route.PRAYER_HIGHER_LAT)         { HigherLatContent()         }
+            animatedComposable(Route.ADHAN_REMINDERS)           { AdhanRemindersPage()       }
+            animatedComposable(
+                route     = Route.ADHAN_SOUND_SELECTION,
+                arguments = listOf(
+                    navArgument("prayerId") { type = NavType.IntType },
+                ),
+            ) { backStack ->
+                val prayerId = backStack.arguments?.getInt("prayerId") ?: 0
+                AdhanSoundSelectionPage(prayerId = prayerId)
+            }
 
             // ── Quran ─────────────────────────────────────────────────────────
             animatedComposable(

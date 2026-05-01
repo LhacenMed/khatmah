@@ -55,6 +55,19 @@ fun PrayerSettingsContent() {
                 .verticalScroll(rememberScrollState())
                 .padding(padding),
         ) {
+            // ── Reminders section ─────────────────────────────────────────────
+            SettingsSectionHeader(stringResource(R.string.prayer_settings_reminders))
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.prayer_settings_adhan_reminders)) },
+                modifier        = Modifier.clickable { nav.navigate(Route.ADHAN_REMINDERS) },
+                trailingContent = {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
+                },
+            )
+
+            HorizontalDivider()
+
             // ── Location section ──────────────────────────────────────────────
             SettingsSectionHeader(stringResource(R.string.prayer_settings_location))
 
@@ -122,8 +135,6 @@ fun PrayerSettingsContent() {
                     )
                 },
             )
-
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
             // Calculation Method
             NavSettingsItem(

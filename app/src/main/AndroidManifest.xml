@@ -7,10 +7,13 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- Required by android.location.Geocoder for city name resolution -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Exact alarms: API 33+ (auto-granted for alarm/prayer apps) -->
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <!-- Exact alarms: API 31-32 (user may need to grant in battery settings) -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <!-- Exact alarms: API 33+ auto-granted for apps with core timing needs -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- Re-schedule alarms after device reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".App"
@@ -50,6 +53,30 @@
         <receiver
             android:name=".widget.PrayerAlarmReceiver"
             android:exported="false" />
+
+        <!-- Receives exact-alarm broadcasts to post adhan notifications -->
+        <receiver
+            android:name=".notification.AdhanReceiver"
+            android:exported="false" />
+
+        <!-- Re-schedules adhan alarms after device reboot -->
+        <receiver
+            android:name=".notification.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Serves assets/adhan/*.mp3 as content:// URIs for notification channel sounds.
+        Must be exported so the system notification service can read the audio files.
+        Only serves static notification audio — no sensitive data is exposed. -->
+        <provider
+            android:name=".util.AdhanAssetProvider"
+            android:authorities="${applicationId}.adhan_provider"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            tools:ignore="ExportedContentProvider" />
 
     </application>
 

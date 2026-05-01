@@ -30,6 +30,8 @@ object Route {
     const val PRAYER_DST                = "prayer_dst"
     const val PRAYER_MANUAL_CORRECTIONS = "prayer_manual_corrections"
     const val PRAYER_HIGHER_LAT         = "prayer_higher_lat"
+    const val ADHAN_REMINDERS           = "adhan_reminders"
+    const val ADHAN_SOUND_SELECTION     = "adhan_sound_selection/{prayerId}"
 
     // ── Quran ─────────────────────────────────────────────────────────────────
     // suraNum = 0 → open at last-read page (SharedPrefs).
@@ -62,6 +64,9 @@ object Route {
      */
     fun adhkarEditor(categoryId: String? = null) =
         "adhkar_editor?categoryId=${categoryId.orEmpty()}"
+
+    /** Builds the adhan sound selection route for [prayerId]. */
+    fun adhanSoundSelection(prayerId: Int) = "adhan_sound_selection/$prayerId"
 
     // ── Onboarding ────────────────────────────────────────────────────────────
     const val ONBOARDING_LANGUAGE       = "onboarding_language"

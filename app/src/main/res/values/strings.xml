@@ -198,6 +198,22 @@
 
     <!-- Main settings page -->
     <string name="prayer_settings_title">Prayer Times Settings</string>
+    <string name="prayer_settings_reminders">Reminders</string>
+    <string name="prayer_settings_adhan_reminders">Adhan Reminders</string>
+    <string name="adhan_reminders_title">Adhan Reminders</string>
+    <string name="adhan_reminders_section_title">Prayer Reminders</string>
+    <string name="adhan_reminders_warning">Make sure to open the app at least once every 3 days to ensure notifications continue to be received.</string>
+    <string name="adhan_alarm_title_format">%s Alarm</string>
+    <string name="adhan_alarm_before_section">Alarm before Adhan</string>
+    <string name="adhan_alert_before">Alert before Adhan</string>
+    <string name="adhan_alert_before_off">Off</string>
+    <string name="adhan_sound_section_format">Sound for %s Alert</string>
+    <string name="adhan_sound_stop">Stop</string>
+    <string name="adhan_sound_silent">Silent</string>
+    <string name="adhan_sound_device">Device alert sound</string>
+    <string name="adhan_sound_short">Short alert sound</string>
+    <string name="adhan_makkah_full">Makkah Adhan - Full</string>
+    <string name="adhan_status_off">Off</string>
     <string name="prayer_settings_location">Location</string>
     <string name="prayer_settings_auto_location">Auto-detect Location</string>
     <string name="prayer_settings_manual_location">Search Location Manually</string>
@@ -317,4 +333,20 @@
 
     <string name="reader_style_svg_warsh">Warsh SVG</string>
     <string name="reader_style_svg_warsh_desc">Interactive vector mushaf pages</string>
+
+    <!-- Notification channels -->
+    <string name="notif_channel_silent">Silent</string>
+    <string name="notif_channel_device">Device sound</string>
+    <string name="notif_channel_pre">Pre-adhan alert</string>
+
+    <!-- Notification body -->
+    <string name="notif_adhan_body">It’s time for prayer</string>
+    <string name="notif_pre_alert_body">%1$d minutes until %2$s</string>
+
+    <!-- Sound selection -->
+    <string name="adhan_alert_before_minutes">%1$d minutes before</string>
+
+    <!-- Dialog buttons -->
+    <string name="dialog_confirm">OK</string>
+    <string name="dialog_cancel">Cancel</string>
 </resources>
