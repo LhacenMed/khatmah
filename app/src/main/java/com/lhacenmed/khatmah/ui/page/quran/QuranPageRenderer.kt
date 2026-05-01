@@ -72,7 +72,7 @@ internal fun buildAyaRunAnnotated(
         ayas.forEachIndexed { i, aya ->
             val start       = length
             val highlighted = selectedAya?.first == aya.suraNum &&
-                    selectedAya?.second == aya.ayaNum
+                    selectedAya.second == aya.ayaNum
             val bgAlpha     = if (highlighted) 0.12f else 0f
 
             withStyle(SpanStyle(background = primary.copy(alpha = bgAlpha))) {

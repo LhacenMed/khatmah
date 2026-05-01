@@ -12,6 +12,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -39,6 +42,44 @@ fun DhikrFontSize.next() = when (this) {
     DhikrFontSize.LARGE  -> DhikrFontSize.SMALL
 }
 
+// ── Aya number annotation ─────────────────────────────────────────────────────
+
+/**
+ * Regex matching aya number tokens embedded in Quranic text:
+ *  • Circled Unicode digits  ①–⑳  (U+2460–U+2473)
+ *  • ASCII digit sequences   123
+ *  • Arabic-Indic sequences  ٢٥٣
+ */
+private val ayaNumberRegex = Regex("[\u2460-\u2473]|[0-9٠-٩]+")
+
+/**
+ * Builds an [AnnotatedString] where aya number tokens are tinted with [numberColor]
+ * and all other characters use [bodyColor]. Processes the string in a single pass.
+ */
+private fun quranAnnotated(
+    text:        String,
+    bodyColor:   Color,
+    numberColor: Color,
+) = buildAnnotatedString {
+    var cursor = 0
+    ayaNumberRegex.findAll(text).forEach { match ->
+        if (cursor < match.range.first) {
+            pushStyle(SpanStyle(color = bodyColor))
+            append(text.substring(cursor, match.range.first))
+            pop()
+        }
+        pushStyle(SpanStyle(color = numberColor, fontSize = 25.sp))
+        append(match.value)
+        pop()
+        cursor = match.range.last + 1
+    }
+    if (cursor < text.length) {
+        pushStyle(SpanStyle(color = bodyColor))
+        append(text.substring(cursor))
+        pop()
+    }
+}
+
 // ── Dhikr body ────────────────────────────────────────────────────────────────
 
 /**
@@ -46,8 +87,9 @@ fun DhikrFontSize.next() = when (this) {
  *
  * Paragraph rendering by type:
  *  [DhikrParagraph.Body]  — standard body text, right-aligned.
- *  [DhikrParagraph.Quran] — Quranic verse rendered in [WarshFamily], slightly
- *                           larger, preserving in-text glyph markers (①②… etc.) as Unicode.
+ *  [DhikrParagraph.Quran] — Quranic verse rendered in [WarshFamily]; aya numbers
+ *                           are tinted with a muted primary color to visually
+ *                           separate them from the verse text.
  *  [DhikrParagraph.Note]  — small muted footnote in primary tint.
  *
  * Line heights are proportional to font size to keep Arabic diacritics legible
@@ -58,6 +100,9 @@ fun DhikrBody(dhikr: Dhikr, fontSize: DhikrFontSize) {
     val bodySp  = (24f * fontSize.bodyScale).sp
     val quranSp = (27f * fontSize.quranScale).sp
     val noteSp  = (16f * fontSize.bodyScale).sp
+
+    val quranBodyColor  = MaterialTheme.colorScheme.onBackground
+    val ayaNumberColor  = MaterialTheme.colorScheme.primary
 
     Column(
         modifier = Modifier
@@ -78,12 +123,15 @@ fun DhikrBody(dhikr: Dhikr, fontSize: DhikrFontSize) {
                     fontWeight = FontWeight.Normal,
                 )
                 is DhikrParagraph.Quran -> Text(
-                    text       = paragraph.text,
+                    text       = quranAnnotated(
+                        text        = paragraph.text,
+                        bodyColor   = quranBodyColor,
+                        numberColor = ayaNumberColor,
+                    ),
                     fontFamily = WarshFamily,
                     fontSize   = quranSp,
                     lineHeight = (quranSp.value * 2.0f).sp,
                     textAlign  = TextAlign.Start,
-                    color      = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Normal,
                 )
                 is DhikrParagraph.Note -> Text(
