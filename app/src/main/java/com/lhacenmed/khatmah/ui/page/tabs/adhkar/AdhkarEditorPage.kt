@@ -30,12 +30,9 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -70,72 +67,23 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.data.adhkar.AdhkarCategory
 import com.lhacenmed.khatmah.data.adhkar.BuiltInDefaults
 import com.lhacenmed.khatmah.data.adhkar.Dhikr
-import com.lhacenmed.khatmah.data.adhkar.DhikrParagraph
 import com.lhacenmed.khatmah.data.adhkar.IconSource
 import com.lhacenmed.khatmah.ui.component.AdhkarCard
 import com.lhacenmed.khatmah.ui.component.ColorPickerDialog
 import com.lhacenmed.khatmah.ui.component.LargeTopAppBar
 import com.lhacenmed.khatmah.ui.nav.LocalNavController
+import com.lhacenmed.khatmah.ui.page.tabs.adhkar.component.DhikrDraftCard
+import com.lhacenmed.khatmah.ui.page.tabs.adhkar.component.DhikrDraftState
+import com.lhacenmed.khatmah.ui.page.tabs.adhkar.component.SectionLabel
 import java.util.UUID
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-
-// ── Draft models (composition-scoped, not persisted) ─────────────────────────
-
-private enum class ParagraphDraftType(val labelRes: Int) {
-    BODY(R.string.adhkar_paragraph_body),
-    QURAN(R.string.adhkar_paragraph_quran),
-    NOTE(R.string.adhkar_paragraph_note),
-}
-
-private class ParagraphDraftState {
-    var type by mutableStateOf(ParagraphDraftType.BODY)
-    var text by mutableStateOf("")
-    val key = UUID.randomUUID().toString()
-
-    fun toParagraph(): DhikrParagraph? =
-        if (text.isBlank()) null else when (type) {
-            ParagraphDraftType.BODY  -> DhikrParagraph.Body(text)
-            ParagraphDraftType.QURAN -> DhikrParagraph.Quran(text)
-            ParagraphDraftType.NOTE  -> DhikrParagraph.Note(text)
-        }
-}
-
-private class DhikrDraftState {
-    val key = UUID.randomUUID().toString()
-    var repetitions by mutableIntStateOf(1)
-    val paragraphs = mutableStateListOf(ParagraphDraftState())
-
-    val isValid: Boolean get() = paragraphs.any { it.text.isNotBlank() }
-
-    fun toDhikr(): Dhikr = Dhikr(
-        paragraphs  = paragraphs.mapNotNull { it.toParagraph() },
-        repetitions = repetitions,
-    )
-
-    companion object {
-        /** Builds a draft pre-filled from an existing [Dhikr]. */
-        fun from(dhikr: Dhikr): DhikrDraftState = DhikrDraftState().apply {
-            repetitions = dhikr.repetitions
-            paragraphs.clear()
-            paragraphs.addAll(dhikr.paragraphs.map { para ->
-                ParagraphDraftState().apply {
-                    when (para) {
-                        is DhikrParagraph.Body  -> { type = ParagraphDraftType.BODY;  text = para.text }
-                        is DhikrParagraph.Quran -> { type = ParagraphDraftType.QURAN; text = para.text }
-                        is DhikrParagraph.Note  -> { type = ParagraphDraftType.NOTE;  text = para.text }
-                    }
-                }
-            })
-        }
-    }
-}
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -206,11 +154,11 @@ fun AdhkarEditorPage(categoryId: String?) {
         AdhkarEditorContent(
             categoryId      = categoryId,
             isEditMode      = isEditMode,
-            initialTitle    = category?.title   ?: "",
-            initialColor    = category?.color   ?: Color(0xFF1565C0),
-            initialSpan     = category?.span    ?: 1,
+            initialTitle    = category?.title      ?: "",
+            initialColor    = category?.color      ?: Color(0xFF1565C0),
+            initialSpan     = category?.span       ?: 1,
             initialIconSrc  = category?.iconSource ?: IconSource.None,
-            initialDhikrs   = loadedDhikrs      ?: emptyList(),
+            initialDhikrs   = loadedDhikrs         ?: emptyList(),
             builtInDefaults = builtInDefaults,
             vm              = vm,
         )
@@ -283,10 +231,10 @@ private fun AdhkarEditorContent(
         derivedStateOf {
             if (builtInDefaults == null) false
             else {
-                title != builtInDefaults.title          ||
-                        cardColor != builtInDefaults.color      ||
-                        span != builtInDefaults.span            ||
-                        iconLocalPath != null                   ||  // any custom image = icon changed
+                title != builtInDefaults.title     ||
+                        cardColor != builtInDefaults.color ||
+                        span != builtInDefaults.span       ||
+                        iconLocalPath != null              ||  // any custom image = icon changed
                         dhikrList.map { it.toDhikr() } != builtInDefaults.dhikrList
             }
         }
@@ -386,7 +334,6 @@ private fun AdhkarEditorContent(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-
             // ── Live preview ──────────────────────────────────────────────────
             SectionLabel(stringResource(R.string.adhkar_preview))
             AdhkarCard(
@@ -527,131 +474,4 @@ private fun AdhkarEditorContent(
             Spacer(Modifier.height(16.dp))
         }
     }
-}
-
-// ── Dhikr draft card ──────────────────────────────────────────────────────────
-
-@Composable
-private fun DhikrDraftCard(
-    index: Int,
-    draft: DhikrDraftState,
-    canDelete: Boolean,
-    onDelete: () -> Unit,
-) {
-    Card(
-        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier            = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text     = stringResource(R.string.adhkar_dhikr_n, index),
-                    style    = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.weight(1f),
-                )
-                AnimatedVisibility(visible = canDelete) {
-                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Outlined.Close, null, Modifier.size(18.dp))
-                    }
-                }
-            }
-
-            draft.paragraphs.forEachIndexed { pIdx, para ->
-                ParagraphDraftRow(
-                    draft     = para,
-                    canDelete = draft.paragraphs.size > 1,
-                    onDelete  = { draft.paragraphs.removeAt(pIdx) },
-                )
-            }
-
-            TextButton(
-                onClick  = { draft.paragraphs.add(ParagraphDraftState()) },
-                modifier = Modifier.align(Alignment.Start),
-            ) {
-                Icon(Icons.Outlined.Add, null, Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.adhkar_add_paragraph), style = MaterialTheme.typography.labelMedium)
-            }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-            Row(
-                verticalAlignment     = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text     = stringResource(R.string.adhkar_repetitions, draft.repetitions),
-                    style    = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                FilledTonalIconButton(
-                    onClick  = { if (draft.repetitions > 1) draft.repetitions-- },
-                    modifier = Modifier.size(32.dp),
-                ) { Text("−", style = MaterialTheme.typography.titleMedium) }
-                FilledTonalIconButton(
-                    onClick  = { draft.repetitions++ },
-                    modifier = Modifier.size(32.dp),
-                ) { Text("+", style = MaterialTheme.typography.titleMedium) }
-            }
-        }
-    }
-}
-
-// ── Paragraph row ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun ParagraphDraftRow(
-    draft: ParagraphDraftState,
-    canDelete: Boolean,
-    onDelete: () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ParagraphDraftType.entries.forEach { type ->
-                FilterChip(
-                    selected = draft.type == type,
-                    onClick  = { draft.type = type },
-                    label    = { Text(stringResource(type.labelRes), style = MaterialTheme.typography.labelSmall) },
-                )
-            }
-            if (canDelete) {
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Outlined.Close, null, Modifier.size(16.dp))
-                }
-            }
-        }
-        OutlinedTextField(
-            value         = draft.text,
-            onValueChange = { draft.text = it },
-            modifier      = Modifier.fillMaxWidth(),
-            minLines      = 3,
-            maxLines      = 8,
-            textStyle     = MaterialTheme.typography.bodyLarge,
-            placeholder   = {
-                Text(
-                    text  = when (draft.type) {
-                        ParagraphDraftType.QURAN -> stringResource(R.string.adhkar_paragraph_quran_hint)
-                        ParagraphDraftType.NOTE  -> stringResource(R.string.adhkar_paragraph_note_hint)
-                        else                     -> stringResource(R.string.adhkar_paragraph_body_hint)
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-        )
-    }
-}
-
-// ── Section label ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text  = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-    )
 }
