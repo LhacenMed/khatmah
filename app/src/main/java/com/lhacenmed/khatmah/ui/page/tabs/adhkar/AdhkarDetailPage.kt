@@ -68,6 +68,12 @@ import kotlinx.coroutines.launch
  *  • [state.version] is included in the dhikr [LaunchedEffect] key so that after
  *    an edit or reset in [AdhkarEditorPage], the detail page automatically
  *    re-fetches the updated dhikr list when the user returns.
+ *  • [isBusy] is the single source of truth for "a tap is being processed":
+ *    it is set to true the moment a finalising tap is accepted (last rep or
+ *    single-rep advance) and cleared only when [LaunchedEffect(page)] fires on
+ *    the new page, guaranteeing zero spurious counts regardless of how fast the
+ *    user taps. [pagerState.isScrollInProgress] additionally blocks taps that
+ *    arrive during a user-initiated swipe.
  */
 @Composable
 fun AdhkarDetailPage(categoryId: String) {
@@ -124,15 +130,27 @@ fun AdhkarDetailPage(categoryId: String) {
     // allDone only for single-rep and completion page — multi-rep auto-navigates on last tap.
     val allDone = isCompletionPage || dhikr == null || dhikr.repetitions <= 1
 
-    // On every page entry: snap arc to 0 (no animated carry-over from prior page)
-    // and reset that page's counter so revisiting always starts fresh.
     val arcAnim = remember { Animatable(0f) }
-    // Guards LaunchedEffect(page) from snapping arc to 0 mid last-rep animation.
-    var isAnimatingLastRep by remember { mutableStateOf(false) }
-    // Snap arc instantly to this page's existing progress when navigating.
+
+    /**
+     * True while a finalising tap is in flight — from the moment the last rep (or
+     * single-rep advance) is accepted until [LaunchedEffect(page)] confirms the
+     * new page has settled.
+     *
+     * This is the single lock that prevents rapid taps from leaking counts across
+     * page boundaries. It replaces the old [isAnimatingLastRep] flag and is
+     * complemented by [pagerState.isScrollInProgress] for user-swipe protection.
+     *
+     * The arc is snapped to 0 before [goNext] is called (in the last-rep branch),
+     * so [LaunchedEffect(page)] can always unconditionally snap without a guard.
+     */
+    var isBusy by remember { mutableStateOf(false) }
+
+    // New page settled → release the lock and reset arc/counter.
     LaunchedEffect(page) {
+        isBusy = false
         vm.resetCount()
-        if (!isAnimatingLastRep) arcAnim.snapTo(0f)
+        arcAnim.snapTo(0f)
     }
 
     // Progress bar: 0 at the first dhikr, grows by 1/N per completed dhikr,
@@ -145,27 +163,52 @@ fun AdhkarDetailPage(categoryId: String) {
 
     // ── Actions ───────────────────────────────────────────────────────────────
 
+    /** Advances to the next page (or pops back from the completion page). */
     fun goNext() = scope.launch {
         if (page < totalPages - 1) pagerState.animateScrollToPage(page + 1)
         else nav.popBackStack()
+        // isBusy remains true until LaunchedEffect(page) fires on the new page.
     }
 
+    /**
+     * Central tap handler — the single entry point for all count/navigation logic.
+     *
+     * Guards:
+     *  1. [isCompletionPage] — completion slide has no tap action.
+     *  2. [isBusy] — a finalising tap is already in flight.
+     *  3. [pagerState.isScrollInProgress] — the pager is mid-swipe.
+     *
+     * These three guards together make it impossible for a rapid burst of taps to
+     * produce more counts than intended or to navigate more than one page at a time.
+     */
     fun handleTap() {
-        if (isCompletionPage) return
+        if (isCompletionPage || isBusy || pagerState.isScrollInProgress) return
+
         val reps = dhikr?.repetitions ?: 1
-        if (reps <= 1) { goNext(); return }
+
+        // Single-rep dhikr: one tap advances immediately.
+        if (reps <= 1) {
+            isBusy = true
+            goNext()
+            return
+        }
+
         val newCount = repCount + 1
         val isLast   = newCount >= reps
         vm.recordRead()
+
         if (isLast) {
-            isAnimatingLastRep = true
+            // Last rep: lock immediately so no further taps are accepted,
+            // animate arc to full, snap back to 0, then advance.
+            // Arc is at 0 before goNext() so LaunchedEffect(page) needs no guard.
+            isBusy = true
             scope.launch {
                 arcAnim.animateTo(1f, tween(400, easing = FastOutSlowInEasing))
                 arcAnim.snapTo(0f)
-                isAnimatingLastRep = false
+                goNext()
             }
-            goNext()
         } else {
+            // Intermediate rep: animate arc fraction; no page change, no lock.
             scope.launch {
                 arcAnim.animateTo(
                     targetValue   = newCount.toFloat() / reps,
