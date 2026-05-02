@@ -876,7 +876,7 @@ object AdhkarData {
             paragraphs = listOf(
                 DhikrParagraph.Body("اللَّهُ أَكْبَرُ."),
             ),
-            repetitions = 34,
+            repetitions = 33,
         ),
         // 11. الإخلاص والمعوذتان — نفث على الجسد
         Dhikr(

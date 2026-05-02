@@ -285,8 +285,8 @@
     <string name="rep_three">Three times</string>
     <string name="rep_seven">Seven times</string>
     <string name="rep_ten">Ten times</string>
-    <string name="rep_thirty_three">Thirty-three times</string>
-    <string name="rep_hundred">One hundred times</string>
+    <string name="rep_thirty_three">33 times</string>
+    <string name="rep_hundred">100 times</string>
     <!-- Fallback: %d is replaced with the numeric count -->
     <string name="rep_n_times">%d times</string>
 
@@ -354,4 +354,8 @@
 
     <string name="notif_adhan_title">%1$s Adhan %2$s</string>
     <string name="notif_adhan_body">It\'s now time for %1$s Adhan</string>
+
+    <!-- %d = numeric count; mid = 11-99, high = 101+ (Arabic grammar ranges) -->
+    <string name="rep_n_times_mid">%d times</string>
+    <string name="rep_n_times_high">%d times</string>
 </resources>

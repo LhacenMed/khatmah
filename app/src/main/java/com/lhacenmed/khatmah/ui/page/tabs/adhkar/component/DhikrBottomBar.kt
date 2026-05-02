@@ -43,14 +43,16 @@ import com.lhacenmed.khatmah.data.adhkar.Dhikr
  */
 @Composable
 fun repLabel(count: Int): String = when (count) {
-    1    -> stringResource(R.string.rep_once)
-    2    -> stringResource(R.string.rep_twice)
-    3    -> stringResource(R.string.rep_three)
-    7    -> stringResource(R.string.rep_seven)
-    10   -> stringResource(R.string.rep_ten)
-    33   -> stringResource(R.string.rep_thirty_three)
-    100  -> stringResource(R.string.rep_hundred)
-    else -> stringResource(R.string.rep_n_times, count)
+    1                     -> stringResource(R.string.rep_once)
+    2                     -> stringResource(R.string.rep_twice)
+    3                     -> stringResource(R.string.rep_three)
+    7                     -> stringResource(R.string.rep_seven)
+    10                    -> stringResource(R.string.rep_ten)
+    33                    -> stringResource(R.string.rep_thirty_three)
+    100                   -> stringResource(R.string.rep_hundred)
+    in 11..99             -> stringResource(R.string.rep_n_times_mid,  count) // singular accusative (AR: مرةً)
+    in 101..Int.MAX_VALUE -> stringResource(R.string.rep_n_times_high, count) // singular genitive  (AR: مرةٍ)
+    else                  -> stringResource(R.string.rep_n_times,      count) // 4–10 plural        (AR: مرات)
 }
 
 // ── Bottom bar ────────────────────────────────────────────────────────────────

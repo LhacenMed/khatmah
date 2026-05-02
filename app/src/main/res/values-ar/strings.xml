@@ -282,7 +282,7 @@
     <string name="rep_three">ثلاث مرات</string>
     <string name="rep_seven">سبع مرات</string>
     <string name="rep_ten">عشر مرات</string>
-    <string name="rep_thirty_three">ثلاثًا وثلاثين مرة</string>
+    <string name="rep_thirty_three">33 مرة</string>
     <string name="rep_hundred">مئة مرة</string>
     <!-- Fallback: %d is replaced with the numeric count -->
     <string name="rep_n_times">%d مرات</string>
@@ -351,4 +351,9 @@
 
     <string name="notif_adhan_title">أذان %1$s %2$s</string>
     <string name="notif_adhan_body">حان الآن موعد أذان %1$s</string>
+
+    <!-- 11–99: مفردة منصوبة -->
+    <string name="rep_n_times_mid">%d مرةً</string>
+    <!-- 101+: مفردة مجرورة -->
+    <string name="rep_n_times_high">%d مرةٍ</string>
 </resources>
