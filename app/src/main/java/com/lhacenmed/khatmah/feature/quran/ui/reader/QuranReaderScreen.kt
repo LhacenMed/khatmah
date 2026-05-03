@@ -543,6 +543,7 @@ private fun QuranXmlPager(
                         pageData       = pageData,
                         selectedAya    = selectedAya,
                         highlightColor = primary,
+                        markerColor    = primary,
                         onBaresTap     = { barsVisible = !barsVisible },
                         onZoomChanged  = { isZoomed = it },
                         onAyaPress     = { surahNum, ayahNum ->

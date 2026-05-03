@@ -7,24 +7,38 @@ import java.io.InputStream
 import androidx.core.graphics.toColorInt
 
 data class ParsedVector(
-    val viewportWidth: Float,
+    val viewportWidth:  Float,
     val viewportHeight: Float,
-    val paths: List<VectorPath>
+    val paths:          List<VectorPath>,
 )
 
+/**
+ * One path element from an Android <vector> drawable.
+ *
+ * [isMarker] — true when [fillColor] equals [MARKER_SENTINEL], meaning this path
+ * is an aya-number marker whose color should be overridden at render time.
+ * The sentinel (#FF03A9F4) is assigned by the SVG pre-processing script and
+ * survives vd-tool conversion unchanged.
+ */
 data class VectorPath(
-    val pathData: String,
-    val fillColor: Int,   // ARGB int; defaults to black
-    val fillAlpha: Float  // 0f–1f
+    val pathData:  String,
+    val fillColor: Int,
+    val fillAlpha: Float,
+    val isMarker:  Boolean = false,
 )
 
 object VectorXmlParser {
 
+    /**
+     * Sentinel ARGB assigned to aya-marker paths by the SVG conversion script.
+     * Any path with this exact fill color is treated as a marker at render time
+     * and painted with the app's dynamic marker color instead.
+     */
+    internal const val MARKER_SENTINEL = 0xFF03A9F4.toInt()
+
     fun parse(stream: InputStream): ParsedVector {
-        val factory = XmlPullParserFactory.newInstance().apply {
-            isNamespaceAware = true
-        }
-        val parser = factory.newPullParser()
+        val factory = XmlPullParserFactory.newInstance().apply { isNamespaceAware = true }
+        val parser  = factory.newPullParser()
         parser.setInput(stream, null)
 
         var vpWidth  = 0f
@@ -44,7 +58,12 @@ object VectorXmlParser {
                         val fill  = parser.attrString("android:fillColor")
                             ?.let { parseColor(it) } ?: Color.BLACK
                         val alpha = parser.attrFloat("android:fillAlpha") ?: 1f
-                        paths += VectorPath(data, fill, alpha)
+                        paths += VectorPath(
+                            pathData  = data,
+                            fillColor = fill,
+                            fillAlpha = alpha,
+                            isMarker  = fill == MARKER_SENTINEL,
+                        )
                     }
                 }
             }

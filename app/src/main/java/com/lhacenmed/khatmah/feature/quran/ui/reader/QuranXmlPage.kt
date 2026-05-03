@@ -119,15 +119,25 @@ private fun inverseZoom(point: Offset, scale: Float, pan: Offset, size: IntSize)
 
 // ── Per-path paint cache ──────────────────────────────────────────────────────
 
+/**
+ * Builds one [android.graphics.Paint] per path.
+ * Marker paths (sentinel color) are painted with [markerColor] instead of their
+ * stored fill, allowing dynamic theming from MaterialTheme or user preferences.
+ * Content paths respect dark-mode inversion as before.
+ */
 private fun buildPaints(
-    paths:  List<VectorPath>,
-    isDark: Boolean,
+    paths:       List<VectorPath>,
+    isDark:      Boolean,
+    markerColor: Int,
 ): List<android.graphics.Paint> = paths.map { vp ->
     android.graphics.Paint().apply {
         isAntiAlias = true
         style       = android.graphics.Paint.Style.FILL
-        color = if (isDark) (vp.fillColor xor 0x00FFFFFF) or (vp.fillColor and 0xFF000000.toInt())
-        else vp.fillColor
+        color = when {
+            vp.isMarker -> markerColor
+            isDark      -> (vp.fillColor xor 0x00FFFFFF) or (vp.fillColor and 0xFF000000.toInt())
+            else        -> vp.fillColor
+        }
         alpha = (vp.fillAlpha * 255).toInt().coerceIn(0, 255)
     }
 }
@@ -154,6 +164,7 @@ internal fun QuranXmlPage(
     pageData:       WarshPageData,
     selectedAya:    Pair<Int, Int>?,
     highlightColor: Color,
+    markerColor:    Color,
     onAyaPress:     (surahNum: Int, ayahNum: Int) -> Unit,
     onBaresTap:     () -> Unit,
     onZoomChanged:  (Boolean) -> Unit = {},
@@ -185,9 +196,10 @@ internal fun QuranXmlPage(
         }
     }
 
-    // Per-path paints — rebuilt when page or dark mode changes.
-    val paints: List<android.graphics.Paint> = remember(pageData.pageNum, isDark) {
-        buildPaints(pageData.vector.paths, isDark)
+    // Per-path paints — rebuilt when page, dark mode, or marker color changes.
+    val markerArgb = markerColor.toArgb()
+    val paints: List<android.graphics.Paint> = remember(pageData.pageNum, isDark, markerArgb) {
+        buildPaints(pageData.vector.paths, isDark, markerArgb)
     }
 
     // Scale matrix: maps 0–235 viewport units → composable pixels.
