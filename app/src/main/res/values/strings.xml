@@ -358,4 +358,10 @@
     <!-- %d = numeric count; mid = 11-99, high = 101+ (Arabic grammar ranges) -->
     <string name="rep_n_times_mid">%d times</string>
     <string name="rep_n_times_high">%d times</string>
+
+    <!-- Qibla screen -->
+    <string name="qibla_calibrate_desc">Please place the device on a flat horizontal surface.</string>
+    <string name="qibla_rotate_desc">Rotate the device until the arrow turns green</string>
+    <string name="qibla_from_north">Qibla direction from North</string>
+    <string name="qibla_no_location">Location unavailable — please set your location first</string>
 </resources>

@@ -17,6 +17,9 @@ object Route {
     const val INDEX   = "index"
     const val MORE    = "more"
 
+    // ── Qibla ─────────────────────────────────────────────────────────────────────
+    const val QIBLA = "qibla"
+
     // ── General settings sub-pages ────────────────────────────────────────────
     const val THEME_SETTINGS = "theme_settings"
     const val DARK_THEME     = "dark_theme"

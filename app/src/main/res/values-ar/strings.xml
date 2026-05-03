@@ -356,4 +356,10 @@
     <string name="rep_n_times_mid">%d مرةً</string>
     <!-- 101+: مفردة مجرورة -->
     <string name="rep_n_times_high">%d مرةٍ</string>
+
+    <!-- Qibla screen -->
+    <string name="qibla_calibrate_desc">يرجى وضع الجهاز على سطح أفقي.</string>
+    <string name="qibla_rotate_desc">قم بتدوير الجهاز حتى يتغير السهم للأخضر</string>
+    <string name="qibla_from_north">اتجاه القبلة من الشمال</string>
+    <string name="qibla_no_location">الموقع غير متاح، يرجى تعيين الموقعك أولًا</string>
 </resources>

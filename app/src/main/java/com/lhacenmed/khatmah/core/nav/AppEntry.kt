@@ -61,6 +61,7 @@ import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.DstContent
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.HigherLatContent
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.JuristicContent
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.ManualCorrectionsContent
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.qibla.QiblaPage
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.AdhanSoundSelectionPage
 import com.lhacenmed.khatmah.feature.quran.ui.IndexTab
 import com.lhacenmed.khatmah.feature.quran.ui.debug.DebugWarshPage
@@ -183,6 +184,9 @@ fun AppEntry() {
             ) { QuranReaderScreen() }
             animatedComposable(Route.QURAN_SEARCH) { QuranSearchPage() }
             animatedComposable(Route.DEBUG_WARSH) { DebugWarshPage() }
+
+            // ── Qibla ─────────────────────────────────────────────────────────────────────
+            animatedComposable(Route.QIBLA) { QiblaPage() }
 
             // ── Adhkar editor (create + edit) ─────────────────────────────────
             // categoryId empty → create mode; non-empty → edit mode.
@@ -312,9 +316,8 @@ private fun MainScreen(
                             }
                         }
                     } else if (isPrayersTab) {
-                        // Qibla button (TODO: wire to Qibla screen)
                         IconButton(
-                            onClick     = { /* TODO: Qibla screen */ },
+                            onClick     = { nav.navigate(Route.QIBLA) },
                             tooltipText = stringResource(R.string.prayers_qibla),
                         ) {
                             Icon(
