@@ -1,6 +1,7 @@
 package com.lhacenmed.khatmah.feature.prayer.ui.settings.qibla
 
 import android.content.Context
+import android.graphics.Typeface
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -20,9 +21,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -33,8 +39,8 @@ import androidx.compose.ui.unit.sp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
-//import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import kotlin.math.*
+import androidx.core.graphics.withRotation
 
 // Kaaba coordinates — Mecca, Saudi Arabia.
 private const val MECCA_LAT = 21.4225
@@ -42,6 +48,13 @@ private const val MECCA_LNG = 39.8262
 
 // Alignment threshold in degrees.
 private const val ALIGN_THRESHOLD = 5f
+
+private const val TICK_LEN_RATIO = 0.07f
+
+// Semantic accent colors (independent of dynamic theme).
+private val QiblaGreen = Color(0xFF4CAF50)
+private val QiblaAmber = Color(0xFFFFB300)
+private val NorthRed   = Color(0xFFE53935)
 
 // ─── Bearing math ─────────────────────────────────────────────────────────────
 
@@ -53,6 +66,21 @@ private fun calcQiblaBearing(lat: Double, lng: Double): Float {
     val y  = sin(Δλ) * cos(φ2)
     val x  = cos(φ1) * sin(φ2) - sin(φ1) * cos(φ2) * cos(Δλ)
     return ((Math.toDegrees(atan2(y, x)) + 360) % 360).toFloat()
+}
+
+/** Maps a heading in degrees to its nearest cardinal / intercardinal abbreviation. */
+private fun headingToCardinal(h: Float): String {
+    val dirs = arrayOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+    return dirs[(((h % 360f) + 360f) % 360f / 45f + 0.5f).toInt() % 8]
+}
+
+/** Converts a decimal-degree value to a DMS string (sign ignored; label handled separately). */
+private fun Double.toDms(): String {
+    val abs = abs(this)
+    val d   = abs.toInt()
+    val m   = ((abs - d) * 60).toInt()
+    val s   = (((abs - d) * 60 - m) * 60).toInt()
+    return "$d°$m'$s\""
 }
 
 // ─── Entry composable ─────────────────────────────────────────────────────────
@@ -71,12 +99,17 @@ fun QiblaPage() {
     // Cumulative azimuth avoids the 0°/360° wrap-around discontinuity in animation.
     var cumulativeAzimuth by remember { mutableFloatStateOf(0f) }
     var hasReading        by remember { mutableStateOf(false) }
+    var isTilted by remember { mutableStateOf(false) }
 
     val sensorManager = remember {
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     }
     val rotationSensor = remember {
         sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+    }
+    val gravitySensor = remember {
+        sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)
+            ?: sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     }
 
     DisposableEffect(Unit) {
@@ -97,8 +130,24 @@ fun QiblaPage() {
             }
         }
 
+        val tiltListener = object : SensorEventListener {
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+            override fun onSensorChanged(event: SensorEvent) {
+                val x = event.values[0]; val y = event.values[1]; val z = event.values[2]
+                val mag = sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+                if (mag == 0f) return
+                val tiltDeg = Math.toDegrees(acos((abs(z) / mag).toDouble())).toFloat()
+                isTilted = tiltDeg > 50f
+            }
+        }
+
+        sensorManager.registerListener(tiltListener, gravitySensor, SensorManager.SENSOR_DELAY_UI)
         sensorManager.registerListener(listener, rotationSensor, SensorManager.SENSOR_DELAY_UI)
-        onDispose { sensorManager.unregisterListener(listener) }
+
+        onDispose {
+            sensorManager.unregisterListener(listener)
+            sensorManager.unregisterListener(tiltListener)
+        }
     }
 
     Scaffold(
@@ -127,7 +176,7 @@ fun QiblaPage() {
         when {
             location == null -> NoLocationScreen(padding)
             !hasReading      -> CalibrationScreen(padding)
-            else             -> CompassScreen(cumulativeAzimuth, qiblaBearing, padding)
+            else             -> CompassScreen(cumulativeAzimuth, qiblaBearing, location, isTilted, padding)
         }
     }
 }
@@ -185,6 +234,8 @@ private fun CalibrationScreen(padding: PaddingValues) {
 private fun CompassScreen(
     cumulativeAzimuth: Float,
     qiblaBearing:      Float,
+    location:          OnboardingPrefs.LocationData,
+    isTilted:          Boolean,
     padding:           PaddingValues,
 ) {
     val animAzimuth by animateFloatAsState(
@@ -205,45 +256,103 @@ private fun CompassScreen(
     val isAligned   = abs(diff) < ALIGN_THRESHOLD
 
     val qiblaColor by animateColorAsState(
-        targetValue = if (isAligned) Color(0xFF4CAF50) else Color(0xFFFFC107),
+        targetValue = if (isAligned) QiblaGreen else QiblaAmber,
         label       = "qiblaColor",
     )
 
     Column(
         modifier            = Modifier
             .fillMaxSize()
-            .padding(padding)
-            .padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.Center,
+            .padding(padding),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween,
     ) {
+        // ── Live heading label ────────────────────────────────────────────────
         Text(
-            text      = stringResource(R.string.qibla_rotate_desc),
-            style     = MaterialTheme.typography.bodyMedium,
-            color     = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
+            text  = "${headingToCardinal(heading)} ${heading.toInt()}°",
+            style = MaterialTheme.typography.displayMedium.copy(
+                fontWeight    = FontWeight.Light,
+                letterSpacing = 1.sp,
+            ),
+            modifier = Modifier.padding(top = 8.dp),
         )
 
-        Spacer(Modifier.height(36.dp))
+        // ── Compass + tilt warning overlay ────────────────────────────────────
+        Box(contentAlignment = Alignment.Center) {
+            QiblaCompass(
+                dialRotation = -heading,
+                needleAngle  = needleAngle,
+                qiblaColor   = qiblaColor,
+            )
+            if (isTilted) {
+                Text(
+                    text     = stringResource(R.string.qibla_calibrate_desc),
+                    style    = MaterialTheme.typography.bodyMedium,
+                    color    = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .background(
+                            color  = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+                            shape  = MaterialTheme.shapes.medium,
+                        )
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                )
+            }
+        }
 
-        QiblaCompass(
-            dialRotation = -heading,
-            needleAngle  = needleAngle,
-            qiblaColor   = qiblaColor,
+        // ── Qibla bearing + coordinates ───────────────────────────────────────
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier            = Modifier.padding(bottom = 24.dp),
+        ) {
+            Text(
+                text  = stringResource(R.string.qibla_from_north),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text  = "${qiblaBearing.toInt()}°",
+                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                color = qiblaColor,
+            )
+            Spacer(Modifier.height(28.dp))
+            CoordRow(location)
+        }
+    }
+}
+
+// ── Coordinates row ───────────────────────────────────────────────────────────
+
+@Composable
+private fun CoordRow(location: OnboardingPrefs.LocationData) {
+    Row(
+        modifier              = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+    ) {
+        CoordItem(
+            label = if (location.lat >= 0) "NL" else "SL",
+            dms   = location.lat.toDms(),
         )
+        CoordItem(
+            label = if (location.lng >= 0) "EL" else "WL",
+            dms   = location.lng.toDms(),
+        )
+    }
+}
 
-        Spacer(Modifier.height(36.dp))
-
+@Composable
+private fun CoordItem(label: String, dms: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text  = stringResource(R.string.qibla_from_north),
-            style = MaterialTheme.typography.bodyMedium,
+            text  = label,
+            style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            text  = "${qiblaBearing.toInt()}°",
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-            color = qiblaColor,
+            text  = dms,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
         )
     }
 }
@@ -256,6 +365,7 @@ private fun CompassScreen(
  * The dial rotates by [dialRotation] to keep N pointing to magnetic North.
  * The needle rotates by [needleAngle] so its tip always points toward Mecca.
  * When aligned, [qiblaColor] transitions to green.
+ * A fixed vertical line at 12 o'clock overlays the tick zone as a heading indicator.
  */
 @Composable
 private fun QiblaCompass(
@@ -263,152 +373,239 @@ private fun QiblaCompass(
     needleAngle:  Float,
     qiblaColor:   Color,
 ) {
-    val iconSize   = 28.dp
-    val iconTopPad = 14.dp   // gap from the needle Box top to the Kaaba icon's top edge
+    val context    = LocalContext.current
+    val onSurface  = MaterialTheme.colorScheme.onSurface
+    val iconSize   = 24.dp
+    val iconTopPad = 20.dp
 
     Box(
         modifier         = Modifier.size(280.dp),
         contentAlignment = Alignment.Center,
     ) {
-        // Rotating compass dial — N/S/E/W ticks turn with the device.
+        // Rotating compass dial — ticks, labels, starburst.
         CompassDial(
-            rotation = dialRotation,
-            modifier = Modifier.fillMaxSize(),
+            rotation  = dialRotation,
+            onSurface = onSurface,
+            context   = context,
+            modifier  = Modifier.fillMaxSize(),
         )
 
         // Qibla needle — rotates independently to always point at Mecca.
-        Box(
-            modifier         = Modifier
-                .fillMaxSize()
-                .graphicsLayer { rotationZ = needleAngle },
-            contentAlignment = Alignment.TopCenter,
-        ) {
-            // Kaaba icon at the needle tip.
-            Icon(
-                painter            = painterResource(R.drawable.ic_kaaba),
-                contentDescription = null,
-                tint               = qiblaColor,
-                modifier           = Modifier
-                    .padding(top = iconTopPad)
-                    .size(iconSize),
-            )
-
-            // Arrow shaft from icon bottom to pivot + short counterweight tail.
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val cx         = size.width / 2
-                val cy         = size.height / 2
-                val tipY       = (iconTopPad + iconSize).toPx()
-                val tailLength = (cy - tipY) * 0.3f
-
-                drawLine(
-                    color       = qiblaColor,
-                    start       = Offset(cx, tipY),
-                    end         = Offset(cx, cy),
-                    strokeWidth = 4.dp.toPx(),
-                )
-                drawLine(
-                    color       = Color(0xFFE53935),
-                    start       = Offset(cx, cy),
-                    end         = Offset(cx, cy + tailLength),
-                    strokeWidth = 4.dp.toPx(),
-                )
-            }
-        }
+//        Box(
+//            modifier         = Modifier
+//                .fillMaxSize()
+//                .graphicsLayer { rotationZ = needleAngle },
+//            contentAlignment = Alignment.TopCenter,
+//        ) {
+//            // Kaaba icon at the needle tip.
+//            Icon(
+//                painter            = painterResource(R.drawable.ic_kaaba),
+//                contentDescription = null,
+//                tint               = qiblaColor,
+//                modifier           = Modifier
+//                    .padding(top = iconTopPad)
+//                    .size(iconSize),
+//            )
+//
+//            // Arrow shaft from icon bottom to pivot + short counterweight tail.
+//            Canvas(modifier = Modifier.fillMaxSize()) {
+//                val cx    = size.width / 2
+//                val cy    = size.height / 2
+//                val tipY  = (iconTopPad + iconSize).toPx()
+//                val tailL = (cy - tipY) * 0.3f
+//
+//                drawLine(
+//                    color       = qiblaColor,
+//                    start       = Offset(cx, tipY),
+//                    end         = Offset(cx, cy),
+//                    strokeWidth = 3.dp.toPx(),
+//                )
+//                drawLine(
+//                    color       = NorthRed,
+//                    start       = Offset(cx, cy),
+//                    end         = Offset(cx, cy + tailL),
+//                    strokeWidth = 3.dp.toPx(),
+//                )
+//            }
+//        }
 
         // Center pivot dot.
-        Box(
+//        Box(
+//            modifier = Modifier
+//                .size(10.dp)
+//                .background(MaterialTheme.colorScheme.onSurface, CircleShape),
+//        )
+
+        // Fixed heading indicator — protrudes above the outer tick edge, bottom
+        // pinned at inner tick edge; clip=false lets the top overflow the Box.
+        Canvas(
             modifier = Modifier
-                .size(12.dp)
-                .background(MaterialTheme.colorScheme.onSurface, CircleShape),
-        )
+                .fillMaxSize()
+                .graphicsLayer { clip = false },
+        ) {
+            val r2      = minOf(size.width, size.height) / 2f
+            val tickLen = r2 * TICK_LEN_RATIO
+            drawLine(
+                color       = onSurface,
+                start       = Offset(size.width / 2f, -tickLen * 1.0f),
+                end         = Offset(size.width / 2f, tickLen),
+                strokeWidth = 3.dp.toPx(),
+                cap         = StrokeCap.Round,
+            )
+        }
     }
 }
 
 // ── Compass dial ──────────────────────────────────────────────────────────────
 
-/** Draws the rotating N/S/E/W compass ring via native Canvas for crisp, lightweight rendering. */
+/**
+ * Rotating compass dial drawn entirely via native Canvas for performance.
+ *
+ * Design:
+ *  • No border rings — transparent background, ticks float directly on the surface.
+ *  • All ticks equal height; opacity: cardinal-major 85 % (heavy), non-cardinal-major 85 % (thin), minor 18 %.
+ *  • Degree labels every 30°, rotated radially and positioned just inside the tick zone.
+ *  • Cardinal letters (N/E/S/W) upright inside; N is [NorthRed].
+ *  • Small red triangle at 0° with base outward and tip pointing inward toward center.
+ *  • 4-pointed starburst crosshair via two overlapping diamond paths + RadialGradient.
+ */
 @Composable
-private fun CompassDial(rotation: Float, modifier: Modifier = Modifier) {
+private fun CompassDial(
+    rotation:  Float,
+    onSurface: Color,
+    context:   Context,
+    modifier:  Modifier = Modifier,
+) {
+    val arrowPainter = painterResource(R.drawable.ic_triangle_arrow)
+    val cairoRegular = remember { Typeface.createFromAsset(context.assets, "fonts/cairo_regular.ttf") }
+    val cairoBold    = remember { Typeface.createFromAsset(context.assets, "fonts/cairo_bold.ttf")    }
+
     Canvas(modifier = modifier.graphicsLayer { rotationZ = rotation }) {
-        val cx = size.width / 2
+        val cx = size.width  / 2
         val cy = size.height / 2
         val r  = minOf(cx, cy)
         val nc = drawContext.canvas.nativeCanvas
 
-        // White background.
-        nc.drawCircle(cx, cy, r * 0.94f,
-            android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                color = android.graphics.Color.WHITE
-                style = android.graphics.Paint.Style.FILL
-            }
-        )
-        // Outer border.
-        nc.drawCircle(cx, cy, r * 0.94f,
-            android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                color       = android.graphics.Color.LTGRAY
-                style       = android.graphics.Paint.Style.STROKE
-                strokeWidth = 2.dp.toPx()
-            }
-        )
+        val tickLen = r * TICK_LEN_RATIO   // uniform height for all ticks
 
-        // Tick marks: major every 90°, mid every 30°, minor every 5°.
+        // ── Tick marks — equal height, opacity carries the visual hierarchy ───
         val tickPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            style = android.graphics.Paint.Style.STROKE
+            style     = android.graphics.Paint.Style.STROKE
+            strokeCap = android.graphics.Paint.Cap.ROUND
         }
-        for (i in 0 until 72) {
-            val a       = Math.toRadians(i * 5.0 - 90.0)
-            val isMajor = i % 18 == 0
-            val isMid   = i % 6 == 0
-            val oR = r * 0.93f
-            val iR = when {
-                isMajor -> r * 0.72f
-                isMid   -> r * 0.82f
-                else    -> r * 0.88f
-            }
-            tickPaint.strokeWidth = if (isMajor) 3.dp.toPx() else 1.dp.toPx()
-            tickPaint.color = if (isMajor) android.graphics.Color.DKGRAY
-            else android.graphics.Color.argb(100, 120, 120, 120)
+        // 12 major ticks; 14 minor ticks between each → 15 slots of 2° each.
+        // Cardinal majors (0°/90°/180°/270°) are heavier; non-cardinal majors match minor width.
+        val minorStep = 30.0 / 15.0
+        for (seg in 0 until 12) {
+            val majorDeg    = seg * 30.0
+            val isCardinal  = seg % 3 == 0   // 0, 3, 6, 9 → 0°, 90°, 180°, 270°
+            // Major tick
+            val aMaj = Math.toRadians(majorDeg - 90.0)
+            tickPaint.strokeWidth = if (isCardinal) 2.dp.toPx() else 1.dp.toPx()
+            tickPaint.color       = onSurface.copy(alpha = 0.85f).toArgb()
             nc.drawLine(
-                cx + cos(a).toFloat() * oR, cy + sin(a).toFloat() * oR,
-                cx + cos(a).toFloat() * iR, cy + sin(a).toFloat() * iR,
+                cx + cos(aMaj).toFloat() * r,            cy + sin(aMaj).toFloat() * r,
+                cx + cos(aMaj).toFloat() * (r - tickLen), cy + sin(aMaj).toFloat() * (r - tickLen),
                 tickPaint,
             )
+            // 14 minor ticks
+            tickPaint.strokeWidth = 1.dp.toPx()
+            tickPaint.color       = onSurface.copy(alpha = 0.18f).toArgb()
+            for (m in 1..14) {
+                val aMin = Math.toRadians(majorDeg + m * minorStep - 90.0)
+                nc.drawLine(
+                    cx + cos(aMin).toFloat() * r,            cy + sin(aMin).toFloat() * r,
+                    cx + cos(aMin).toFloat() * (r - tickLen), cy + sin(aMin).toFloat() * (r - tickLen),
+                    tickPaint,
+                )
+            }
         }
 
-        // Cardinal direction labels (N in red, rest in dark grey).
-        val labelPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        // ── Degree labels every 30° — rotated radially, just inside tick zone ─
+        val numPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             textAlign = android.graphics.Paint.Align.CENTER
-            textSize  = 18.sp.toPx()
-            typeface  = android.graphics.Typeface.DEFAULT_BOLD
+            textSize  = 13.sp.toPx()
+            typeface  = cairoRegular
         }
-        val labelR = r * 0.60f
+        // Position: extra gap below tick inner edge so labels breathe.
+        val numR = r - tickLen - numPaint.textSize * 1.1f
+        for ((i, bearing) in (0 until 360 step 30).withIndex()) {
+            val isCardinal = bearing % 90 == 0
+            numPaint.color = onSurface.copy(alpha = if (isCardinal) 1.0f else 0.60f).toArgb()
+            nc.withRotation(bearing.toFloat(), cx, cy) {
+                // Rotate canvas so this bearing is at the top, then draw text there upright.
+                drawText(
+                    "$bearing",
+                    cx,
+                    cy - numR + numPaint.textSize * 0.35f,
+                    numPaint,
+                )
+            }
+        }
+
+        // ── Cardinal letters (N/E/S/W) — upright, inside the tick zone ────────
+        val cardPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            textAlign = android.graphics.Paint.Align.CENTER
+            textSize  = 28.sp.toPx()
+            typeface  = cairoRegular
+        }
+        val cardR = r * 0.55f
         listOf("N" to 0, "E" to 90, "S" to 180, "W" to 270).forEach { (lbl, bearing) ->
-            val a = Math.toRadians(bearing - 90.0)
-            labelPaint.color = if (bearing == 0) android.graphics.Color.rgb(183, 28, 28)
-            else android.graphics.Color.DKGRAY
-            nc.drawText(
-                lbl,
-                cx + cos(a).toFloat() * labelR,
-                cy + sin(a).toFloat() * labelR + labelPaint.textSize * 0.35f,
-                labelPaint,
-            )
+            val a      = Math.toRadians(bearing - 90.0)
+            val lx     = cx + cos(a).toFloat() * cardR
+            val ly     = cy + sin(a).toFloat() * cardR
+            val baseY  = ly + cardPaint.textSize * 0.35f
+            cardPaint.color = onSurface.toArgb()
+            nc.withRotation(-rotation, lx, ly) {
+                drawText(lbl, lx, baseY, cardPaint)
+            }
         }
 
-        // Degree labels at 90°, 180°, 270° (0° is covered by "N").
-        val degPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            textAlign = android.graphics.Paint.Align.CENTER
-            textSize  = 10.sp.toPx()
-            color     = android.graphics.Color.GRAY
+        // ── North indicator — between N and 0° label, pointing North ─────────
+        val arrowR    = (numR + cardR) / 2f
+        val arrowSize = 12.dp.toPx()
+        translate(cx - arrowSize / 2, cy - arrowR - arrowSize / 2) {
+            with(arrowPainter) {
+                draw(
+                    size        = Size(arrowSize, arrowSize),
+                    colorFilter = ColorFilter.tint(NorthRed),
+                )
+            }
         }
-        val degR = r * 0.79f
-        listOf(90 to "90°", 180 to "180°", 270 to "270°").forEach { (bearing, lbl) ->
-            val a = Math.toRadians(bearing - 90.0)
-            nc.drawText(
-                lbl,
-                cx + cos(a).toFloat() * degR,
-                cy + sin(a).toFloat() * degR + degPaint.textSize * 0.35f,
-                degPaint,
-            )
+
+        // ── 4-pointed starburst crosshair ─────────────────────────────────────
+        // 8-point star polygon: 4 axis tips + 4 diagonal waist points near center.
+        // Small blobby quad-bezier center smooths the convergence point.
+        val starLen   = r * 0.3f
+        val waist     = starLen * 0.025f
+        val blobR     = waist * 7f
+        val starPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = onSurface.copy(alpha = 0.2f).toArgb()
+            style = android.graphics.Paint.Style.FILL
         }
+        val starPath = android.graphics.Path().apply {
+            moveTo(cx,           cy - starLen)
+            lineTo(cx + waist,   cy - waist)
+            lineTo(cx + starLen, cy)
+            lineTo(cx + waist,   cy + waist)
+            lineTo(cx,           cy + starLen)
+            lineTo(cx - waist,   cy + waist)
+            lineTo(cx - starLen, cy)
+            lineTo(cx - waist,   cy - waist)
+            close()
+        }
+        val blobPath = android.graphics.Path().apply {
+            moveTo(cx,          cy - blobR)
+            quadTo(cx, cy,      cx + blobR, cy)
+            quadTo(cx, cy,      cx, cy + blobR)
+            quadTo(cx, cy,      cx - blobR, cy)
+            quadTo(cx, cy,      cx, cy - blobR)
+            close()
+        }
+        val combinedPath = android.graphics.Path().apply {
+            addPath(starPath)
+            addPath(blobPath)
+        }
+        nc.drawPath(combinedPath, starPaint)
     }
 }
