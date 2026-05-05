@@ -12,6 +12,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -42,6 +44,9 @@ import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import kotlin.math.*
 import androidx.core.graphics.withRotation
 import kotlin.math.roundToInt
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.input.pointer.pointerInput
 
 // Kaaba coordinates — Mecca, Saudi Arabia.
 private const val MECCA_LAT = 21.4225
@@ -268,16 +273,6 @@ private fun CompassScreen(
         targetValue = if (isAligned) QiblaGreen else QiblaAmber,
         label       = "qiblaColor",
     )
-    val animPitch by animateFloatAsState(
-        targetValue   = devicePitch,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-        label         = "pitch",
-    )
-    val animRoll by animateFloatAsState(
-        targetValue   = deviceRoll,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-        label         = "roll",
-    )
 
     // ── Cardinal alignment haptic ─────────────────────────────────────────────
     val view        = androidx.compose.ui.platform.LocalView.current
@@ -296,12 +291,25 @@ private fun CompassScreen(
         }
     }
 
+    // ── Qibla alignment haptic ────────────────────────────────────────────────
+    val nearQibla = abs(diff) < 2f
+    var qiblaFired by remember { mutableStateOf(false) }
+
+    LaunchedEffect(nearQibla) {
+        if (nearQibla && !qiblaFired) {
+            qiblaFired = true
+            view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        } else if (!nearQibla) {
+            qiblaFired = false
+        }
+    }
+
     Column(
         modifier            = Modifier
             .fillMaxSize()
             .padding(padding),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.SpaceEvenly,
     ) {
         // ── Live heading label ────────────────────────────────────────────────
         Text(
@@ -319,8 +327,8 @@ private fun CompassScreen(
                 dialRotation = -heading,
                 needleAngle  = needleAngle,
                 qiblaColor   = qiblaColor,
-                pitchDeg     = animPitch,
-                rollDeg      = animRoll,
+                pitchDeg     = devicePitch,
+                rollDeg      = deviceRoll,
             )
             if (isTilted) {
                 Text(
@@ -420,13 +428,47 @@ private fun QiblaCompass(
     val iconSize   = 24.dp
     val iconTopPad = 20.dp
 
+    // ── Gesture tilt state ────────────────────────────────────────────────────
+    data class GestureTilt(val active: Boolean = false, val pitch: Float = 0f, val roll: Float = 0f)
+    var gesture by remember { mutableStateOf(GestureTilt()) }
+
+    val targetPitch = if (gesture.active) gesture.pitch else pitchDeg
+    val targetRoll  = if (gesture.active) gesture.roll  else rollDeg
+
+    val tiltSpec    = spring<Float>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
+    val animPitch by animateFloatAsState(targetPitch, tiltSpec, label = "pitch")
+    val animRoll  by animateFloatAsState(targetRoll,  tiltSpec, label = "roll")
+
+    val maxTilt = 20f   // max visual tilt degrees from gesture
+
     Box(
         modifier = Modifier
             .size(280.dp)
+            .pointerInput(Unit) {
+                val radius = size.width / 2f
+                fun tiltFrom(x: Float, y: Float) = GestureTilt(
+                    active = true,
+                    roll   = ((x - radius) / radius * maxTilt).coerceIn(-maxTilt, maxTilt),
+                    pitch  = -((y - radius) / radius * maxTilt).coerceIn(-maxTilt, maxTilt),
+                )
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    gesture  = tiltFrom(down.position.x, down.position.y)
+
+                    while (true) {
+                        val event  = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) break
+                        change.consume()
+                        gesture = tiltFrom(change.position.x, change.position.y)
+                    }
+                    gesture = GestureTilt()
+                }
+            }
             .graphicsLayer {
-                rotationX      = pitchDeg
-                rotationY      = rollDeg
-                cameraDistance = 5f * density   // higher = less extreme perspective
+                rotationX      = animPitch
+                rotationY      = animRoll
+                cameraDistance = 5f * density
             },
         contentAlignment = Alignment.Center,
     ) {
