@@ -41,6 +41,7 @@ import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import kotlin.math.*
 import androidx.core.graphics.withRotation
+import kotlin.math.roundToInt
 
 // Kaaba coordinates — Mecca, Saudi Arabia.
 private const val MECCA_LAT = 21.4225
@@ -100,6 +101,8 @@ fun QiblaPage() {
     var cumulativeAzimuth by remember { mutableFloatStateOf(0f) }
     var hasReading        by remember { mutableStateOf(false) }
     var isTilted by remember { mutableStateOf(false) }
+    var devicePitch by remember { mutableFloatStateOf(0f) }
+    var deviceRoll  by remember { mutableFloatStateOf(0f) }
 
     val sensorManager = remember {
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -137,7 +140,11 @@ fun QiblaPage() {
                 val mag = sqrt((x * x + y * y + z * z).toDouble()).toFloat()
                 if (mag == 0f) return
                 val tiltDeg = Math.toDegrees(acos((abs(z) / mag).toDouble())).toFloat()
-                isTilted = tiltDeg > 50f
+                isTilted    = tiltDeg > 50f
+                devicePitch = (Math.toDegrees(atan2(-y.toDouble(), z.toDouble())).toFloat()
+                    .coerceIn(-80f, 80f)) * 0.4f
+                deviceRoll  = (Math.toDegrees(atan2(x.toDouble(), z.toDouble())).toFloat()
+                    .coerceIn(-80f, 80f)) * 0.4f
             }
         }
 
@@ -176,7 +183,7 @@ fun QiblaPage() {
         when {
             location == null -> NoLocationScreen(padding)
             !hasReading      -> CalibrationScreen(padding)
-            else             -> CompassScreen(cumulativeAzimuth, qiblaBearing, location, isTilted, padding)
+            else             -> CompassScreen(cumulativeAzimuth, qiblaBearing, location, isTilted, devicePitch, deviceRoll, padding)
         }
     }
 }
@@ -236,6 +243,8 @@ private fun CompassScreen(
     qiblaBearing:      Float,
     location:          OnboardingPrefs.LocationData,
     isTilted:          Boolean,
+    devicePitch:       Float,
+    deviceRoll:        Float,
     padding:           PaddingValues,
 ) {
     val animAzimuth by animateFloatAsState(
@@ -259,6 +268,33 @@ private fun CompassScreen(
         targetValue = if (isAligned) QiblaGreen else QiblaAmber,
         label       = "qiblaColor",
     )
+    val animPitch by animateFloatAsState(
+        targetValue   = devicePitch,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label         = "pitch",
+    )
+    val animRoll by animateFloatAsState(
+        targetValue   = deviceRoll,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label         = "roll",
+    )
+
+    // ── Cardinal alignment haptic ─────────────────────────────────────────────
+    val view        = androidx.compose.ui.platform.LocalView.current
+    var lastSnapped by remember { mutableIntStateOf(-1) }
+
+    val snappedCardinal = ((heading / 90f).roundToInt() * 90 % 360)
+    val nearCardinal    = abs(heading - snappedCardinal) < 2f ||
+            abs(heading - snappedCardinal - 360f) < 2f
+
+    LaunchedEffect(snappedCardinal, nearCardinal) {
+        if (nearCardinal && snappedCardinal != lastSnapped) {
+            lastSnapped = snappedCardinal
+            view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        } else if (!nearCardinal) {
+            lastSnapped = -1   // reset so re-entry into the same cardinal fires again
+        }
+    }
 
     Column(
         modifier            = Modifier
@@ -283,6 +319,8 @@ private fun CompassScreen(
                 dialRotation = -heading,
                 needleAngle  = needleAngle,
                 qiblaColor   = qiblaColor,
+                pitchDeg     = animPitch,
+                rollDeg      = animRoll,
             )
             if (isTilted) {
                 Text(
@@ -326,18 +364,20 @@ private fun CompassScreen(
 
 @Composable
 private fun CoordRow(location: OnboardingPrefs.LocationData) {
-    Row(
-        modifier              = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-    ) {
-        CoordItem(
-            label = if (location.lat >= 0) "NL" else "SL",
-            dms   = location.lat.toDms(),
-        )
-        CoordItem(
-            label = if (location.lng >= 0) "EL" else "WL",
-            dms   = location.lng.toDms(),
-        )
+    CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr) {
+        Row(
+            modifier              = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            CoordItem(
+                label = if (location.lat >= 0) "NL" else "SL",
+                dms   = location.lat.toDms(),
+            )
+            CoordItem(
+                label = if (location.lng >= 0) "EL" else "WL",
+                dms   = location.lng.toDms(),
+            )
+        }
     }
 }
 
@@ -372,6 +412,8 @@ private fun QiblaCompass(
     dialRotation: Float,
     needleAngle:  Float,
     qiblaColor:   Color,
+    pitchDeg:     Float,
+    rollDeg:      Float,
 ) {
     val context    = LocalContext.current
     val onSurface  = MaterialTheme.colorScheme.onSurface
@@ -379,7 +421,13 @@ private fun QiblaCompass(
     val iconTopPad = 20.dp
 
     Box(
-        modifier         = Modifier.size(280.dp),
+        modifier = Modifier
+            .size(280.dp)
+            .graphicsLayer {
+                rotationX      = pitchDeg
+                rotationY      = rollDeg
+                cameraDistance = 5f * density   // higher = less extreme perspective
+            },
         contentAlignment = Alignment.Center,
     ) {
         // Rotating compass dial — ticks, labels, starburst.
@@ -478,7 +526,6 @@ private fun CompassDial(
 ) {
     val arrowPainter = painterResource(R.drawable.ic_triangle_arrow)
     val cairoRegular = remember { Typeface.createFromAsset(context.assets, "fonts/cairo_regular.ttf") }
-    val cairoBold    = remember { Typeface.createFromAsset(context.assets, "fonts/cairo_bold.ttf")    }
 
     Canvas(modifier = modifier.graphicsLayer { rotationZ = rotation }) {
         val cx = size.width  / 2
