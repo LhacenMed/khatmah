@@ -71,6 +71,9 @@ object Route {
     /** Builds the adhan sound selection route for [prayerId]. */
     fun adhanSoundSelection(prayerId: Int) = "adhan_sound_selection/$prayerId"
 
+    // ── Khatmah ───────────────────────────────────────────────────────────────────
+    const val NEW_KHATMAH = "new_khatmah"
+
     // ── Onboarding ────────────────────────────────────────────────────────────
     const val ONBOARDING_LANGUAGE       = "onboarding_language"
     const val ONBOARDING_NOTIFICATIONS  = "onboarding_notifications"

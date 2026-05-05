@@ -9,7 +9,7 @@
 
 | Property | Value |
 |----------|-------|
-| **Path** | `C:\Users\lhacenmed\Desktop\rename-script\db documentor\quran.db` |
+| **Path** | `C:\Users\lhacenmed\AndroidStudioProjects\Khatmah\app\src\main\assets\databases\quran.db` |
 | **Size** | 21332.0 KB |
 | **Page Size** | 4096 bytes |
 | **Page Count** | 5333 |

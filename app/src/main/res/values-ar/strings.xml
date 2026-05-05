@@ -365,4 +365,72 @@
 
     <string name="qibla_rotate_hint">قم بتدوير الجهاز حتى يتغير السهم للأخضر</string>
     <string name="qibla_aligned">الجهاز يشير إلى اتجاه القبلة</string>
+
+    <!-- ── New Khatmah wizard ───────────────────────────────────────────────── -->
+    <string name="new_khatmah_title">ختمة جديدة</string>
+    <string name="new_khatmah_step1_desc">الرجاء تحديد المكان أو الجزء الذي تريد أن تبدأ منه الختمة</string>
+    <string name="new_khatmah_step2_desc">الرجاء تحديد المدة التي تريد أن تختم فيها أو كمية الورد اليومي الذي تود قراءته</string>
+    <string name="new_khatmah_start_from">البدء من:</string>
+    <string name="new_khatmah_duration_label">مدة الختمة:</string>
+    <string name="new_khatmah_days">%d يوماً</string>
+    <string name="new_khatmah_daily_amount_label">كمية الورد:</string>
+    <string name="new_khatmah_and">و</string>
+    <string name="new_khatmah_continue">الاستمرار</string>
+
+    <string-array name="new_khatmah_juz_options">
+        <item>بداية المصحف</item>
+        <item>الجزء الثاني</item>
+        <item>الجزء الثالث</item>
+        <item>الجزء الرابع</item>
+        <item>الجزء الخامس</item>
+        <item>الجزء السادس</item>
+        <item>الجزء السابع</item>
+        <item>الجزء الثامن</item>
+        <item>الجزء التاسع</item>
+        <item>الجزء العاشر</item>
+        <item>الجزء الحادي عشر</item>
+        <item>الجزء الثاني عشر</item>
+        <item>الجزء الثالث عشر</item>
+        <item>الجزء الرابع عشر</item>
+        <item>الجزء الخامس عشر</item>
+        <item>الجزء السادس عشر</item>
+        <item>الجزء السابع عشر</item>
+        <item>الجزء الثامن عشر</item>
+        <item>الجزء التاسع عشر</item>
+        <item>الجزء العشرون</item>
+        <item>الجزء الحادي والعشرون</item>
+        <item>الجزء الثاني والعشرون</item>
+        <item>الجزء الثالث والعشرون</item>
+        <item>الجزء الرابع والعشرون</item>
+        <item>الجزء الخامس والعشرون</item>
+        <item>الجزء السادس والعشرون</item>
+        <item>الجزء السابع والعشرون</item>
+        <item>الجزء الثامن والعشرون</item>
+        <item>الجزء التاسع والعشرون</item>
+        <item>الجزء الثلاثون</item>
+    </string-array>
+
+    <string-array name="new_khatmah_ajza_options">
+        <item>-</item>
+        <item>جزء</item>
+        <item>جزءان</item>
+        <item>٣ أجزاء</item>
+        <item>٤ أجزاء</item>
+        <item>٥ أجزاء</item>
+        <item>٦ أجزاء</item>
+        <item>٧ أجزاء</item>
+        <item>٨ أجزاء</item>
+        <item>٩ أجزاء</item>
+        <item>١٠ أجزاء</item>
+    </string-array>
+
+    <string-array name="new_khatmah_arba_options">
+        <item>-</item>
+        <item>ربع</item>
+        <item>ربعان</item>
+        <item>٣ أرباع</item>
+        <item>حزب</item>
+        <item>٥ أرباع</item>
+        <item>٦ أرباع</item>
+    </string-array>
 </resources>

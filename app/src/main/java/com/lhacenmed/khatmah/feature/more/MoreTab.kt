@@ -231,8 +231,9 @@ private fun MoreScreen(padding: PaddingValues) {
         }
         item {
             PreferenceItem(
-                title = stringResource(R.string.more_start_new_khatmah),
-                icon  = Icons.Outlined.Add,
+                title   = stringResource(R.string.more_start_new_khatmah),
+                icon    = Icons.Outlined.Add,
+                onClick = { nav.navigate(Route.NEW_KHATMAH) },
             )
         }
 

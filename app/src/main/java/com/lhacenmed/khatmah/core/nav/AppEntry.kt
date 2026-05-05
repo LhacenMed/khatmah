@@ -53,6 +53,7 @@ import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarEditorPage
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarViewModel
 import com.lhacenmed.khatmah.feature.more.MoreTab
+import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahPage
 import com.lhacenmed.khatmah.feature.prayer.ui.PrayersTab
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.AdhanRemindersPage
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsContent
@@ -213,6 +214,9 @@ fun AppEntry() {
                     categoryId = backStack.arguments?.getString("categoryId").orEmpty(),
                 )
             }
+
+            // ── Khatmah ───────────────────────────────────────────────────────────────────
+            animatedComposable(Route.NEW_KHATMAH) { NewKhatmahPage() }
         }
     }
 }
