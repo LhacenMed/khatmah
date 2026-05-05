@@ -362,4 +362,7 @@
     <string name="qibla_rotate_desc">قم بتدوير الجهاز حتى يتغير السهم للأخضر</string>
     <string name="qibla_from_north">اتجاه القبلة من الشمال</string>
     <string name="qibla_no_location">الموقع غير متاح، يرجى تعيين الموقعك أولًا</string>
+
+    <string name="qibla_rotate_hint">قم بتدوير الجهاز حتى يتغير السهم للأخضر</string>
+    <string name="qibla_aligned">الجهاز يشير إلى اتجاه القبلة</string>
 </resources>

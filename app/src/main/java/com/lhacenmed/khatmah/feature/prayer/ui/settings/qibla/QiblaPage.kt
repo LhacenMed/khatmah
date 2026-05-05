@@ -126,6 +126,7 @@ fun QiblaPage() {
     DisposableEffect(Unit) {
         val rotMatrix   = FloatArray(9)
         val orientation = FloatArray(3)
+        val alpha       = 0.15f   // low-pass smoothing: lower = smoother, higher = faster
 
         val listener = object : SensorEventListener {
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
@@ -135,7 +136,8 @@ fun QiblaPage() {
                 val deg        = Math.toDegrees(orientation[0].toDouble()).toFloat()
                 val normalized = ((deg % 360f) + 360f) % 360f
                 // Shortest-path delta so the animated arc never wraps the long way round.
-                val delta = ((normalized - (cumulativeAzimuth % 360f) + 540f) % 360f) - 180f
+                val raw   = ((normalized - (cumulativeAzimuth % 360f) + 540f) % 360f) - 180f
+                val delta = raw * alpha   // low-pass: blend toward new reading gradually
                 cumulativeAzimuth += delta
                 if (!hasReading) hasReading = true
             }
@@ -156,8 +158,8 @@ fun QiblaPage() {
             }
         }
 
-        sensorManager.registerListener(tiltListener, gravitySensor, SensorManager.SENSOR_DELAY_UI)
-        sensorManager.registerListener(listener, rotationSensor, SensorManager.SENSOR_DELAY_UI)
+        sensorManager.registerListener(tiltListener, gravitySensor, SensorManager.SENSOR_DELAY_GAME)
+        sensorManager.registerListener(listener, rotationSensor, SensorManager.SENSOR_DELAY_GAME)
 
         onDispose {
             sensorManager.unregisterListener(listener)
@@ -258,8 +260,8 @@ private fun CompassScreen(
     val animAzimuth by animateFloatAsState(
         targetValue   = cumulativeAzimuth,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness    = Spring.StiffnessLow,
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness    = Spring.StiffnessMedium,
         ),
         label = "azimuth",
     )
@@ -337,6 +339,14 @@ private fun CompassScreen(
                     letterSpacing = 1.sp,
                 ),
                 modifier = Modifier.padding(top = 8.dp),
+            )
+
+            Text(
+                text  = stringResource(if (isAligned) R.string.qibla_aligned else R.string.qibla_rotate_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isAligned) QiblaGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier  = Modifier.padding(horizontal = 24.dp),
             )
 
             // ── Compass + measure widget ──────────────────────────────────────────

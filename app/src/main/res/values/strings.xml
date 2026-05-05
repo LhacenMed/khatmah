@@ -364,4 +364,7 @@
     <string name="qibla_rotate_desc">Rotate the device until the arrow turns green</string>
     <string name="qibla_from_north">Qibla direction from North</string>
     <string name="qibla_no_location">Location unavailable — please set your location first</string>
+
+    <string name="qibla_rotate_hint">Rotate until the arrow turns green</string>
+    <string name="qibla_aligned">Device is pointing toward Qibla</string>
 </resources>
