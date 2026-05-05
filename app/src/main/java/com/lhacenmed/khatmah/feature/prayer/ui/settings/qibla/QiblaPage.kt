@@ -148,7 +148,7 @@ fun QiblaPage() {
                 isTilted    = tiltDeg > 50f
                 devicePitch = (Math.toDegrees(atan2(-y.toDouble(), z.toDouble())).toFloat()
                     .coerceIn(-80f, 80f)) * 0.4f
-                deviceRoll  = (Math.toDegrees(atan2(x.toDouble(), z.toDouble())).toFloat()
+                deviceRoll  = -(Math.toDegrees(atan2(x.toDouble(), z.toDouble())).toFloat()
                     .coerceIn(-80f, 80f)) * 0.4f
             }
         }
@@ -311,18 +311,32 @@ private fun CompassScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceEvenly,
     ) {
-        // ── Live heading label ────────────────────────────────────────────────
-        Text(
-            text  = "${headingToCardinal(heading)} ${heading.toInt()}°",
-            style = MaterialTheme.typography.displayMedium.copy(
-                fontWeight    = FontWeight.Light,
-                letterSpacing = 1.sp,
-            ),
-            modifier = Modifier.padding(top = 8.dp),
-        )
+        // ── Tilt warning ──────────────────────────────────────────────────────────
+        if (isTilted) {
+            Text(
+                text     = stringResource(R.string.qibla_calibrate_desc),
+                style    = MaterialTheme.typography.bodyMedium,
+                color    = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .background(
+                        color  = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+                        shape  = MaterialTheme.shapes.medium,
+                    )
+                    .padding(horizontal = 20.dp, vertical = 10.dp),
+            )
+        } else {
+            // ── Live heading label ────────────────────────────────────────────────
+            Text(
+                text  = "${headingToCardinal(heading)} ${heading.toInt()}°",
+                style = MaterialTheme.typography.displayMedium.copy(
+                    fontWeight    = FontWeight.Light,
+                    letterSpacing = 1.sp,
+                ),
+                modifier = Modifier.padding(top = 8.dp),
+            )
 
-        // ── Compass + tilt warning overlay ────────────────────────────────────
-        Box(contentAlignment = Alignment.Center) {
+            // ── Compass ───────────────────────────────────────────────────────────
             QiblaCompass(
                 dialRotation = -heading,
                 needleAngle  = needleAngle,
@@ -330,40 +344,26 @@ private fun CompassScreen(
                 pitchDeg     = devicePitch,
                 rollDeg      = deviceRoll,
             )
-            if (isTilted) {
-                Text(
-                    text     = stringResource(R.string.qibla_calibrate_desc),
-                    style    = MaterialTheme.typography.bodyMedium,
-                    color    = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .background(
-                            color  = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
-                            shape  = MaterialTheme.shapes.medium,
-                        )
-                        .padding(horizontal = 20.dp, vertical = 10.dp),
-                )
-            }
-        }
 
-        // ── Qibla bearing + coordinates ───────────────────────────────────────
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier            = Modifier.padding(bottom = 24.dp),
-        ) {
-            Text(
-                text  = stringResource(R.string.qibla_from_north),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text  = "${qiblaBearing.toInt()}°",
-                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
-                color = qiblaColor,
-            )
-            Spacer(Modifier.height(28.dp))
-            CoordRow(location)
+            // ── Qibla bearing + coordinates ───────────────────────────────────────
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier            = Modifier.padding(bottom = 24.dp),
+            ) {
+                Text(
+                    text  = stringResource(R.string.qibla_from_north),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text  = "${qiblaBearing.toInt()}°",
+                    style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                    color = qiblaColor,
+                )
+                Spacer(Modifier.height(28.dp))
+                CoordRow(location)
+            }
         }
     }
 }
