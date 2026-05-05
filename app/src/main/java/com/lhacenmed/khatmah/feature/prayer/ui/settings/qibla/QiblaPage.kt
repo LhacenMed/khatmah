@@ -46,7 +46,10 @@ import androidx.core.graphics.withRotation
 import kotlin.math.roundToInt
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.unit.Dp
 
 // Kaaba coordinates — Mecca, Saudi Arabia.
 private const val MECCA_LAT = 21.4225
@@ -274,20 +277,20 @@ private fun CompassScreen(
         label       = "qiblaColor",
     )
 
-    // ── Cardinal alignment haptic ─────────────────────────────────────────────
+    // ── Major tick alignment haptic (every 30°: cardinals + mid-ticks) ────────
     val view        = androidx.compose.ui.platform.LocalView.current
     var lastSnapped by remember { mutableIntStateOf(-1) }
 
-    val snappedCardinal = ((heading / 90f).roundToInt() * 90 % 360)
-    val nearCardinal    = abs(heading - snappedCardinal) < 2f ||
-            abs(heading - snappedCardinal - 360f) < 2f
+    val snappedMajor = ((heading / 30f).roundToInt() * 30 % 360)
+    val nearMajor    = abs(heading - snappedMajor) < 2f ||
+            abs(heading - snappedMajor - 360f) < 2f
 
-    LaunchedEffect(snappedCardinal, nearCardinal) {
-        if (nearCardinal && snappedCardinal != lastSnapped) {
-            lastSnapped = snappedCardinal
-            view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-        } else if (!nearCardinal) {
-            lastSnapped = -1   // reset so re-entry into the same cardinal fires again
+    LaunchedEffect(snappedMajor, nearMajor) {
+        if (nearMajor && snappedMajor != lastSnapped) {
+            lastSnapped = snappedMajor
+            view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+        } else if (!nearMajor) {
+            lastSnapped = -1
         }
     }
 
@@ -298,7 +301,7 @@ private fun CompassScreen(
     LaunchedEffect(nearQibla) {
         if (nearQibla && !qiblaFired) {
             qiblaFired = true
-            view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+            view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
         } else if (!nearQibla) {
             qiblaFired = false
         }
@@ -309,7 +312,7 @@ private fun CompassScreen(
             .fillMaxSize()
             .padding(padding),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceEvenly,
+        verticalArrangement = Arrangement.Center,
     ) {
         // ── Tilt warning ──────────────────────────────────────────────────────────
         if (isTilted) {
@@ -336,14 +339,22 @@ private fun CompassScreen(
                 modifier = Modifier.padding(top = 8.dp),
             )
 
-            // ── Compass ───────────────────────────────────────────────────────────
-            QiblaCompass(
-                dialRotation = -heading,
-                needleAngle  = needleAngle,
-                qiblaColor   = qiblaColor,
-                pitchDeg     = devicePitch,
-                rollDeg      = deviceRoll,
-            )
+            // ── Compass + measure widget ──────────────────────────────────────────
+            BoxWithConstraints(
+                modifier         = Modifier.weight(1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                val compassSize = minOf(maxWidth, maxHeight, 280.dp)
+                QiblaCompass(
+                    dialRotation  = -heading,
+                    needleAngle   = needleAngle,
+                    qiblaColor    = qiblaColor,
+                    pitchDeg      = devicePitch,
+                    rollDeg       = deviceRoll,
+                    heading       = heading,
+                    compassSize   = compassSize,
+                )
+            }
 
             // ── Qibla bearing + coordinates ───────────────────────────────────────
             Column(
@@ -422,28 +433,31 @@ private fun QiblaCompass(
     qiblaColor:   Color,
     pitchDeg:     Float,
     rollDeg:      Float,
+    heading:      Float,
+    compassSize:  Dp,
 ) {
     val context    = LocalContext.current
     val onSurface  = MaterialTheme.colorScheme.onSurface
-    val iconSize   = 24.dp
-    val iconTopPad = 20.dp
 
     // ── Gesture tilt state ────────────────────────────────────────────────────
     data class GestureTilt(val active: Boolean = false, val pitch: Float = 0f, val roll: Float = 0f)
-    var gesture by remember { mutableStateOf(GestureTilt()) }
+    var gesture       by remember { mutableStateOf(GestureTilt()) }
+    var lockedBearing by remember { mutableStateOf<Float?>(null) }
+
+    val currentHeading by rememberUpdatedState(heading)
 
     val targetPitch = if (gesture.active) gesture.pitch else pitchDeg
     val targetRoll  = if (gesture.active) gesture.roll  else rollDeg
 
-    val tiltSpec    = spring<Float>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
+    val tiltSpec  = spring<Float>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
     val animPitch by animateFloatAsState(targetPitch, tiltSpec, label = "pitch")
     val animRoll  by animateFloatAsState(targetRoll,  tiltSpec, label = "roll")
 
-    val maxTilt = 20f   // max visual tilt degrees from gesture
+    val maxTilt = 20f
 
     Box(
         modifier = Modifier
-            .size(280.dp)
+            .size(compassSize)
             .pointerInput(Unit) {
                 val radius = size.width / 2f
                 fun tiltFrom(x: Float, y: Float) = GestureTilt(
@@ -455,13 +469,24 @@ private fun QiblaCompass(
                     val down = awaitFirstDown()
                     gesture  = tiltFrom(down.position.x, down.position.y)
 
+                    var lastPos = down.position
                     while (true) {
                         val event  = awaitPointerEvent()
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        lastPos = change.position
                         if (!change.pressed) break
                         change.consume()
                         gesture = tiltFrom(change.position.x, change.position.y)
                     }
+
+                    // Toggle only if released inside the compass circle.
+                    val radius = size.width / 2f
+                    val dx     = lastPos.x - radius
+                    val dy     = lastPos.y - radius
+                    if (dx * dx + dy * dy <= radius * radius) {
+                        lockedBearing = if (lockedBearing == null) currentHeading else null
+                    }
+
                     gesture = GestureTilt()
                 }
             }
@@ -472,59 +497,50 @@ private fun QiblaCompass(
             },
         contentAlignment = Alignment.Center,
     ) {
-        // Rotating compass dial — ticks, labels, starburst.
+        // Rotating compass dial — ticks, labels, starburst, locked indicator.
         CompassDial(
-            rotation  = dialRotation,
-            onSurface = onSurface,
-            context   = context,
-            modifier  = Modifier.fillMaxSize(),
+            rotation      = dialRotation,
+            onSurface     = onSurface,
+            context       = context,
+            heading       = heading,
+            lockedBearing = lockedBearing,
+            modifier      = Modifier.fillMaxSize(),
         )
 
-        // Qibla needle — rotates independently to always point at Mecca.
-//        Box(
-//            modifier         = Modifier
-//                .fillMaxSize()
-//                .graphicsLayer { rotationZ = needleAngle },
-//            contentAlignment = Alignment.TopCenter,
-//        ) {
-//            // Kaaba icon at the needle tip.
-//            Icon(
-//                painter            = painterResource(R.drawable.ic_kaaba),
-//                contentDescription = null,
-//                tint               = qiblaColor,
-//                modifier           = Modifier
-//                    .padding(top = iconTopPad)
-//                    .size(iconSize),
-//            )
-//
-//            // Arrow shaft from icon bottom to pivot + short counterweight tail.
-//            Canvas(modifier = Modifier.fillMaxSize()) {
-//                val cx    = size.width / 2
-//                val cy    = size.height / 2
-//                val tipY  = (iconTopPad + iconSize).toPx()
-//                val tailL = (cy - tipY) * 0.3f
-//
-//                drawLine(
-//                    color       = qiblaColor,
-//                    start       = Offset(cx, tipY),
-//                    end         = Offset(cx, cy),
-//                    strokeWidth = 3.dp.toPx(),
-//                )
-//                drawLine(
-//                    color       = NorthRed,
-//                    start       = Offset(cx, cy),
-//                    end         = Offset(cx, cy + tailL),
-//                    strokeWidth = 3.dp.toPx(),
-//                )
-//            }
-//        }
+        // Qibla direction arrow + kaaba icon — outside tick circle, rotates to point at Mecca.
+        // Kaaba counter-rotates to stay upright like cardinal letters.
+        val qiblaArrow = painterResource(R.drawable.ic_triangle_arrow)
+        val kaabaIcon  = painterResource(R.drawable.ic_kaaba)
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { rotationZ = needleAngle; clip = false },
+        ) {
+            val r2      = minOf(size.width, size.height) / 2f
+            val tickLen = r2 * TICK_LEN_RATIO
+            val arrowSz = 20.dp.toPx()
+            val kaabaSz = 20.dp.toPx()
+            val gap     = 4.dp.toPx()
 
-        // Center pivot dot.
-//        Box(
-//            modifier = Modifier
-//                .size(10.dp)
-//                .background(MaterialTheme.colorScheme.onSurface, CircleShape),
-//        )
+            // Arrow — points toward Mecca, rotates with needleAngle.
+            translate(size.width / 2f - arrowSz / 2f, -(arrowSz + tickLen * 0.9f)) {
+                with(qiblaArrow) {
+                    draw(Size(arrowSz, arrowSz), colorFilter = ColorFilter.tint(qiblaColor))
+                }
+            }
+
+            // Kaaba — sits above arrow, counter-rotates to remain vertically upright.
+            val kaabaLeft = size.width / 2f - kaabaSz / 2f
+            val kaabaTop  = -(arrowSz + tickLen * 0.4f + gap + kaabaSz)
+            withTransform({
+                translate(kaabaLeft, kaabaTop)
+                rotate(-needleAngle, pivot = Offset(kaabaSz / 2f, kaabaSz / 2f))
+            }) {
+                with(kaabaIcon) {
+                    draw(Size(kaabaSz, kaabaSz), colorFilter = ColorFilter.tint(qiblaColor))
+                }
+            }
+        }
 
         // Fixed heading indicator — protrudes above the outer tick edge, bottom
         // pinned at inner tick edge; clip=false lets the top overflow the Box.
@@ -536,8 +552,8 @@ private fun QiblaCompass(
             val r2      = minOf(size.width, size.height) / 2f
             val tickLen = r2 * TICK_LEN_RATIO
             drawLine(
-                color       = onSurface,
-                start       = Offset(size.width / 2f, -tickLen * 1.0f),
+                color       = if (lockedBearing != null) NorthRed else onSurface,
+                start       = Offset(size.width / 2f, -tickLen * 0.7f),
                 end         = Offset(size.width / 2f, tickLen),
                 strokeWidth = 3.dp.toPx(),
                 cap         = StrokeCap.Round,
@@ -561,13 +577,22 @@ private fun QiblaCompass(
  */
 @Composable
 private fun CompassDial(
-    rotation:  Float,
-    onSurface: Color,
-    context:   Context,
-    modifier:  Modifier = Modifier,
+    rotation:      Float,
+    onSurface:     Color,
+    context:       Context,
+    heading:       Float,
+    lockedBearing: Float?,
+    modifier:      Modifier = Modifier,
 ) {
     val arrowPainter = painterResource(R.drawable.ic_triangle_arrow)
     val cairoRegular = remember { Typeface.createFromAsset(context.assets, "fonts/cairo_regular.ttf") }
+
+    /** True if [deg] falls within the shortest arc between [from] and [to]. */
+    fun inArcShortest(deg: Float, from: Float, to: Float): Boolean {
+        val span = ((to - from + 540f) % 360f) - 180f          // signed shortest, –180..+180
+        val rel  = ((deg - from + 360f) % 360f)                // 0..360 relative to from
+        return if (span >= 0f) rel <= span else rel >= (360f + span)
+    }
 
     Canvas(modifier = modifier.graphicsLayer { rotationZ = rotation }) {
         val cx = size.width  / 2
@@ -584,30 +609,54 @@ private fun CompassDial(
         }
         // 12 major ticks; 14 minor ticks between each → 15 slots of 2° each.
         // Cardinal majors (0°/90°/180°/270°) are heavier; non-cardinal majors match minor width.
+        // Ticks in the locked arc are drawn in red.
         val minorStep = 30.0 / 15.0
         for (seg in 0 until 12) {
-            val majorDeg    = seg * 30.0
-            val isCardinal  = seg % 3 == 0   // 0, 3, 6, 9 → 0°, 90°, 180°, 270°
+            val majorDeg   = seg * 30.0
+            val isCardinal = seg % 3 == 0
+            val majInArc = lockedBearing != null && inArcShortest(majorDeg.toFloat(), heading, lockedBearing)
             // Major tick
             val aMaj = Math.toRadians(majorDeg - 90.0)
             tickPaint.strokeWidth = if (isCardinal) 2.dp.toPx() else 1.dp.toPx()
-            tickPaint.color       = onSurface.copy(alpha = 0.85f).toArgb()
+            tickPaint.color = if (majInArc) NorthRed.toArgb()
+            else onSurface.copy(alpha = 0.85f).toArgb()
             nc.drawLine(
-                cx + cos(aMaj).toFloat() * r,            cy + sin(aMaj).toFloat() * r,
-                cx + cos(aMaj).toFloat() * (r - tickLen), cy + sin(aMaj).toFloat() * (r - tickLen),
+                cx + cos(aMaj).toFloat() * r,             cy + sin(aMaj).toFloat() * r,
+                cx + cos(aMaj).toFloat() * (r - tickLen),  cy + sin(aMaj).toFloat() * (r - tickLen),
                 tickPaint,
             )
             // 14 minor ticks
             tickPaint.strokeWidth = 1.dp.toPx()
-            tickPaint.color       = onSurface.copy(alpha = 0.18f).toArgb()
             for (m in 1..14) {
-                val aMin = Math.toRadians(majorDeg + m * minorStep - 90.0)
+                val minDeg   = majorDeg + m * minorStep
+                val minInArc = lockedBearing != null && inArcShortest(minDeg.toFloat(), heading, lockedBearing)
+                val aMin     = Math.toRadians(minDeg - 90.0)
+                tickPaint.color = if (minInArc) NorthRed.copy(alpha = 0.75f).toArgb()
+                else onSurface.copy(alpha = 0.18f).toArgb()
                 nc.drawLine(
-                    cx + cos(aMin).toFloat() * r,            cy + sin(aMin).toFloat() * r,
-                    cx + cos(aMin).toFloat() * (r - tickLen), cy + sin(aMin).toFloat() * (r - tickLen),
+                    cx + cos(aMin).toFloat() * r,             cy + sin(aMin).toFloat() * r,
+                    cx + cos(aMin).toFloat() * (r - tickLen),  cy + sin(aMin).toFloat() * (r - tickLen),
                     tickPaint,
                 )
             }
+        }
+
+        // ── Locked bearing indicator — rotates with dial, drawn in red ────────
+        if (lockedBearing != null) {
+            val aLock     = Math.toRadians(lockedBearing - 90.0)
+            val lockPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                style       = android.graphics.Paint.Style.STROKE
+                strokeCap   = android.graphics.Paint.Cap.ROUND
+                strokeWidth = 3.dp.toPx()
+                color       = NorthRed.toArgb()
+            }
+            nc.drawLine(
+                cx + cos(aLock).toFloat() * (r + tickLen * 0.7f),
+                cy + sin(aLock).toFloat() * (r + tickLen * 0.7f),
+                cx + cos(aLock).toFloat() * (r - tickLen),
+                cy + sin(aLock).toFloat() * (r - tickLen),
+                lockPaint,
+            )
         }
 
         // ── Degree labels every 30° — rotated radially, just inside tick zone ─
