@@ -153,8 +153,13 @@ private fun buildPaints(
  * Hit regions are inverse-transformed so aya tap accuracy is maintained at
  * any zoom level.
  *
- * [onAyaPress]     — tap or long-press inside a polygon (surahNum, ayahNum).
- * [onBaresTap]     — tap outside all polygons (toggles top/bottom bars).
+ * Gesture contract:
+ *   Long-press inside a polygon → [onAyaPress] (triggers audio).
+ *   Tap anywhere (inside or outside polygons) → [onBaresTap] (toggles bars).
+ *   Long-press outside polygons → no-op.
+ *
+ * [onAyaPress]     — long-press inside a polygon (surahNum, ayahNum).
+ * [onBaresTap]     — tap anywhere (toggles top/bottom bars).
  * [onZoomChanged]  — emitted when zoom crosses the 1× boundary.
  * [highlightColor] — semi-transparent fill for the selected aya region.
  */
@@ -220,23 +225,19 @@ internal fun QuranXmlPage(
         }
     }
 
-    // Hit regions scaled to screen pixels — rebuilt only when size changes.
-    val hitRegions: List<HitRegion> by remember(pageData.pageNum, composableSize) {
-        derivedStateOf {
-            if (composableSize == IntSize.Zero) emptyList()
-            else {
-                val viewBox = RectF(0f, 0f, pageData.viewportW, pageData.viewportH)
-                buildHitRegions(pageData.regions, viewBox, composableSize)
-            }
+    // Hit regions scaled to screen pixels — rebuilt only when size or page changes.
+    val hitRegions: List<HitRegion> = remember(pageData.pageNum, composableSize) {
+        if (composableSize == IntSize.Zero) emptyList()
+        else {
+            val viewBox = RectF(0f, 0f, pageData.viewportW, pageData.viewportH)
+            buildHitRegions(pageData.regions, viewBox, composableSize)
         }
     }
 
     // Highlight path for the currently selected aya.
-    val highlightPath: Path? by remember(selectedAya, hitRegions) {
-        derivedStateOf {
-            selectedAya?.let { (sura, aya) ->
-                hitRegions.firstOrNull { it.surahNum == sura && it.ayahNum == aya }?.path
-            }
+    val highlightPath: Path? = remember(selectedAya, hitRegions) {
+        selectedAya?.let { (sura, aya) ->
+            hitRegions.firstOrNull { it.surahNum == sura && it.ayahNum == aya }?.path
         }
     }
 
@@ -248,6 +249,16 @@ internal fun QuranXmlPage(
             isAntiAlias = true
         }
     }
+
+    // Always-current state snapshots for use inside the stable pointerInput block.
+    // Using rememberUpdatedState avoids restarting pointerInput on every recomposition
+    // while ensuring the lambda always reads the latest values.
+    val currentHitRegions by rememberUpdatedState(hitRegions)
+    val currentScale      by rememberUpdatedState(scale)
+    val currentPan        by rememberUpdatedState(panOffset)
+    val currentSize       by rememberUpdatedState(composableSize)
+    val currentOnAyaPress by rememberUpdatedState(onAyaPress)
+    val currentOnBaresTap by rememberUpdatedState(onBaresTap)
 
     Box(
         modifier         = modifier,
@@ -261,18 +272,19 @@ internal fun QuranXmlPage(
                 // Pinch-to-zoom: only intercepts pan gestures when zoomed in,
                 // so the pager can still handle horizontal swipes at 1×.
                 .transformable(state = transformState, canPan = { scale > 1f })
-                .pointerInput(hitRegions, scale, panOffset) {
+                // Stable Unit key — never restarts. rememberUpdatedState above
+                // ensures the block always reads the latest hitRegions and zoom.
+                .pointerInput(Unit) {
                     detectTapGestures(
-                        onTap = { raw ->
-                            val p   = inverseZoom(raw, scale, panOffset, composableSize)
-                            val hit = hitAt(hitRegions, p)
-                            if (hit != null) onAyaPress(hit.surahNum, hit.ayahNum)
-                            else             onBaresTap()
+                        onTap = {
+                            // Tap always toggles bars — never triggers audio.
+                            currentOnBaresTap()
                         },
                         onLongPress = { raw ->
-                            val p   = inverseZoom(raw, scale, panOffset, composableSize)
-                            val hit = hitAt(hitRegions, p)
-                            if (hit != null) onAyaPress(hit.surahNum, hit.ayahNum)
+                            // Long-press inside a polygon → play audio for that aya.
+                            val p   = inverseZoom(raw, currentScale, currentPan, currentSize)
+                            val hit = hitAt(currentHitRegions, p)
+                            if (hit != null) currentOnAyaPress(hit.surahNum, hit.ayahNum)
                         },
                     )
                 },

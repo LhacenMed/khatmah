@@ -424,18 +424,24 @@ class WarshXmlRepository(private val context: Context) {
     /**
      * Parses JSON polygon data for one page.
      * Format: top-level array of { surahNumber, ayahNumber, polygon, x, y }.
+     * Uses opt* accessors and per-element try-catch so a single malformed entry
+     * never discards valid regions on the same page.
      */
-    private fun parseRegions(jsonFile: File): List<WarshAyaRegion> {
-        val arr = JSONArray(jsonFile.readText())
-        return List(arr.length()) { i ->
-            val obj = arr.getJSONObject(i)
-            WarshAyaRegion(
-                surahNum = obj.getInt("surahNumber"),
-                ayahNum  = obj.getInt("ayahNumber"),
-                polygon  = obj.getString("polygon"),
-            )
-        }
-    }
+    private fun parseRegions(jsonFile: File): List<WarshAyaRegion> =
+        runCatching {
+            val arr = JSONArray(jsonFile.readText())
+            (0 until arr.length()).mapNotNull { i ->
+                runCatching {
+                    val obj      = arr.getJSONObject(i)
+                    val surahNum = obj.optInt("surahNumber")
+                    val ayahNum  = obj.optInt("ayahNumber")
+                    val polygon  = obj.optString("polygon").orEmpty()
+                    if (surahNum > 0 && ayahNum > 0 && polygon.isNotBlank())
+                        WarshAyaRegion(surahNum, ayahNum, polygon)
+                    else null
+                }.getOrNull()
+            }
+        }.getOrElse { emptyList() }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

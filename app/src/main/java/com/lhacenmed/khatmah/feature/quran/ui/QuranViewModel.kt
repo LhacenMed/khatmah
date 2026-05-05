@@ -80,16 +80,23 @@ class QuranViewModel(
     private suspend fun initXmlMode() {
         val warshRepo = WarshXmlRepository(getApplication())
         if (!warshRepo.isFullyDownloaded()) {
-            // Files not downloaded yet — fall back to text reader.
             initTextMode()
             return
         }
 
-        // Xml mode does not use the DB mushaf-page map for jump-to-aya (Warsh page
-        // numbering differs from the Hafs DB). Aya-index is left empty; jumps via
-        // search will land on page 1 as a safe default until Warsh mapping is added.
-        savedPage = savedPage.coerceIn(0, WarshXmlRepository.Companion.PAGE_COUNT - 1)
-        _state.value = State.XmlReady(WarshXmlRepository.Companion.PAGE_COUNT)
+        // Reuse the same quran_pages mushaf map — the XML pages are the same 604-page
+        // Mushaf, so page numbers and aya boundaries are identical.
+        val mushafMap = withContext(Dispatchers.IO) { repo.ayaMushhafPages() }
+        ayaPageIndex  = mushafMap
+
+        val targetSura = handle.get<Int>("suraNum") ?: 0
+        savedPage = if (targetSura > 0) {
+            val targetAya = (handle.get<Int>("ayaNum") ?: 0).coerceAtLeast(1)
+            pageForAya(targetSura, targetAya) ?: 0
+        } else {
+            savedPage.coerceIn(0, PAGE_COUNT - 1)
+        }
+        _state.value = State.XmlReady(PAGE_COUNT)
     }
 
     private suspend fun initTextMode() {
@@ -153,7 +160,9 @@ class QuranViewModel(
     private companion object {
         const val PREFS             = "quran_reader"
         const val KEY_PAGE          = "last_page"
-        /** Hafs mushaf image page count — used for image reader mode only. */
+        /** Hafs mushaf image page count — used for image and XML reader modes. */
         const val MUSHAF_PAGE_COUNT = 604
+        /** Warsh XML mushaf page count — same physical Mushaf, same page count. */
+        const val PAGE_COUNT        = WarshXmlRepository.PAGE_COUNT
     }
 }
