@@ -47,3 +47,20 @@ data class AthmanRow(
     val endAya: Int,
     val endPage: Int,
 )
+
+/** UI-ready snapshot of one scheduled session for the success dialog. */
+data class SessionDisplay(
+    val dayNumber: Int,
+    val startSuraName: String,
+    val startAya: Int,
+    val endSuraName: String,
+    val endAya: Int,
+    val startPage: Int,
+    val endPage: Int,
+)
+
+/** Returned after a khatmah is persisted. */
+data class KhatmahResult(
+    val id: Long,
+    val sessions: List<SessionDisplay>,
+)

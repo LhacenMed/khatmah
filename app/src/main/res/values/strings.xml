@@ -401,6 +401,14 @@
     <string-array name="new_khatmah_arba_options">
         <item>—</item>
         <item>1 Rub\'</item><item>2 Rub\'</item><item>3 Rub\'</item>
-        <item>1 Hizb</item><item>5 Rub\'</item><item>6 Rub\'</item>
+        <item>1 Hizb</item><item>5 Rub\'</item><item>6 Rub\'</item><item>7 Rub\'</item>
     </string-array>
+
+    <!-- Khatmah success dialog -->
+    <string name="khatmah_created_title">Khatmah Created!</string>
+    <string name="khatmah_created_subtitle">%d sessions scheduled</string>
+    <string name="khatmah_session_label">Session %d</string>
+    <string name="khatmah_from_label">From: %1$s — Aya %2$d</string>
+    <string name="khatmah_to_label">To: %1$s — Aya %2$d</string>
+    <string name="khatmah_pages_label">Page %1$d – %2$d</string>
 </resources>

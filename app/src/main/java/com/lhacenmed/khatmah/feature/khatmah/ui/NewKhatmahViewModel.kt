@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
+import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +19,7 @@ data class NewKhatmahState(
     val dailyAjza: Int = 1,
     val dailyArba: Int = 0,
     val isSaving: Boolean = false,
-    val savedKhatmahId: Long? = null,
+    val savedResult: KhatmahResult? = null,
 )
 
 class NewKhatmahViewModel(private val repo: KhatmahRepository) : ViewModel() {
@@ -31,9 +32,9 @@ class NewKhatmahViewModel(private val repo: KhatmahRepository) : ViewModel() {
     fun setStartJuz(juz: Int) { _state.update { it.copy(startJuz = juz) } }
 
     fun goToStep2() {
-        val juz       = _state.value.startJuz
+        val juz          = _state.value.startJuz
         val (ajza, arba) = repo.computeDailyAmount(juz, 30)
-        val days      = repo.computeDays(juz, ajza, arba)
+        val days         = repo.computeDays(juz, ajza, arba)
         _state.update { it.copy(step = 2, dailyAjza = ajza, dailyArba = arba, durationDays = days) }
     }
 
@@ -48,8 +49,11 @@ class NewKhatmahViewModel(private val repo: KhatmahRepository) : ViewModel() {
 
     fun setDailyAmount(ajza: Int, arba: Int) {
         if (ajza == 0 && arba == 0) return
-        val days = repo.computeDays(_state.value.startJuz, ajza, arba)
-        _state.update { it.copy(dailyAjza = ajza, dailyArba = arba, durationDays = days) }
+        val juz          = _state.value.startJuz
+        // Clamp so daily rub never exceeds what's left in the Quran from startJuz
+        val (a, b)       = repo.snapDailyAmount(juz, ajza, arba)
+        val days         = repo.computeDays(juz, a, b)
+        _state.update { it.copy(dailyAjza = a, dailyArba = b, durationDays = days) }
     }
 
     fun goBack() { _state.update { it.copy(step = 1) } }
@@ -59,8 +63,8 @@ class NewKhatmahViewModel(private val repo: KhatmahRepository) : ViewModel() {
         if (s.isSaving) return
         _state.update { it.copy(isSaving = true) }
         viewModelScope.launch {
-            val id = repo.createKhatmah(s.startJuz, s.dailyAjza, s.dailyArba)
-            _state.update { it.copy(isSaving = false, savedKhatmahId = id) }
+            val result = repo.createKhatmah(s.startJuz, s.dailyAjza, s.dailyArba)
+            _state.update { it.copy(isSaving = false, savedResult = result) }
         }
     }
 

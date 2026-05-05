@@ -2,6 +2,8 @@ package com.lhacenmed.khatmah.feature.khatmah.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -17,10 +19,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
+import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahResult
+import com.lhacenmed.khatmah.feature.khatmah.data.SessionDisplay
 
 @Composable
 fun NewKhatmahPage() {
@@ -28,10 +33,6 @@ fun NewKhatmahPage() {
     val nav     = LocalNavController.current
     val vm: NewKhatmahViewModel = viewModel(factory = NewKhatmahViewModel.Factory(context))
     val state   by vm.state.collectAsState()
-
-    LaunchedEffect(state.savedKhatmahId) {
-        if (state.savedKhatmahId != null) nav.popBackStack()
-    }
 
     BackHandler(enabled = state.step == 2) { vm.goBack() }
 
@@ -49,6 +50,11 @@ fun NewKhatmahPage() {
             else -> Step2(state, vm, padding)
         }
     }
+
+    // Show success dialog once khatmah is persisted
+    state.savedResult?.let { result ->
+        KhatmahSuccessDialog(result = result, onDone = { nav.popBackStack() })
+    }
 }
 
 // ── Step 1: Starting position ─────────────────────────────────────────────────
@@ -65,7 +71,7 @@ private fun Step1(state: NewKhatmahState, vm: NewKhatmahViewModel, padding: Padd
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Box(
-            modifier        = Modifier
+            modifier         = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
             contentAlignment = Alignment.Center,
@@ -79,10 +85,10 @@ private fun Step1(state: NewKhatmahState, vm: NewKhatmahViewModel, padding: Padd
         }
 
         Row(
-            modifier             = Modifier
+            modifier          = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
-            verticalAlignment    = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Label at content-start (right in RTL)
             Text(
@@ -228,6 +234,75 @@ private fun Step2(state: NewKhatmahState, vm: NewKhatmahViewModel, padding: Padd
                 }
             }
         }
+    }
+}
+
+// ── Success dialog ────────────────────────────────────────────────────────────
+
+@Composable
+private fun KhatmahSuccessDialog(result: KhatmahResult, onDone: () -> Unit) {
+    Dialog(onDismissRequest = onDone) {
+        Surface(
+            shape         = RoundedCornerShape(16.dp),
+            tonalElevation = 6.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    text       = stringResource(R.string.khatmah_created_title),
+                    style      = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text  = stringResource(R.string.khatmah_created_subtitle, result.sessions.size),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider()
+                LazyColumn(
+                    modifier        = Modifier.heightIn(max = 360.dp),
+                    contentPadding  = PaddingValues(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(result.sessions) { s -> SessionRow(s) }
+                }
+                HorizontalDivider()
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick  = onDone,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape    = RoundedCornerShape(8.dp),
+                ) {
+                    Text(stringResource(R.string.ok))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SessionRow(s: SessionDisplay) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text       = stringResource(R.string.khatmah_session_label, s.dayNumber),
+            style      = MaterialTheme.typography.labelLarge,
+            color      = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text  = stringResource(R.string.khatmah_from_label, s.startSuraName, s.startAya),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Text(
+            text  = stringResource(R.string.khatmah_to_label, s.endSuraName, s.endAya),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Text(
+            text  = stringResource(R.string.khatmah_pages_label, s.startPage, s.endPage),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

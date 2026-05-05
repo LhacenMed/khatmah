@@ -432,5 +432,14 @@
         <item>حزب</item>
         <item>٥ أرباع</item>
         <item>٦ أرباع</item>
+        <item>٧ أرباع</item>
     </string-array>
+
+    <!-- Khatmah success dialog -->
+    <string name="khatmah_created_title">تم إنشاء الختمة!</string>
+    <string name="khatmah_created_subtitle">%d جلسات مجدولة</string>
+    <string name="khatmah_session_label">الجلسة %d</string>
+    <string name="khatmah_from_label">من: %1$s — آية %2$d</string>
+    <string name="khatmah_to_label">إلى: %1$s — آية %2$d</string>
+    <string name="khatmah_pages_label">صفحة %1$d – %2$d</string>
 </resources>
