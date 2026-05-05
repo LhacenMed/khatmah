@@ -90,6 +90,9 @@ private fun TodayScreen(padding: PaddingValues) {
             TextButton(onClick = { nav.navigate(Route.DEBUG_WARSH) }) {
                 Text("Debug Warsh 001")
             }
+            TextButton(onClick = { nav.navigate(Route.DEBUG_DB) }) {
+                Text("Debug DB Browser")
+            }
             Spacer(Modifier.height(24.dp))
 
             if (refreshing) {

@@ -72,6 +72,7 @@ import com.lhacenmed.khatmah.feature.settings.DarkThemePage
 import com.lhacenmed.khatmah.feature.settings.LanguagePage
 import com.lhacenmed.khatmah.feature.settings.ThemeSettingsPage
 import com.lhacenmed.khatmah.feature.today.TodayTab
+import com.lhacenmed.khatmah.feature.debug.DbBrowserPage
 import com.lhacenmed.khatmah.onboarding.CitySelectPage
 import com.lhacenmed.khatmah.onboarding.CountrySelectPage
 import com.lhacenmed.khatmah.onboarding.LanguageOnboardingPage
@@ -217,6 +218,8 @@ fun AppEntry() {
 
             // ── Khatmah ───────────────────────────────────────────────────────────────────
             animatedComposable(Route.NEW_KHATMAH) { NewKhatmahPage() }
+
+            animatedComposable(Route.DEBUG_DB)    { DbBrowserPage()  }
         }
     }
 }

@@ -74,6 +74,8 @@ object Route {
     // ── Khatmah ───────────────────────────────────────────────────────────────────
     const val NEW_KHATMAH = "new_khatmah"
 
+    const val DEBUG_DB    = "debug_db"
+
     // ── Onboarding ────────────────────────────────────────────────────────────
     const val ONBOARDING_LANGUAGE       = "onboarding_language"
     const val ONBOARDING_NOTIFICATIONS  = "onboarding_notifications"
