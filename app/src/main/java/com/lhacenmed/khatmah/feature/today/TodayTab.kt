@@ -8,8 +8,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -33,34 +33,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-// ── Arabic labels — move to strings.xml when localizing ───────────────────────
-
-private const val S_FROM         = "من قوله تعالى"
-private const val S_READ         = "اقرأ الورد"
-private const val S_MARK_READ    = "أتممت القراءة"
-private const val S_KHATMAH      = "الختمة الحالية"
-private const val S_PREV         = "الأوراد السابقة"
-private const val S_NEXT         = "الأوراد القادمة"
-private const val S_NO_KHATMAH   = "لا توجد ختمة نشطة"
-private const val S_CREATE       = "إنشاء ختمة"
-private const val S_ALL_READ     = "أحسنت! أتممت جميع الأوراد"
-private const val S_DL_TITLE     = "تحميل المصحف"
-private const val S_DL_MSG       = "يجب اختيار نوع المصحف من إعدادات القارئ أولاً"
-private const val S_SETTINGS     = "الإعدادات"
-private const val S_CANCEL       = "إلغاء"
-private const val S_PAGE         = "صفحة"
-private const val S_BASMALA      = "بِسْمِ اِ۬للَّهِ اِ۬لرَّحْمَٰنِ اِ۬لرَّحِيمِ"
-
-private val JUZ_ORDINALS = arrayOf(
-    "الأول","الثاني","الثالث","الرابع","الخامس",
-    "السادس","السابع","الثامن","التاسع","العاشر",
-    "الحادي عشر","الثاني عشر","الثالث عشر","الرابع عشر","الخامس عشر",
-    "السادس عشر","السابع عشر","الثامن عشر","التاسع عشر","العشرون",
-    "الحادي والعشرون","الثاني والعشرون","الثالث والعشرون","الرابع والعشرون","الخامس والعشرون",
-    "السادس والعشرون","السابع والعشرون","الثامن والعشرون","التاسع والعشرون","الثلاثون",
-)
-private fun juzLabel(n: Int) = "الجزء " + JUZ_ORDINALS.getOrElse(n - 1) { n.toString() }
-
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -71,6 +43,7 @@ class TodayViewModel(private val repo: KhatmahRepository) : ViewModel() {
         val startSuraName: String,
         val endSuraName:   String,
         val juzNum:        Int,
+        val firstAyaText:  String,
     )
 
     sealed class UiState {
@@ -99,9 +72,19 @@ class TodayViewModel(private val repo: KhatmahRepository) : ViewModel() {
                         if (session == null) {
                             UiState.AllRead
                         } else {
-                            val meta = repo.sessionMeta(session.startSura, session.endSura)
+                            val meta = repo.sessionMeta(
+                                session.startSura,
+                                session.startAya,
+                                session.endSura,
+                            )
                             UiState.Active(
-                                session   = SessionUi(session, meta.startSuraName, meta.endSuraName, meta.juzNum),
+                                session   = SessionUi(
+                                    entity        = session,
+                                    startSuraName = meta.startSuraName,
+                                    endSuraName   = meta.endSuraName,
+                                    juzNum        = meta.juzNum,
+                                    firstAyaText  = meta.firstAyaText,
+                                ),
                                 khatmah   = khatmah,
                                 readCount = readCount,
                             )
@@ -145,15 +128,17 @@ private fun TodayScreen(padding: PaddingValues) {
     if (showDlDialog) {
         AlertDialog(
             onDismissRequest = { showDlDialog = false },
-            title   = { Text(S_DL_TITLE) },
-            text    = { Text(S_DL_MSG) },
+            title   = { Text(stringResource(R.string.today_dl_title)) },
+            text    = { Text(stringResource(R.string.today_dl_msg)) },
             confirmButton = {
                 TextButton(onClick = { showDlDialog = false; nav.navigate(Route.THEME_SETTINGS) }) {
-                    Text(S_SETTINGS)
+                    Text(stringResource(R.string.today_settings))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDlDialog = false }) { Text(S_CANCEL) }
+                TextButton(onClick = { showDlDialog = false }) {
+                    Text(stringResource(R.string.today_cancel))
+                }
             },
         )
     }
@@ -231,12 +216,12 @@ private fun SessionCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text  = juzLabel(sess.juzNum),
+                    text  = stringResource(R.string.today_starts_from),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text  = S_FROM,
+                    text  = stringResource(R.string.today_juz, sess.juzNum),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -244,19 +229,21 @@ private fun SessionCard(
 
             Spacer(Modifier.height(20.dp))
 
-            // Decorative Basmala
-            Text(
-                text      = S_BASMALA,
-                style     = TextStyle(
-                    fontFamily    = WarshFamily,
-                    fontSize      = 26.sp,
-                    lineHeight    = 42.sp,
-                    textDirection = TextDirection.Rtl,
-                ),
-                textAlign = TextAlign.Center,
-                color     = MaterialTheme.colorScheme.primary,
-                modifier  = Modifier.fillMaxWidth(),
-            )
+            // First aya of the session (replaces hardcoded Basmala)
+            if (sess.firstAyaText.isNotBlank()) {
+                Text(
+                    text      = sess.firstAyaText,
+                    style     = TextStyle(
+                        fontFamily    = WarshFamily,
+                        fontSize      = 26.sp,
+                        lineHeight    = 42.sp,
+                        textDirection = TextDirection.Rtl,
+                    ),
+                    textAlign = TextAlign.Center,
+                    color     = MaterialTheme.colorScheme.primary,
+                    modifier  = Modifier.fillMaxWidth(),
+                )
+            }
 
             Spacer(Modifier.height(20.dp))
             HorizontalDivider()
@@ -268,13 +255,13 @@ private fun SessionCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text       = "$S_PAGE ${e.startPage}",
-                    style      = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    text  = stringResource(R.string.today_sura_aya, sess.startSuraName, e.startAya),
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    text  = "سورة ${sess.startSuraName} - آية ${e.startAya}",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text       = stringResource(R.string.today_page, e.startPage),
+                    style      = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
 
@@ -286,13 +273,13 @@ private fun SessionCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text       = "$S_PAGE ${e.endPage}",
-                    style      = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    text  = stringResource(R.string.today_to_sura_aya, sess.endSuraName, e.endAya),
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    text  = "إلى سورة ${sess.endSuraName} - آية ${e.endAya}",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text       = stringResource(R.string.today_page, e.endPage),
+                    style      = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
 
@@ -304,20 +291,20 @@ private fun SessionCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Button(
-                    onClick  = onMarkRead,
-                    modifier = Modifier.weight(1f),
-                    colors   = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFFCA28),
-                        contentColor   = Color(0xFF1B1B1B),
-                    ),
-                ) {
-                    Text("‹ $S_MARK_READ", fontWeight = FontWeight.SemiBold)
-                }
-                Button(
                     onClick  = onRead,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text(S_READ, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.today_start_reading), fontWeight = FontWeight.SemiBold)
+                }
+                Button(
+                    onClick  = onMarkRead,
+                    modifier = Modifier.weight(1f),
+                    colors   = ButtonDefaults.buttonColors(
+                        containerColor = androidx.compose.ui.graphics.Color(0xFFFFCA28),
+                        contentColor   = androidx.compose.ui.graphics.Color(0xFF1B1B1B),
+                    ),
+                ) {
+                    Text(stringResource(R.string.today_mark_read), fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -333,7 +320,7 @@ private fun KhatmahStats(readCount: Int, totalCount: Int) {
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text       = S_KHATMAH,
+            text       = stringResource(R.string.today_khatmah_title),
             style      = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             modifier   = Modifier.fillMaxWidth(),
@@ -347,8 +334,8 @@ private fun KhatmahStats(readCount: Int, totalCount: Int) {
             modifier              = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text("$S_NEXT : $remaining", style = MaterialTheme.typography.bodySmall)
-            Text("$S_PREV : $readCount", style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.today_upcoming, remaining), style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.today_previous, readCount), style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -371,8 +358,8 @@ private fun NoKhatmahCard(onCreate: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(S_NO_KHATMAH, style = MaterialTheme.typography.bodyLarge)
-            Button(onClick = onCreate) { Text(S_CREATE) }
+            Text(stringResource(R.string.today_no_khatmah), style = MaterialTheme.typography.bodyLarge)
+            Button(onClick = onCreate) { Text(stringResource(R.string.today_create)) }
         }
     }
 }
@@ -385,7 +372,7 @@ private fun AllReadCard() {
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text      = S_ALL_READ,
+                text      = stringResource(R.string.today_all_read),
                 style     = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
                 color     = MaterialTheme.colorScheme.primary,

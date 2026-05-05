@@ -449,7 +449,7 @@
     <string name="today_sura_aya">سورة %1$s - آية %2$d</string>
     <string name="today_to_sura_aya">إلى سورة %1$s - آية %2$d</string>
     <string name="today_start_reading">اقرأ الورد</string>
-    <string name="today_mark_read">‹ أتممت القراءة</string>
+    <string name="today_mark_read">أتممت القراءة</string>
     <string name="today_khatmah_title">الختمة الحالية</string>
     <string name="today_previous">الأوراد السابقة : %d</string>
     <string name="today_upcoming">الأوراد القادمة : %d</string>

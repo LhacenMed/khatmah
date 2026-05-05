@@ -8,8 +8,13 @@ import kotlinx.coroutines.withContext
 import kotlin.math.ceil
 import kotlin.math.min
 
-/** Sura names + juz number needed by TodayTab to display session info. */
-data class SessionMeta(val startSuraName: String, val endSuraName: String, val juzNum: Int)
+/** Sura names + juz + first aya text needed by TodayTab to display session info. */
+data class SessionMeta(
+    val startSuraName: String,
+    val endSuraName:   String,
+    val juzNum:        Int,
+    val firstAyaText:  String,
+)
 
 class KhatmahRepository(private val context: Context) {
 
@@ -73,9 +78,19 @@ class KhatmahRepository(private val context: Context) {
         return 1
     }
 
-    // ── Sura-name cache ───────────────────────────────────────────────────────
+    // ── Caches ────────────────────────────────────────────────────────────────
 
     @Volatile private var cachedSuraNames: Map<Int, String>? = null
+
+    /**
+     * Pre-warms the sura name cache from the Quran DB.
+     * Call once from [App.onCreate] on a background thread so the first
+     * [sessionMeta] call returns immediately without opening the DB.
+     */
+    suspend fun warmCache() = withContext(Dispatchers.IO) {
+        if (cachedSuraNames != null) return@withContext
+        openQuranDb().use { db -> cachedSuraNames = loadSuraNames(db) }
+    }
 
     private fun getJuzForSura(db: SQLiteDatabase, sura: Int): Int {
         db.rawQuery(
@@ -85,7 +100,18 @@ class KhatmahRepository(private val context: Context) {
         return 1
     }
 
-    suspend fun sessionMeta(startSura: Int, endSura: Int): SessionMeta =
+    /** Fetches the Warsh text of a single aya from arabic_text. */
+    private fun getAyaText(db: SQLiteDatabase, sura: Int, aya: Int): String {
+        db.rawQuery(
+            "SELECT text FROM arabic_text WHERE sura=? AND ayah=? LIMIT 1",
+            arrayOf(sura.toString(), aya.toString()),
+        ).use { c ->
+            if (c.moveToFirst()) return c.getString(0).trim()
+        }
+        return ""
+    }
+
+    suspend fun sessionMeta(startSura: Int, startAya: Int, endSura: Int): SessionMeta =
         withContext(Dispatchers.IO) {
             openQuranDb().use { db ->
                 val names = cachedSuraNames
@@ -94,6 +120,7 @@ class KhatmahRepository(private val context: Context) {
                     startSuraName = names[startSura].orEmpty(),
                     endSuraName   = names[endSura].orEmpty(),
                     juzNum        = getJuzForSura(db, startSura),
+                    firstAyaText  = getAyaText(db, startSura, startAya),
                 )
             }
         }

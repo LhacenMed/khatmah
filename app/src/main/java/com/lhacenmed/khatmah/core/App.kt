@@ -7,6 +7,7 @@ import coil.Coil
 import coil.ImageLoader
 import coil.decode.SvgDecoder
 import com.google.android.material.color.DynamicColors
+import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanPrefs
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanScheduler
@@ -17,8 +18,14 @@ import com.lhacenmed.khatmah.shared.util.AppPrefs
 import com.lhacenmed.khatmah.shared.util.LocaleManager
 import com.lhacenmed.khatmah.shared.util.ThemeManager
 import com.lhacenmed.khatmah.widget.PrayerWidgetWorker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class App : Application() {
+
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate() {
@@ -53,5 +60,8 @@ class App : Application() {
                 .components { add(SvgDecoder.Factory()) }
                 .build()
         }
+
+        // Pre-warm the Quran sura-name cache so TodayTab loads instantly.
+        appScope.launch { KhatmahRepository(this@App).warmCache() }
     }
 }
