@@ -68,6 +68,7 @@ import com.lhacenmed.khatmah.feature.quran.ui.IndexTab
 import com.lhacenmed.khatmah.feature.quran.ui.debug.DebugWarshPage
 import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranReaderScreen
 import com.lhacenmed.khatmah.feature.quran.ui.search.QuranSearchPage
+import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranSessionReaderScreen
 import com.lhacenmed.khatmah.feature.settings.DarkThemePage
 import com.lhacenmed.khatmah.feature.settings.LanguagePage
 import com.lhacenmed.khatmah.feature.settings.ThemeSettingsPage
@@ -218,6 +219,20 @@ fun AppEntry() {
 
             // ── Khatmah ───────────────────────────────────────────────────────────────────
             animatedComposable(Route.NEW_KHATMAH) { NewKhatmahPage() }
+
+            // ← add this block ↓
+            animatedComposable(
+                route     = Route.QURAN_SESSION_READER,
+                arguments = listOf(
+                    navArgument("startPage") { type = NavType.IntType },
+                    navArgument("endPage")   { type = NavType.IntType },
+                ),
+            ) { back ->
+                QuranSessionReaderScreen(
+                    startPage = back.arguments?.getInt("startPage") ?: 1,
+                    endPage   = back.arguments?.getInt("endPage")   ?: 1,
+                )
+            }
 
             animatedComposable(Route.DEBUG_DB)    { DbBrowserPage()  }
         }

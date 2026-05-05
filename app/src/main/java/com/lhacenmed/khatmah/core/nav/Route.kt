@@ -72,7 +72,11 @@ object Route {
     fun adhanSoundSelection(prayerId: Int) = "adhan_sound_selection/$prayerId"
 
     // ── Khatmah ───────────────────────────────────────────────────────────────────
-    const val NEW_KHATMAH = "new_khatmah"
+    const val NEW_KHATMAH          = "new_khatmah"
+    const val QURAN_SESSION_READER = "quran_session_reader?startPage={startPage}&endPage={endPage}"  // ← add
+
+    fun quranSessionReader(startPage: Int, endPage: Int) =                                           // ← add
+        "quran_session_reader?startPage=$startPage&endPage=$endPage"
 
     const val DEBUG_DB    = "debug_db"
 

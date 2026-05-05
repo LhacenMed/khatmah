@@ -442,4 +442,23 @@
     <string name="khatmah_from_label">من: %1$s — آية %2$d</string>
     <string name="khatmah_to_label">إلى: %1$s — آية %2$d</string>
     <string name="khatmah_pages_label">صفحة %1$d – %2$d</string>
+
+    <!-- Today Tab -->
+    <string name="today_starts_from">من قوله تعالى</string>
+    <string name="today_page">صفحة %d</string>
+    <string name="today_sura_aya">سورة %1$s - آية %2$d</string>
+    <string name="today_to_sura_aya">إلى سورة %1$s - آية %2$d</string>
+    <string name="today_start_reading">اقرأ الورد</string>
+    <string name="today_mark_read">‹ أتممت القراءة</string>
+    <string name="today_khatmah_title">الختمة الحالية</string>
+    <string name="today_previous">الأوراد السابقة : %d</string>
+    <string name="today_upcoming">الأوراد القادمة : %d</string>
+    <string name="today_no_khatmah">لا توجد ختمة نشطة</string>
+    <string name="today_create">إنشاء ختمة</string>
+    <string name="today_all_read">أحسنت! أتممت جميع الأوراد</string>
+    <string name="today_dl_title">تحميل المصحف</string>
+    <string name="today_dl_msg">يجب اختيار نوع المصحف من إعدادات القارئ أولاً</string>
+    <string name="today_settings">الإعدادات</string>
+    <string name="today_cancel">إلغاء</string>
+    <string name="today_juz">الجزء %d</string>
 </resources>

@@ -19,4 +19,13 @@ interface KhatmahDao {
 
     @Query("SELECT * FROM khatmah_session WHERE khatmahId = :khatmahId ORDER BY dayNumber")
     fun sessions(khatmahId: Long): Flow<List<KhatmahSessionEntity>>
+
+    @Query("SELECT * FROM khatmah_session WHERE khatmahId = :khatmahId AND isRead = 0 ORDER BY dayNumber ASC LIMIT 1")
+    fun firstUnread(khatmahId: Long): Flow<KhatmahSessionEntity?>
+
+    @Query("UPDATE khatmah_session SET isRead = 1 WHERE id = :id")
+    suspend fun markRead(id: Long)
+
+    @Query("SELECT COUNT(*) FROM khatmah_session WHERE khatmahId = :khatmahId AND isRead = 1")
+    fun readCount(khatmahId: Long): Flow<Int>
 }

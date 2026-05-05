@@ -411,4 +411,23 @@
     <string name="khatmah_from_label">From: %1$s — Aya %2$d</string>
     <string name="khatmah_to_label">To: %1$s — Aya %2$d</string>
     <string name="khatmah_pages_label">Page %1$d – %2$d</string>
+
+    <!-- Today Tab -->
+    <string name="today_starts_from">Starts From</string>
+    <string name="today_page">Page %d</string>
+    <string name="today_sura_aya">Surat %1$s · Aya %2$d</string>
+    <string name="today_to_sura_aya">To Surat %1$s · Aya %2$d</string>
+    <string name="today_start_reading">Start Reading</string>
+    <string name="today_mark_read">Done Reading ›</string>
+    <string name="today_khatmah_title">Khatmah Sessions</string>
+    <string name="today_previous">Previous : %d</string>
+    <string name="today_upcoming">Upcoming : %d</string>
+    <string name="today_no_khatmah">No active Khatmah</string>
+    <string name="today_create">Create Khatmah</string>
+    <string name="today_all_read">Well done! You have completed all sessions</string>
+    <string name="today_dl_title">Download Mushaf</string>
+    <string name="today_dl_msg">Please choose a Mushaf type from reader settings first</string>
+    <string name="today_settings">Settings</string>
+    <string name="today_cancel">Cancel</string>
+    <string name="today_juz">Juz\' %d</string>
 </resources>

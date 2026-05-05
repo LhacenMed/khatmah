@@ -3,9 +3,13 @@ package com.lhacenmed.khatmah.feature.khatmah.data
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import kotlin.math.ceil
 import kotlin.math.min
+
+/** Sura names + juz number needed by TodayTab to display session info. */
+data class SessionMeta(val startSuraName: String, val endSuraName: String, val juzNum: Int)
 
 class KhatmahRepository(private val context: Context) {
 
@@ -67,6 +71,45 @@ class KhatmahRepository(private val context: Context) {
             if (c.moveToFirst()) return c.getInt(0)
         }
         return 1
+    }
+
+    // ── Sura-name cache ───────────────────────────────────────────────────────
+
+    @Volatile private var cachedSuraNames: Map<Int, String>? = null
+
+    private fun getJuzForSura(db: SQLiteDatabase, sura: Int): Int {
+        db.rawQuery(
+            "SELECT num_joza FROM quran_ajzaa WHERE sura <= ? ORDER BY sura DESC LIMIT 1",
+            arrayOf(sura.toString()),
+        ).use { c -> if (c.moveToFirst()) return c.getInt(0) }
+        return 1
+    }
+
+    suspend fun sessionMeta(startSura: Int, endSura: Int): SessionMeta =
+        withContext(Dispatchers.IO) {
+            openQuranDb().use { db ->
+                val names = cachedSuraNames
+                    ?: loadSuraNames(db).also { cachedSuraNames = it }
+                SessionMeta(
+                    startSuraName = names[startSura].orEmpty(),
+                    endSuraName   = names[endSura].orEmpty(),
+                    juzNum        = getJuzForSura(db, startSura),
+                )
+            }
+        }
+
+    // ── Today / session flow wrappers ─────────────────────────────────────────
+
+    fun activeKhatmahFlow(): Flow<KhatmahEntity?> = khatmahDb.dao().activeKhatmah()
+
+    fun currentSession(khatmahId: Long): Flow<KhatmahSessionEntity?> =
+        khatmahDb.dao().firstUnread(khatmahId)
+
+    fun readCount(khatmahId: Long): Flow<Int> =
+        khatmahDb.dao().readCount(khatmahId)
+
+    suspend fun markSessionRead(id: Long) = withContext(Dispatchers.IO) {
+        khatmahDb.dao().markRead(id)
     }
 
     // ── Public calculations (pure, no IO) ─────────────────────────────────────
