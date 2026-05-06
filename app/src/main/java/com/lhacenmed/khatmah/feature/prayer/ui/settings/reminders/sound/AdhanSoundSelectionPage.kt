@@ -27,13 +27,16 @@ import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.SettingsSectionHeader
+import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
+import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanConfig
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanPrefs
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanScheduler
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanSound
 import com.lhacenmed.khatmah.feature.prayer.notification.NotificationHelper
 import com.lhacenmed.khatmah.shared.util.AdhanSoundFiles
+import com.lhacenmed.khatmah.core.ui.theme.applyOpacity
+import androidx.core.net.toUri
 
 // ── Pre-alert options ─────────────────────────────────────────────────────────
 private val PRE_ALERT_OPTIONS = listOf(0, 5, 10, 15, 20, 25, 30)
@@ -44,6 +47,7 @@ fun AdhanSoundSelectionPage(prayerId: Int) {
     val nav     = LocalNavController.current
     val context = LocalContext.current
     val configs by AdhanPrefs.flow.collectAsState()
+    val customSounds by AdhanPrefs.customSoundsFlow.collectAsState()
     val config   = configs.getOrElse(prayerId) { AdhanConfig() }
 
     // Discover available asset sounds once.
@@ -106,7 +110,7 @@ fun AdhanSoundSelectionPage(prayerId: Int) {
     fun previewCustom(uri: String) {
         mediaPlayer?.release()
         mediaPlayer = MediaPlayer().apply {
-            setDataSource(context, Uri.parse(uri))
+            setDataSource(context, uri.toUri())
             prepare()
             start()
         }
@@ -130,26 +134,25 @@ fun AdhanSoundSelectionPage(prayerId: Int) {
                 .verticalScroll(rememberScrollState()),
         ) {
             // ── Pre-alert section ─────────────────────────────────────────────
-            SettingsSectionHeader(stringResource(R.string.adhan_alarm_before_section))
+            PreferenceSubtitle(text = stringResource(R.string.adhan_alarm_before_section))
 
-            ListItem(
-                modifier = Modifier.clickable(enabled = config.isEnabled) {
-                    if (config.isEnabled) showPreDialog = true
-                },
-                headlineContent   = { Text(stringResource(R.string.adhan_alert_before)) },
-                supportingContent = {
-                    val alpha = if (config.isEnabled) 1f else 0.38f
+            PreferenceItem(
+                title = stringResource(R.string.adhan_alert_before),
+                enabled = config.isEnabled,
+                onClick = { if (config.isEnabled) showPreDialog = true },
+                trailingIcon = {
                     Text(
-                        text  = preAlertLabel(config.preAlertMinutes),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
+                        text = preAlertLabel(config.preAlertMinutes),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.applyOpacity(config.isEnabled)
                     )
-                },
+                }
             )
 
             HorizontalDivider()
 
             // ── Built-in sound section ────────────────────────────────────────
-            SettingsSectionHeader(stringResource(R.string.adhan_sound_section_format, prayerName))
+            PreferenceSubtitle(text = stringResource(R.string.adhan_sound_section_format, prayerName))
 
             FixedSoundItem(
                 label    = stringResource(R.string.adhan_sound_stop),
@@ -183,6 +186,7 @@ fun AdhanSoundSelectionPage(prayerId: Int) {
             assetSounds.forEach { assetSound ->
                 AssetSoundItem(
                     filename  = assetSound.filename,
+                    displayName = AdhanSoundFiles.getDisplayName(assetSound.filename),
                     selected  = config.sound is AdhanSound.Asset &&
                             config.sound.filename == assetSound.filename,
                     onSelect  = { saveSound(assetSound) },
@@ -193,15 +197,15 @@ fun AdhanSoundSelectionPage(prayerId: Int) {
             HorizontalDivider()
 
             // ── Custom file section ───────────────────────────────────────────
-            SettingsSectionHeader(stringResource(R.string.adhan_sound_custom_section))
+            PreferenceSubtitle(text = stringResource(R.string.adhan_sound_custom_section))
 
-            // Show the currently selected custom sound as a selectable item.
-            if (config.sound is AdhanSound.Custom) {
+            // Show all previously picked custom sounds
+            customSounds.forEach { custom ->
                 CustomSoundItem(
-                    displayName = config.sound.displayName,
-                    selected    = true,
-                    onSelect    = { /* already selected */ },
-                    onPreview   = { previewCustom(config.sound.uri) },
+                    displayName = custom.displayName,
+                    selected    = config.sound is AdhanSound.Custom && config.sound.uri == custom.uri,
+                    onSelect    = { saveSound(custom) },
+                    onPreview   = { previewCustom(custom.uri) },
                 )
             }
 
@@ -250,49 +254,84 @@ private fun FixedSoundItem(
     onClick:   () -> Unit,
     onPreview: (() -> Unit)? = null,
 ) {
-    ListItem(
-        modifier          = Modifier.clickable { onClick() },
-        headlineContent   = {
-            Text(label, color = if (selected) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurface)
-        },
-        leadingContent    = { RadioButton(selected = selected, onClick = null) },
-        trailingContent   = {
+    PreferenceItem(
+        title = label,
+        onClick = onClick,
+        leadingIcon = {
             if (onPreview != null) {
-                IconButton(onClick = onPreview) {
-                    Icon(Icons.Outlined.PlayArrow, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Box(
+                    modifier = Modifier
+                        .padding(start = 16.dp, end = 20.dp)
+                        .size(24.dp)
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            onClick = onPreview
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Outlined.PlayArrow, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             } else {
-                Icon(icon, contentDescription = null,
+                Icon(
+                    icon, contentDescription = null,
+                    modifier = Modifier
+                        .padding(start = 16.dp, end = 20.dp)
+                        .size(24.dp),
                     tint = if (selected) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
             }
         },
+        trailingIcon = {
+            RadioButton(
+                selected = selected,
+                onClick  = null,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+        }
     )
 }
 
 @Composable
 private fun AssetSoundItem(
     filename:  String,
+    displayName: String,
     selected:  Boolean,
     onSelect:  () -> Unit,
     onPreview: () -> Unit,
 ) {
-    ListItem(
-        modifier          = Modifier.clickable { onSelect() },
-        headlineContent   = {
-            Text(filename.removeSuffix(".mp3"),
-                color = if (selected) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface)
-        },
-        leadingContent    = { RadioButton(selected = selected, onClick = null) },
-        trailingContent   = {
-            IconButton(onClick = onPreview) {
-                Icon(Icons.Outlined.PlayArrow, contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    PreferenceItem(
+        title = displayName,
+        onClick = onSelect,
+        leadingIcon = {
+            Box(
+                modifier = Modifier
+                    .padding(start = 16.dp, end = 20.dp)
+                    .size(24.dp)
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                        onClick = onPreview
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Outlined.PlayArrow, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         },
+        trailingIcon = {
+            RadioButton(
+                selected = selected,
+                onClick  = null,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+        }
     )
 }
 
@@ -303,35 +342,43 @@ private fun CustomSoundItem(
     onSelect:    () -> Unit,
     onPreview:   () -> Unit,
 ) {
-    ListItem(
-        modifier          = Modifier.clickable { onSelect() },
-        headlineContent   = {
-            Text(displayName,
-                color = if (selected) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface)
-        },
-        leadingContent    = { RadioButton(selected = selected, onClick = null) },
-        trailingContent   = {
-            IconButton(onClick = onPreview) {
-                Icon(Icons.Outlined.PlayArrow, contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    PreferenceItem(
+        title = displayName,
+        onClick = onSelect,
+        leadingIcon = {
+            Box(
+                modifier = Modifier
+                    .padding(start = 16.dp, end = 20.dp)
+                    .size(24.dp)
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                        onClick = onPreview
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Outlined.PlayArrow, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         },
+        trailingIcon = {
+            RadioButton(
+                selected = selected,
+                onClick  = null,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+        }
     )
 }
 
 @Composable
 private fun BrowseItem(onClick: () -> Unit) {
-    ListItem(
-        modifier        = Modifier.clickable { onClick() },
-        headlineContent = {
-            Text(stringResource(R.string.adhan_sound_custom_browse),
-                color = MaterialTheme.colorScheme.primary)
-        },
-        leadingContent  = {
-            Icon(Icons.Outlined.FolderOpen, contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary)
-        },
+    PreferenceItem(
+        title = stringResource(R.string.adhan_sound_custom_browse),
+        icon = Icons.Outlined.FolderOpen,
+        onClick = onClick,
     )
 }
 

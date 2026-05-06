@@ -54,6 +54,7 @@ import com.lhacenmed.khatmah.core.ui.components.PreferenceSwitch
 import com.lhacenmed.khatmah.shared.util.ThemeManager
 import com.lhacenmed.khatmah.core.ui.theme.ThemeColor
 import com.lhacenmed.khatmah.core.ui.theme.colorPreferences
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 
 /**
  * Appearance settings page.
@@ -111,7 +112,13 @@ val ThemeSettingsPage = NavPage(route = Route.THEME_SETTINGS) {
                         else                                       -> R.string.theme_dark
                     }
                 ),
-                onClick = { nav.navigate(Route.DARK_THEME) }
+                onClick = { nav.navigate(Route.DARK_THEME) },
+                trailingIcon = {
+                    Icon(
+                        imageVector        = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                    )
+                }
             )
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

@@ -35,8 +35,12 @@ object AdhanPrefs {
     private val _flow = MutableStateFlow(defaultConfigs())
     val flow: StateFlow<List<AdhanConfig>> = _flow.asStateFlow()
 
+    private val _customSoundsFlow = MutableStateFlow<List<AdhanSound.Custom>>(emptyList())
+    val customSoundsFlow: StateFlow<List<AdhanSound.Custom>> = _customSoundsFlow.asStateFlow()
+
     fun init(context: Context) {
         _flow.value = load(context.applicationContext)
+        _customSoundsFlow.value = loadCustomSounds(context.applicationContext)
     }
 
     fun get(): List<AdhanConfig> = _flow.value
@@ -51,9 +55,44 @@ object AdhanPrefs {
         }
         _flow.value = updated
         version++
+
+        // If it's a custom sound, also save it to the global custom sounds list
+        if (config.sound is AdhanSound.Custom) {
+            addCustomSound(context, config.sound)
+        }
+    }
+
+    fun getCustomSounds(context: Context): List<AdhanSound.Custom> = _customSoundsFlow.value
+
+    fun addCustomSound(context: Context, sound: AdhanSound.Custom) {
+        val p = prefs(context)
+        val set = p.getStringSet("adhan_custom_sounds", emptySet())?.toMutableSet() ?: mutableSetOf()
+        val key = sound.toKey()
+        if (set.add(key)) {
+            p.edit { putStringSet("adhan_custom_sounds", set) }
+            _customSoundsFlow.value = loadCustomSounds(context)
+        }
+    }
+
+    fun removeCustomSound(context: Context, sound: AdhanSound.Custom) {
+        val p = prefs(context)
+        val set = p.getStringSet("adhan_custom_sounds", emptySet())?.toMutableSet() ?: mutableSetOf()
+        if (set.remove(sound.toKey())) {
+            p.edit { putStringSet("adhan_custom_sounds", set) }
+            _customSoundsFlow.value = loadCustomSounds(context)
+        }
     }
 
     // ── Internal ──────────────────────────────────────────────────────────────
+
+    private fun loadCustomSounds(context: Context): List<AdhanSound.Custom> {
+        val p = prefs(context)
+        val set = p.getStringSet("adhan_custom_sounds", emptySet()) ?: emptySet()
+        return set.mapNotNull { key ->
+            val sound = AdhanSound.fromKey(key)
+            if (sound is AdhanSound.Custom) sound else null
+        }.sortedBy { it.displayName }
+    }
 
     private fun load(context: Context): List<AdhanConfig> {
         val p = prefs(context)

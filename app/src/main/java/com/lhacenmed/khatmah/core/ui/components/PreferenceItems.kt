@@ -128,14 +128,14 @@ fun PreferenceItem(
             }
 
             trailingIcon?.let {
-                VerticalDivider(
-                    modifier  = Modifier
-                        .height(32.dp)
-                        .padding(horizontal = 8.dp)
-                        .align(Alignment.CenterVertically),
-                    color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                    thickness = 1.dp,
-                )
+//                VerticalDivider(
+//                    modifier  = Modifier
+//                        .height(32.dp)
+//                        .padding(horizontal = 8.dp)
+//                        .align(Alignment.CenterVertically),
+//                    color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+//                    thickness = 1.dp,
+//                )
                 Box(modifier = Modifier.padding(end = 8.dp)) {
                     it.invoke()
                 }

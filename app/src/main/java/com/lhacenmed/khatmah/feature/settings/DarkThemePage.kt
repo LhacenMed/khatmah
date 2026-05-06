@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -28,9 +29,9 @@ import com.lhacenmed.khatmah.core.nav.NavPage
 import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.ui.components.IconButton
 import com.lhacenmed.khatmah.core.ui.components.LargeTopAppBar
+import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSwitch
-import com.lhacenmed.khatmah.core.ui.components.SingleChoiceItem
 import com.lhacenmed.khatmah.shared.util.ThemeManager
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -80,10 +81,12 @@ val DarkThemePage = NavPage(route = Route.DARK_THEME) {
                 .verticalScroll(rememberScrollState()),
         ) {
             themeOptions.forEach { (mode, labelRes) ->
-                SingleChoiceItem(
-                    label = stringResource(labelRes),
-                    selected = currentMode == mode,
+                PreferenceItem(
+                    title = stringResource(labelRes),
                     onClick = { ThemeManager.setMode(context, mode) },
+                    trailingIcon = {
+                        RadioButton(selected = currentMode == mode, onClick = null)
+                    }
                 )
             }
 

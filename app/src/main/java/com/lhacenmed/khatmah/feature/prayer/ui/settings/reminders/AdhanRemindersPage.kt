@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -16,11 +18,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
+import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
+import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
+import com.lhacenmed.khatmah.core.ui.theme.applyOpacity
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanPrefs
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanSound
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.SettingsSectionHeader
-import com.lhacenmed.khatmah.core.nav.Route
+import com.lhacenmed.khatmah.shared.util.AdhanSoundFiles
 
 @Composable
 fun AdhanRemindersPage() {
@@ -51,37 +56,49 @@ fun AdhanRemindersPage() {
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
         ) {
-            SettingsSectionHeader(stringResource(R.string.adhan_reminders_section_title))
+            PreferenceSubtitle(text = stringResource(R.string.adhan_reminders_section_title))
 
             prayerNames.forEachIndexed { index, nameRes ->
-                val config  = configs.getOrNull(index) ?: return@forEachIndexed
-                val isOn    = config.isEnabled
+                val config = configs.getOrNull(index) ?: return@forEachIndexed
+                val isOn = config.isEnabled
                 val subtitle = soundSubtitle(config.sound)
 
-                ListItem(
-                    modifier          = Modifier.clickable {
-                        nav.navigate(Route.adhanSoundSelection(index))
-                    },
-                    headlineContent   = { Text(stringResource(nameRes)) },
-                    supportingContent = { Text(subtitle) },
-                    trailingContent   = {
+                PreferenceItem(
+                    title = stringResource(nameRes),
+                    onClick = { nav.navigate(Route.adhanSoundSelection(index)) },
+                    leadingIcon = {
+                        val icon = when {
+                            !isOn -> Icons.Outlined.NotificationsOff
+                            config.sound is AdhanSound.Silent -> Icons.AutoMirrored.Outlined.VolumeOff
+                            else -> Icons.Filled.Notifications
+                        }
                         Icon(
-                            imageVector = if (isOn) Icons.Filled.Notifications
-                            else Icons.Outlined.Notifications,
+                            imageVector = icon,
                             contentDescription = null,
-                            tint = if (isOn) MaterialTheme.colorScheme.primary
+                            modifier = Modifier
+                                .padding(start = 8.dp, end = 16.dp)
+                                .size(24.dp),
+                            tint = if (isOn && config.sound !is AdhanSound.Silent) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        )
+                    },
+                    trailingIcon = {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.applyOpacity(isOn)
                         )
                     },
                 )
             }
 
-            HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider()
 
             Text(
-                text     = stringResource(R.string.adhan_reminders_warning),
-                style    = MaterialTheme.typography.bodyMedium,
-                color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = stringResource(R.string.adhan_reminders_warning),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp),
             )
         }
@@ -93,6 +110,6 @@ private fun soundSubtitle(sound: AdhanSound): String = when (sound) {
     is AdhanSound.Off    -> stringResource(R.string.adhan_status_off)
     is AdhanSound.Silent -> stringResource(R.string.adhan_sound_silent)
     is AdhanSound.Device -> stringResource(R.string.adhan_sound_device)
-    is AdhanSound.Asset  -> sound.filename.removeSuffix(".mp3")
+    is AdhanSound.Asset  -> AdhanSoundFiles.getDisplayName(sound.filename)
     is AdhanSound.Custom -> sound.displayName
 }

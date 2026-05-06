@@ -44,6 +44,6 @@ sealed class AdhanSound {
         }
 
         /** Filename used as the app-wide default. */
-        const val DEFAULT_ASSET = "أذان الحرم المكي - كامل.mp3"
+        const val DEFAULT_ASSET = "makkah.mp3"
     }
 }
