@@ -456,8 +456,8 @@
     <string name="today_start_reading">اقرأ الورد</string>
     <string name="today_mark_read">أتممت القراءة</string>
     <string name="today_khatmah_title">الختمة الحالية</string>
-    <string name="today_previous">الأوراد السابقة : %d</string>
-    <string name="today_upcoming">الأوراد القادمة : %d</string>
+    <string name="today_previous">الأوراد السابقة: %d</string>
+    <string name="today_upcoming">الأوراد القادمة: %d</string>
     <string name="today_no_khatmah">لا توجد ختمة نشطة</string>
     <string name="today_create">إنشاء ختمة</string>
     <string name="today_all_read">أحسنت! أتممت جميع الأوراد</string>
@@ -469,6 +469,8 @@
 
     <string name="today_page_prefix">صفحة</string>
     <string name="today_juz_prefix">الجزء</string>
+    <string name="today_previous_prefix">الأوراد السابقة</string>
+    <string name="today_upcoming_prefix">الأوراد القادمة</string>
 
     <string name="today_khatmah_completed">تم الإنتهاء من الختمة الحالية</string>
     <string name="today_dua_khatm">دعاء ختم القران</string>

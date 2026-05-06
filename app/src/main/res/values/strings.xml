@@ -425,8 +425,8 @@
     <string name="today_start_reading">Start Reading</string>
     <string name="today_mark_read">Done Reading</string>
     <string name="today_khatmah_title">Khatmah Sessions</string>
-    <string name="today_previous">Previous : %d</string>
-    <string name="today_upcoming">Upcoming : %d</string>
+    <string name="today_previous">Previous: %d</string>
+    <string name="today_upcoming">Upcoming: %d</string>
     <string name="today_no_khatmah">No active Khatmah</string>
     <string name="today_create">Create Khatmah</string>
     <string name="today_all_read">Well done! You have completed all sessions</string>
@@ -438,6 +438,8 @@
 
     <string name="today_page_prefix">Page</string>
     <string name="today_juz_prefix">Juz\'</string>
+    <string name="today_previous_prefix">Previous</string>
+    <string name="today_upcoming_prefix">Upcoming</string>
 
     <string name="today_khatmah_completed">Khatmah completed</string>
     <string name="today_dua_khatm">Khatm Al-Quran Dua</string>

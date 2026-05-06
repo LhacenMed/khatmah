@@ -215,7 +215,8 @@ private fun TodayScreen(padding: PaddingValues) {
                 when {
                     initialState is TodayViewModel.UiState.Loading ||
                             targetState  is TodayViewModel.UiState.Loading ->
-                        EnterTransition.None togetherWith ExitTransition.None
+                        fadeIn(animationSpec = tween(300)) togetherWith
+                                fadeOut(animationSpec = tween(300))
 
                     initialState is TodayViewModel.UiState.Active &&
                             targetState  is TodayViewModel.UiState.Active ->
@@ -257,13 +258,23 @@ private fun TodayScreen(padding: PaddingValues) {
         }
 
         // Bottom strip — full progress when all read, real stats when active, skeleton when loading.
-        when (val s = state) {
-            is TodayViewModel.UiState.Active  ->
-                KhatmahStats(readCount = s.readCount, totalCount = s.khatmah.totalDays)
-            is TodayViewModel.UiState.AllRead ->
-                KhatmahStats(readCount = s.totalDays, totalCount = s.totalDays)
-            is TodayViewModel.UiState.Loading -> SkeletonStats()
-            else                              -> Unit
+        AnimatedContent(
+            targetState   = state,
+            contentKey    = { s -> s::class },
+            transitionSpec = {
+                fadeIn(animationSpec = tween(300)) togetherWith
+                        fadeOut(animationSpec = tween(300))
+            },
+            label = "stats_strip",
+        ) { s ->
+            when (s) {
+                is TodayViewModel.UiState.Active  ->
+                    KhatmahStats(readCount = s.readCount, totalCount = s.khatmah.totalDays)
+                is TodayViewModel.UiState.AllRead ->
+                    KhatmahStats(readCount = s.totalDays, totalCount = s.totalDays)
+                is TodayViewModel.UiState.Loading -> SkeletonStats()
+                else                              -> Unit
+            }
         }
     }
 }
@@ -543,13 +554,24 @@ private fun SkeletonStats() {
         )
         // LinearProgressIndicator track height is 4dp
         SkeletonBox(Modifier.fillMaxWidth().height(4.dp))
-        // bodySmall ~12sp → 12dp height
         Row(
             modifier              = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            SkeletonBox(Modifier.size(width = 80.dp, height = 12.dp))
-            SkeletonBox(Modifier.size(width = 80.dp, height = 12.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment     = Alignment.CenterVertically,
+            ) {
+                Text(stringResource(R.string.today_previous_prefix), style = MaterialTheme.typography.bodySmall)
+                SkeletonBox(Modifier.size(width = 20.dp, height = 12.dp))
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment     = Alignment.CenterVertically,
+            ) {
+                Text(stringResource(R.string.today_upcoming_prefix), style = MaterialTheme.typography.bodySmall)
+                SkeletonBox(Modifier.size(width = 20.dp, height = 12.dp))
+            }
         }
     }
 }
@@ -558,7 +580,12 @@ private fun SkeletonStats() {
 
 @Composable
 private fun KhatmahStats(readCount: Int, totalCount: Int) {
-    val progress  = if (totalCount > 0) readCount.toFloat() / totalCount else 0f
+    val rawProgress  = if (totalCount > 0) readCount.toFloat() / totalCount else 0f
+    val animProgress by animateFloatAsState(
+        targetValue   = rawProgress,
+        animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+        label         = "khatmah_progress",
+    )
     val remaining = (totalCount - readCount).coerceAtLeast(0)
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -570,15 +597,21 @@ private fun KhatmahStats(readCount: Int, totalCount: Int) {
             textAlign  = TextAlign.Start,
         )
         LinearProgressIndicator(
-            progress = { progress },
+            progress = { animProgress },
             modifier = Modifier.fillMaxWidth(),
         )
         Row(
             modifier              = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(stringResource(R.string.today_previous, readCount), style = MaterialTheme.typography.bodySmall)
-            Text(stringResource(R.string.today_upcoming, remaining), style = MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(R.string.today_previous_prefix), style = MaterialTheme.typography.bodySmall)
+                Text("$readCount",  style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(R.string.today_upcoming_prefix), style = MaterialTheme.typography.bodySmall)
+                Text("$remaining",  style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+            }
         }
     }
 }
@@ -588,13 +621,84 @@ private fun KhatmahStats(readCount: Int, totalCount: Int) {
 @Composable
 private fun NoKhatmahCard(onCreate: () -> Unit) {
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier            = Modifier.padding(24.dp).fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(stringResource(R.string.today_no_khatmah), style = MaterialTheme.typography.bodyLarge)
-            Button(onClick = onCreate) { Text(stringResource(R.string.today_create)) }
+        Box {
+            Column(modifier = Modifier.padding(16.dp)) {
+
+                // Invisible header row — keeps exact dimensions
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.CenterVertically,
+                ) {
+                    Text(text = "ض", style = MaterialTheme.typography.labelLarge, modifier = Modifier.alpha(0f))
+                    Text(text = "ض", style = MaterialTheme.typography.labelLarge, modifier = Modifier.alpha(0f))
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                // Invisible aya block — keeps exact height via font metrics
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text     = "ض",
+                        style    = TextStyle(fontFamily = WarshFamily, fontSize = 26.sp, lineHeight = 42.sp),
+                        modifier = Modifier.alpha(0f),
+                    )
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                // Invisible divider — keeps exact height
+                HorizontalDivider(modifier = Modifier.alpha(0f))
+
+                Spacer(Modifier.height(12.dp))
+
+                // Invisible info rows
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(text = "ض", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.alpha(0f))
+                    Text(text = "ض", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.alpha(0f))
+                }
+
+                Spacer(Modifier.height(4.dp))
+
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(text = "ض", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.alpha(0f))
+                    Text(text = "ض", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.alpha(0f))
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Action buttons
+                Button(
+                    onClick  = onCreate,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.today_create), fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+            // Absolutely centered overlay — matches card body size, no layout impact
+            Box(
+                modifier         = Modifier.matchParentSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text      = stringResource(R.string.today_no_khatmah),
+                    textAlign = TextAlign.Center,
+                    color     = MaterialTheme.colorScheme.primary,
+                    maxLines  = 3,
+                    overflow  = TextOverflow.Ellipsis,
+                    modifier  = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 50.dp),
+                )
+            }
         }
     }
 }
