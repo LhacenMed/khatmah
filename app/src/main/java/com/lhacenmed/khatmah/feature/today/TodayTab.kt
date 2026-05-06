@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
@@ -410,13 +411,28 @@ private fun SkeletonCard() {
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    SkeletonBox(Modifier.size(width = 40.dp, height = 14.dp))
+                    SkeletonBox(Modifier.size(width = 10.dp, height = 14.dp))
                 }
             }
 
             Spacer(Modifier.height(20.dp))
 
-            SkeletonBox(Modifier.fillMaxWidth().height(42.dp))
+            // Invisible text drives exact height; skeleton overlays it.
+            Box(
+                modifier         = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text   = "بِسْمِ اِ۬للَّهِ اِ۬لرَّحْمَٰنِ اِ۬لرَّحِيمِ",
+                    style  = TextStyle(
+                        fontFamily = WarshFamily,
+                        fontSize   = 26.sp,
+                        lineHeight = 42.sp,
+                    ),
+                    modifier = Modifier.alpha(0f),
+                )
+                SkeletonBox(Modifier.size(width = 220.dp, height = 25.dp))
+            }
 
             Spacer(Modifier.height(20.dp))
             HorizontalDivider()
