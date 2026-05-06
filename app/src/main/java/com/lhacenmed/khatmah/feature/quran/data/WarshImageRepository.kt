@@ -199,5 +199,12 @@ class WarshImageRepository(private val context: Context) {
         const val PAGE_COUNT      = 604
         private const val CONCURRENCY = 8
         private const val FOLDER_ID   = "10-FYiWO1UgCfprKeh2WRqcimklHW37X5"
+
+        @Volatile private var instance: WarshImageRepository? = null
+
+        /** Returns the process-scoped singleton — state survives ViewModel recreation. */
+        fun get(context: Context): WarshImageRepository = instance ?: synchronized(this) {
+            instance ?: WarshImageRepository(context.applicationContext).also { instance = it }
+        }
     }
 }

@@ -15,6 +15,7 @@ import com.lhacenmed.khatmah.feature.prayer.notification.AdhanSound
 import com.lhacenmed.khatmah.feature.prayer.notification.NotificationHelper
 import com.lhacenmed.khatmah.shared.util.AdhanSoundFiles
 import com.lhacenmed.khatmah.shared.util.AppPrefs
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.shared.util.LocaleManager
 import com.lhacenmed.khatmah.shared.util.ThemeManager
 import com.lhacenmed.khatmah.widget.PrayerWidgetWorker
@@ -39,6 +40,7 @@ class App : Application() {
         // Load persisted prayer calculation settings before any UI is created.
         PrayerSettings.init(this)
         AppPrefs.init(this)
+        MushafPrefs.init(this)
         // Init adhan notification prefs and ensure notification channels exist.
         AdhanPrefs.init(this)
         // Init adhan notification prefs, channels, and alarms.

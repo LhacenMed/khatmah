@@ -18,13 +18,9 @@ import com.lhacenmed.khatmah.core.motion.materialSharedAxisZ
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.nav.NavScreen
 import com.lhacenmed.khatmah.core.nav.Route
-import com.lhacenmed.khatmah.feature.today.components.AllReadCard
-import com.lhacenmed.khatmah.feature.today.components.KhatmahStats
-import com.lhacenmed.khatmah.feature.today.components.NoKhatmahCard
-import com.lhacenmed.khatmah.feature.today.components.SessionCard
-import com.lhacenmed.khatmah.feature.today.components.SkeletonCard
-import com.lhacenmed.khatmah.feature.today.components.SkeletonStats
-import com.lhacenmed.khatmah.shared.util.AppPrefs
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
+import com.lhacenmed.khatmah.feature.today.components.*
 
 val TodayTab = NavScreen(
     route    = Route.TODAY,
@@ -40,11 +36,11 @@ private fun TodayScreen(padding: PaddingValues) {
     val nav     = LocalNavController.current
     val vm: TodayViewModel = viewModel(factory = TodayViewModel.Factory(context))
     val state       by vm.state.collectAsState()
-    val readerStyle by AppPrefs.readerStyle.collectAsState()
+    val mushaf      by MushafPrefs.selected.collectAsState()
     var showDlDialog by remember { mutableStateOf(false) }
 
     if (showDlDialog) {
-        ReaderStyleDialog(
+        MushafDownloadDialog(
             onSettings = { showDlDialog = false; nav.navigate(Route.THEME_SETTINGS) },
             onDismiss  = { showDlDialog = false },
         )
@@ -96,7 +92,7 @@ private fun TodayScreen(padding: PaddingValues) {
                     state      = s,
                     onMarkRead = { vm.markRead(s.session.entity.id) },
                     onRead     = {
-                        if (readerStyle == AppPrefs.ReaderStyle.TEXT) {
+                        if (mushaf == MushafPrint.WarshText) {
                             showDlDialog = true
                         } else {
                             nav.navigate(
@@ -135,7 +131,7 @@ private fun TodayScreen(padding: PaddingValues) {
 // ── Dialogs ───────────────────────────────────────────────────────────────────
 
 @Composable
-private fun ReaderStyleDialog(onSettings: () -> Unit, onDismiss: () -> Unit) {
+private fun MushafDownloadDialog(onSettings: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title            = { Text(stringResource(R.string.today_dl_title)) },

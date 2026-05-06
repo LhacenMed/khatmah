@@ -6,12 +6,13 @@ import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
 import com.lhacenmed.khatmah.feature.quran.data.QuranRepository
 import com.lhacenmed.khatmah.feature.quran.data.WarshXmlRepository
 import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranPageBuilder
 import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranPageData
 import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranSegment
-import com.lhacenmed.khatmah.shared.util.AppPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -55,10 +56,10 @@ class QuranViewModel(
 
     init {
         viewModelScope.launch {
-            when (AppPrefs.readerStyle.value) {
-                AppPrefs.ReaderStyle.IMAGES    -> initImageMode()
-                AppPrefs.ReaderStyle.SVG_WARSH -> initXmlMode()
-                else                           -> initTextMode()
+            when (MushafPrefs.selected.value) {
+                MushafPrint.WarshImages -> initImageMode()
+                MushafPrint.WarshSvg    -> initXmlMode()
+                else                    -> initTextMode()
             }
         }
     }

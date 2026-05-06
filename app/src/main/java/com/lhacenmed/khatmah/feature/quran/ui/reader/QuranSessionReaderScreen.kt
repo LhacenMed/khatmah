@@ -41,6 +41,8 @@ import com.lhacenmed.khatmah.feature.quran.data.WarshPageData
 import com.lhacenmed.khatmah.feature.quran.data.WarshXmlRepository
 import com.lhacenmed.khatmah.feature.quran.ui.components.ImageTopBar
 import com.lhacenmed.khatmah.feature.quran.ui.components.QuranBottomBar
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
 import com.lhacenmed.khatmah.shared.util.AppPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -55,20 +57,20 @@ private const val ANIM = 280
  * Renders only the Quran pages belonging to a single Khatmah session
  * ([startPage]..[endPage], 1-based mushaf page numbers).
  *
- * Reader type follows [AppPrefs.readerStyle]:
- *   IMAGES    → JPEG mushaf pages
- *   SVG_WARSH → vector XML mushaf pages (with aya tap + audio)
- *   TEXT      → caller should have shown a dialog; renders a fallback message here.
+ * Reader type follows [MushafPrefs.selected]:
+ *   WarshImages → JPEG mushaf pages
+ *   WarshSvg    → vector XML mushaf pages (with aya tap + audio)
+ *   HafsText    → TodayTab should have shown a dialog; renders a fallback message here.
  */
 @Composable
 fun QuranSessionReaderScreen(startPage: Int, endPage: Int) {
-    val style by AppPrefs.readerStyle.collectAsState()
+    val print by MushafPrefs.selected.collectAsState()
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        when (style) {
-            AppPrefs.ReaderStyle.IMAGES    -> SessionImagePager(startPage, endPage)
-            AppPrefs.ReaderStyle.SVG_WARSH -> SessionXmlPager(startPage, endPage)
-            AppPrefs.ReaderStyle.TEXT      -> {
+        when (print) {
+            MushafPrint.WarshImages -> SessionImagePager(startPage, endPage)
+            MushafPrint.WarshSvg    -> SessionXmlPager(startPage, endPage)
+            MushafPrint.WarshText    -> {
                 // Guard: TodayTab should have prevented this path.
                 Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Text("الرجاء اختيار نوع المصحف من الإعدادات")

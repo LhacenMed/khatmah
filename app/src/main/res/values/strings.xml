@@ -448,4 +448,19 @@
     <string name="today_khatmah_completed">Khatmah completed</string>
     <string name="today_dua_khatm">Khatm Al-Quran Dua</string>
     <string name="today_new_khatmah">Start New Khatmah</string>
+
+    <!-- Riwaya names -->
+    <string name="riwaya_hafs">Hafs</string>
+    <string name="riwaya_warsh">Warsh</string>
+
+    <!-- Mushaf prints -->
+    <string name="mushaf_print_title">Mushaf Print</string>
+    <string name="more_mushaf_print">Mushaf Print</string>
+    <string name="print_warsh_text">Warsh — Text</string>
+    <string name="print_warsh_text_desc">Rendered Arabic text with search and audio playback</string>
+    <string name="print_warsh_images">Warsh — Mushaf Pages</string>
+    <string name="print_warsh_images_desc">Scanned Warsh mushaf pages · ~120 MB</string>
+    <string name="print_warsh_svg">Warsh — SVG Pages</string>
+    <string name="print_warsh_svg_desc">Interactive Warsh vector pages · ~45 MB</string>
+    <string name="print_download">Download</string>
 </resources>

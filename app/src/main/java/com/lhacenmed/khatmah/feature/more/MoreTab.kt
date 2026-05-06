@@ -67,6 +67,7 @@ import com.lhacenmed.khatmah.core.ui.components.OptionSelectBottomSheet
 import com.lhacenmed.khatmah.core.ui.components.SheetOption
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.core.nav.NavScreen
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.shared.util.LocaleManager
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -87,7 +88,7 @@ val MoreTab = NavScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MoreScreen(padding: PaddingValues) {
-    val context = LocalContext.current
+    LocalContext.current
 
     // ── Alarm switch states ────────────────────────────────────────────────────
     // Persisted across recompositions; drives enabled state on paired time items.
@@ -99,39 +100,12 @@ private fun MoreScreen(padding: PaddingValues) {
     // ── Reader style bottom sheet ──────────────────────────────────────────────
     // Using explicit MutableState (not 'by' delegation) so assignments inside
     // lambdas are visible to the compiler and suppress the "assigned but never read" warning.
-    val showReaderStyleSheet: MutableState<Boolean> = rememberSaveable { mutableStateOf(false) }
     val showLanguageSheet: MutableState<Boolean>    = rememberSaveable { mutableStateOf(false) }
-    val readerStyle by AppPrefs.readerStyle.collectAsState()
 
-    val warshRepo = remember { WarshXmlRepository(context) }
-    val warshState by warshRepo.downloadState.collectAsState()
-    val warshImageRepo  = remember { WarshImageRepository(context) }
-    val warshImageState by warshImageRepo.downloadState.collectAsState()
+    rememberCoroutineScope()
+    val selectedPrint by MushafPrefs.selected.collectAsState()
 
-    val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    val readerStyleOptions = listOf(
-        SheetOption(
-            key      = AppPrefs.ReaderStyle.TEXT,
-            title    = stringResource(R.string.reader_style_text),
-            subtitle = stringResource(R.string.reader_style_text_desc),
-        ),
-        SheetOption(
-            key               = AppPrefs.ReaderStyle.IMAGES,
-            title             = stringResource(R.string.reader_style_images),
-            subtitle          = stringResource(R.string.reader_style_images_desc),
-            hasCustomTrailing = true,
-        ),
-        SheetOption(
-            key               = AppPrefs.ReaderStyle.SVG_WARSH,
-            title             = stringResource(R.string.reader_style_svg_warsh),
-            subtitle          = stringResource(R.string.reader_style_svg_warsh_desc),
-            hasCustomTrailing = true,
-        ),
-    )
-
-    val languageOptions = listOf<SheetOption<String?>>(
+    val languageOptions = listOf(
         SheetOption(
             key   = null,
             title = stringResource(R.string.language_system_default),
@@ -337,20 +311,10 @@ private fun MoreScreen(padding: PaddingValues) {
         }
         item {
             PreferenceItem(
-                title        = stringResource(R.string.more_reader_style),
+                title        = stringResource(R.string.more_mushaf_print),
                 icon         = Icons.Outlined.AutoStories,
-                trailingIcon = {
-                    TrailingLabelText(
-                        label = stringResource(
-                            when (readerStyle) {
-                                AppPrefs.ReaderStyle.TEXT      -> R.string.reader_style_text
-                                AppPrefs.ReaderStyle.IMAGES    -> R.string.reader_style_images
-                                AppPrefs.ReaderStyle.SVG_WARSH -> R.string.reader_style_svg_warsh
-                            }
-                        )
-                    )
-                },
-                onClick = { showReaderStyleSheet.value = true },
+                trailingIcon = { TrailingLabelText(label = stringResource(selectedPrint.nameRes)) },
+                onClick      = { nav.navigate(Route.MUSHAF_PRINTS) },
             )
         }
         item {
@@ -407,111 +371,6 @@ private fun MoreScreen(padding: PaddingValues) {
                 onClick = { nav.navigate(Route.DEBUG_DB) },
             )
         }
-    }
-
-    // ── Reader Style Sheet ────────────────────────────────────────────────────
-    if (showReaderStyleSheet.value) {
-        OptionSelectBottomSheet(
-            title      = stringResource(R.string.more_reader_style),
-            options    = readerStyleOptions,
-            selected   = readerStyle,
-            sheetState = sheetState,
-            onSelect = { style ->
-                when {
-                    style == AppPrefs.ReaderStyle.IMAGES && warshImageState !is WarshImageDownloadState.Downloaded -> {
-                        if (warshImageState !is WarshImageDownloadState.Downloading &&
-                            warshImageState !is WarshImageDownloadState.Connecting) {
-                            scope.launch {
-                                warshImageRepo.downloadAll().collectLatest { /* state updates internally */ }
-                            }
-                        }
-                    }
-                    style == AppPrefs.ReaderStyle.SVG_WARSH && warshState !is WarshDownloadState.Downloaded -> {
-                        if (warshState !is WarshDownloadState.Downloading &&
-                            warshState !is WarshDownloadState.Connecting) {
-                            scope.launch {
-                                warshRepo.downloadAll().collectLatest { /* state updates internally */ }
-                            }
-                        }
-                    }
-                    else -> {
-                        scope.launch {
-                            sheetState.hide()
-                            AppPrefs.setReaderStyle(context, style)
-                            showReaderStyleSheet.value = false
-                        }
-                    }
-                }
-            },
-            onDismiss = { showReaderStyleSheet.value = false },
-            optionTrailingContent = { option ->
-                Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
-                    when (option.key) {
-                        AppPrefs.ReaderStyle.IMAGES -> when (val s = warshImageState) {
-                            is WarshImageDownloadState.NotDownloaded,
-                            is WarshImageDownloadState.Error -> Icon(
-                                imageVector        = Icons.Outlined.CloudDownload,
-                                contentDescription = null,
-                                tint               = MaterialTheme.colorScheme.primary,
-                                modifier           = Modifier.size(20.dp),
-                            )
-                            is WarshImageDownloadState.Connecting -> CircularProgressIndicator(
-                                modifier    = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color       = MaterialTheme.colorScheme.primary,
-                            )
-                            is WarshImageDownloadState.Downloading -> CircularProgressIndicator(
-                                progress    = { s.progress },
-                                modifier    = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color       = MaterialTheme.colorScheme.primary,
-                            )
-                            is WarshImageDownloadState.Downloaded -> {
-                                if (readerStyle == AppPrefs.ReaderStyle.IMAGES) {
-                                    Icon(
-                                        imageVector        = Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint               = MaterialTheme.colorScheme.primary,
-                                        modifier           = Modifier.size(20.dp),
-                                    )
-                                }
-                            }
-                        }
-                        AppPrefs.ReaderStyle.SVG_WARSH -> when (val s = warshState) {
-                            is WarshDownloadState.NotDownloaded,
-                            is WarshDownloadState.Error -> Icon(
-                                imageVector        = Icons.Outlined.CloudDownload,
-                                contentDescription = null,
-                                tint               = MaterialTheme.colorScheme.primary,
-                                modifier           = Modifier.size(20.dp),
-                            )
-                            is WarshDownloadState.Connecting -> CircularProgressIndicator(
-                                modifier    = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color       = MaterialTheme.colorScheme.primary,
-                            )
-                            is WarshDownloadState.Downloading -> CircularProgressIndicator(
-                                progress    = { s.progress },
-                                modifier    = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color       = MaterialTheme.colorScheme.primary,
-                            )
-                            is WarshDownloadState.Downloaded -> {
-                                if (readerStyle == AppPrefs.ReaderStyle.SVG_WARSH) {
-                                    Icon(
-                                        imageVector        = Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint               = MaterialTheme.colorScheme.primary,
-                                        modifier           = Modifier.size(20.dp),
-                                    )
-                                }
-                            }
-                        }
-                        else -> Unit
-                    }
-                }
-            }
-        )
     }
 
     if (showLanguageSheet.value) {

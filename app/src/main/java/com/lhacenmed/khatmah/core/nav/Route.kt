@@ -80,6 +80,9 @@ object Route {
 
     const val DEBUG_DB    = "debug_db"
 
+    // ── Mushaf print selection ────────────────────────────────────────────────────
+    const val MUSHAF_PRINTS = "mushaf_prints"
+
     // ── Onboarding ────────────────────────────────────────────────────────────
     const val ONBOARDING_LANGUAGE       = "onboarding_language"
     const val ONBOARDING_NOTIFICATIONS  = "onboarding_notifications"

@@ -479,4 +479,19 @@
     <string name="today_khatmah_completed">تم الإنتهاء من الختمة الحالية</string>
     <string name="today_dua_khatm">دعاء ختم القران</string>
     <string name="today_new_khatmah">بدء ختمة جديدة</string>
+
+    <!-- Riwaya names -->
+    <string name="riwaya_hafs">حفص</string>
+    <string name="riwaya_warsh">ورش</string>
+
+    <!-- Mushaf prints -->
+    <string name="mushaf_print_title">طبعة المصحف</string>
+    <string name="more_mushaf_print">طبعة المصحف</string>
+    <string name="print_warsh_text">ورش — نص</string>
+    <string name="print_warsh_text_desc">نص عربي معروض مع البحث وتشغيل الصوت</string>
+    <string name="print_warsh_images">ورش — صفحات المصحف</string>
+    <string name="print_warsh_images_desc">صور ممسوحة لصفحات مصحف ورش · حوالي 120 ميغابايت</string>
+    <string name="print_warsh_svg">ورش — صفحات SVG</string>
+    <string name="print_warsh_svg_desc">صفحات متجهية تفاعلية لورش · حوالي 45 ميغابايت</string>
+    <string name="print_download">تنزيل</string>
 </resources>
