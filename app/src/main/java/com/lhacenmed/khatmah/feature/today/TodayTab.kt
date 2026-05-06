@@ -22,6 +22,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
@@ -60,7 +61,7 @@ class TodayViewModel(private val repo: KhatmahRepository) : ViewModel() {
     sealed class UiState {
         object Loading   : UiState()
         object NoKhatmah : UiState()
-        object AllRead   : UiState()
+        data class AllRead(val totalDays: Int) : UiState()
         data class Active(
             val session:   SessionUi,
             val khatmah:   KhatmahEntity,
@@ -81,7 +82,7 @@ class TodayViewModel(private val repo: KhatmahRepository) : ViewModel() {
                         repo.readCount(khatmah.id),
                     ) { session, readCount ->
                         if (session == null) {
-                            UiState.AllRead
+                            UiState.AllRead(totalDays = khatmah.totalDays)
                         } else {
                             val meta = repo.sessionMeta(
                                 session.startSura,
@@ -232,7 +233,10 @@ private fun TodayScreen(padding: PaddingValues) {
             when (s) {
                 is TodayViewModel.UiState.Loading   -> SkeletonCard()
                 is TodayViewModel.UiState.NoKhatmah -> NoKhatmahCard { nav.navigate(Route.NEW_KHATMAH) }
-                is TodayViewModel.UiState.AllRead   -> AllReadCard()
+                is TodayViewModel.UiState.AllRead   -> AllReadCard(
+                    onDua        = { /* TODO: navigate to dua */ },
+                    onNewKhatmah = { nav.navigate(Route.NEW_KHATMAH) },
+                )
                 is TodayViewModel.UiState.Active    -> SessionCard(
                     state      = s,
                     onMarkRead = { vm.markRead(s.session.entity.id) },
@@ -252,12 +256,12 @@ private fun TodayScreen(padding: PaddingValues) {
             }
         }
 
-        // Bottom strip — real stats when active, skeleton when loading, hidden otherwise.
-        when (state) {
-            is TodayViewModel.UiState.Active  -> {
-                val s = state as TodayViewModel.UiState.Active
+        // Bottom strip — full progress when all read, real stats when active, skeleton when loading.
+        when (val s = state) {
+            is TodayViewModel.UiState.Active  ->
                 KhatmahStats(readCount = s.readCount, totalCount = s.khatmah.totalDays)
-            }
+            is TodayViewModel.UiState.AllRead ->
+                KhatmahStats(readCount = s.totalDays, totalCount = s.totalDays)
             is TodayViewModel.UiState.Loading -> SkeletonStats()
             else                              -> Unit
         }
@@ -596,18 +600,104 @@ private fun NoKhatmahCard(onCreate: () -> Unit) {
 }
 
 @Composable
-private fun AllReadCard() {
+private fun AllReadCard(
+    onDua:        () -> Unit,
+    onNewKhatmah: () -> Unit,
+) {
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-        Box(
-            modifier         = Modifier.padding(32.dp).fillMaxWidth(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text      = stringResource(R.string.today_all_read),
-                style     = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                color     = MaterialTheme.colorScheme.primary,
-            )
+        Box {
+            Column(modifier = Modifier.padding(16.dp)) {
+
+                // Invisible header row — keeps exact dimensions
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.CenterVertically,
+                ) {
+                    Text(text = "ض", style = MaterialTheme.typography.labelLarge, modifier = Modifier.alpha(0f))
+                    Text(text = "ض", style = MaterialTheme.typography.labelLarge, modifier = Modifier.alpha(0f))
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                // Invisible aya block — keeps exact height via font metrics
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text     = "ض",
+                        style    = TextStyle(fontFamily = WarshFamily, fontSize = 26.sp, lineHeight = 42.sp),
+                        modifier = Modifier.alpha(0f),
+                    )
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                // Invisible divider — keeps exact height
+                HorizontalDivider(modifier = Modifier.alpha(0f))
+
+                Spacer(Modifier.height(12.dp))
+
+                // Invisible info rows
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(text = "ض", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.alpha(0f))
+                    Text(text = "ض", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.alpha(0f))
+                }
+
+                Spacer(Modifier.height(4.dp))
+
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(text = "ض", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.alpha(0f))
+                    Text(text = "ض", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.alpha(0f))
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Action buttons
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Button(
+                        onClick  = onDua,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(stringResource(R.string.today_dua_khatm), fontWeight = FontWeight.SemiBold)
+                    }
+                    Button(
+                        onClick  = onNewKhatmah,
+                        modifier = Modifier.weight(1f),
+                        colors   = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFFCA28),
+                            contentColor   = Color(0xFF1B1B1B),
+                        ),
+                    ) {
+                        Text(stringResource(R.string.today_new_khatmah), fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+
+            // Absolutely centered overlay — matches card body size, no layout impact
+            Box(
+                modifier         = Modifier.matchParentSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text      = stringResource(R.string.today_khatmah_completed),
+                    textAlign = TextAlign.Center,
+                    color     = MaterialTheme.colorScheme.primary,
+                    maxLines  = 3,
+                    overflow  = TextOverflow.Ellipsis,
+                    modifier  = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 50.dp), // on the Text, not the Box — clips instead of shrinking centering area
+                )
+            }
         }
     }
 }

@@ -469,4 +469,8 @@
 
     <string name="today_page_prefix">صفحة</string>
     <string name="today_juz_prefix">الجزء</string>
+
+    <string name="today_khatmah_completed">تم الإنتهاء من الختمة الحالية</string>
+    <string name="today_dua_khatm">دعاء ختم القران</string>
+    <string name="today_new_khatmah">بدء ختمة جديدة</string>
 </resources>
