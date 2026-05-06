@@ -85,8 +85,14 @@ fun PrayerSettingsContent() {
 
             if (loc != null) {
                 PreferenceItem(
-                    title       = loc.cityName.ifBlank { stringResource(R.string.prayers_city_unknown) },
-                    description = "%.4f°, %.4f°".format(loc.lat, loc.lng),
+                    title = loc.cityName.ifBlank { stringResource(R.string.prayers_city_unknown) },
+                    trailingIcon = {
+                        Text(
+                            text = "%.4f°, %.4f°".format(loc.lat, loc.lng),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.applyOpacity(true)
+                        )
+                    }
                 )
             } else {
                 PreferenceItem(title = stringResource(R.string.prayers_city_unknown))

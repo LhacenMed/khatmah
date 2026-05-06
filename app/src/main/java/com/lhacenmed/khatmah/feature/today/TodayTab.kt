@@ -2,12 +2,19 @@ package com.lhacenmed.khatmah.feature.today
 
 import android.content.Context
 import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -21,6 +28,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.core.motion.initialOffset
+import com.lhacenmed.khatmah.core.motion.materialSharedAxisX
+import com.lhacenmed.khatmah.core.motion.materialSharedAxisZ
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.nav.NavScreen
 import com.lhacenmed.khatmah.core.nav.Route
@@ -113,6 +123,38 @@ private fun truncateAya(text: String, maxWords: Int = 4): String {
     else words.take(maxWords).joinToString(" ") + "…"
 }
 
+// ── Shimmer ───────────────────────────────────────────────────────────────────
+
+@Composable
+private fun shimmerBrush(): Brush {
+    val color = MaterialTheme.colorScheme.onSurface
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val offset by transition.animateFloat(
+        initialValue  = -300f,
+        targetValue   = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(900, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "shimmer_offset",
+    )
+    return Brush.linearGradient(
+        colors = listOf(
+            color.copy(alpha = 0.08f),
+            color.copy(alpha = 0.18f),
+            color.copy(alpha = 0.08f),
+        ),
+        start = Offset(offset, 0f),
+        end   = Offset(offset + 300f, 0f),
+    )
+}
+
+/** Single shimmer block with rounded corners. */
+@Composable
+private fun SkeletonBox(modifier: Modifier) {
+    Box(modifier.clip(RoundedCornerShape(4.dp)).background(shimmerBrush()))
+}
+
 // ── NavScreen entry ───────────────────────────────────────────────────────────
 
 val TodayTab = NavScreen(
@@ -157,23 +199,37 @@ private fun TodayScreen(padding: PaddingValues) {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // Animated session card — slides between sessions, crossfades for other transitions.
+        // contentKey on session id ensures Compose always detects Active→Active changes.
         AnimatedContent(
-            targetState = state,
+            targetState   = state,
+            modifier      = Modifier.clipToBounds(),
+            contentKey    = { s ->
+                when (s) {
+                    is TodayViewModel.UiState.Active -> s.session.entity.id
+                    else                             -> s::class
+                }
+            },
             transitionSpec = {
-                if (initialState is TodayViewModel.UiState.Active &&
-                    targetState  is TodayViewModel.UiState.Active
-                ) {
-                    (slideInVertically(tween(300)) { it } + fadeIn(tween(220))) togetherWith
-                            (slideOutVertically(tween(300)) { -it } + fadeOut(tween(220)))
-                } else {
-                    fadeIn(tween(300)) togetherWith fadeOut(tween(300))
+                when {
+                    initialState is TodayViewModel.UiState.Loading ||
+                            targetState  is TodayViewModel.UiState.Loading ->
+                        EnterTransition.None togetherWith ExitTransition.None
+
+                    initialState is TodayViewModel.UiState.Active &&
+                            targetState  is TodayViewModel.UiState.Active ->
+                        materialSharedAxisX(
+                            initialOffsetX = { (it * initialOffset).toInt() },
+                            targetOffsetX  = { -(it * initialOffset).toInt() },
+                        )
+
+                    else ->
+                        materialSharedAxisZ(forward = true)
                 }
             },
             label = "session_card",
         ) { s ->
             when (s) {
-                is TodayViewModel.UiState.Loading   -> LoadingCard()
+                is TodayViewModel.UiState.Loading   -> SkeletonCard()
                 is TodayViewModel.UiState.NoKhatmah -> NoKhatmahCard { nav.navigate(Route.NEW_KHATMAH) }
                 is TodayViewModel.UiState.AllRead   -> AllReadCard()
                 is TodayViewModel.UiState.Active    -> SessionCard(
@@ -195,10 +251,14 @@ private fun TodayScreen(padding: PaddingValues) {
             }
         }
 
-        // Khatmah progress strip — only shown while there is an active session.
-        if (state is TodayViewModel.UiState.Active) {
-            val s = state as TodayViewModel.UiState.Active
-            KhatmahStats(readCount = s.readCount, totalCount = s.khatmah.totalDays)
+        // Bottom strip — real stats when active, skeleton when loading, hidden otherwise.
+        when (state) {
+            is TodayViewModel.UiState.Active  -> {
+                val s = state as TodayViewModel.UiState.Active
+                KhatmahStats(readCount = s.readCount, totalCount = s.khatmah.totalDays)
+            }
+            is TodayViewModel.UiState.Loading -> SkeletonStats()
+            else                              -> Unit
         }
     }
 }
@@ -307,13 +367,169 @@ private fun SessionCard(
                     onClick  = onMarkRead,
                     modifier = Modifier.weight(1f),
                     colors   = ButtonDefaults.buttonColors(
-                        containerColor = androidx.compose.ui.graphics.Color(0xFFFFCA28),
-                        contentColor   = androidx.compose.ui.graphics.Color(0xFF1B1B1B),
+                        containerColor = Color(0xFFFFCA28),
+                        contentColor   = Color(0xFF1B1B1B),
                     ),
                 ) {
                     Text(stringResource(R.string.today_mark_read), fontWeight = FontWeight.SemiBold)
                 }
             }
+        }
+    }
+}
+
+// ── Skeleton placeholders ─────────────────────────────────────────────────────
+
+/**
+ * Mirrors [SessionCard] exactly — static labels and buttons shown real,
+ * dynamic fields (juz, aya text, sura names, page numbers) replaced with
+ * shimmer blocks sized to match their expected rendered dimensions.
+ */
+@Composable
+private fun SkeletonCard() {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+
+            // Header row
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text  = stringResource(R.string.today_starts_from),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text  = stringResource(R.string.today_juz_prefix),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    SkeletonBox(Modifier.size(width = 40.dp, height = 14.dp))
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            SkeletonBox(Modifier.fillMaxWidth().height(42.dp))
+
+            Spacer(Modifier.height(20.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(12.dp))
+
+            // Start row
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically,
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                ) {
+                    SkeletonBox(Modifier.size(width = 80.dp, height = 14.dp))
+                    Text(" · ", style = MaterialTheme.typography.bodyMedium)
+                    SkeletonBox(Modifier.size(width = 32.dp, height = 14.dp))
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text       = stringResource(R.string.today_page_prefix),
+                        style      = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    SkeletonBox(Modifier.size(width = 24.dp, height = 14.dp))
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            // End row
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically,
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                ) {
+                    SkeletonBox(Modifier.size(width = 80.dp, height = 14.dp))
+                    Text(" · ", style = MaterialTheme.typography.bodyMedium)
+                    SkeletonBox(Modifier.size(width = 32.dp, height = 14.dp))
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text       = stringResource(R.string.today_page_prefix),
+                        style      = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    SkeletonBox(Modifier.size(width = 24.dp, height = 14.dp))
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick  = {},
+                    enabled  = false,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(R.string.today_start_reading), fontWeight = FontWeight.SemiBold)
+                }
+                Button(
+                    onClick  = {},
+                    enabled  = false,
+                    modifier = Modifier.weight(1f),
+                    colors   = ButtonDefaults.buttonColors(
+                        disabledContainerColor = Color(0xFFFFCA28).copy(alpha = 0.38f),
+                        disabledContentColor   = Color(0xFF1B1B1B).copy(alpha = 0.38f),
+                    ),
+                ) {
+                    Text(stringResource(R.string.today_mark_read), fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Mirrors [KhatmahStats] — static title shown real,
+ * progress bar and count labels replaced with shimmer blocks.
+ */
+@Composable
+private fun SkeletonStats() {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text       = stringResource(R.string.today_khatmah_title),
+            style      = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier   = Modifier.fillMaxWidth(),
+            textAlign  = TextAlign.Start,
+        )
+        // LinearProgressIndicator track height is 4dp
+        SkeletonBox(Modifier.fillMaxWidth().height(4.dp))
+        // bodySmall ~12sp → 12dp height
+        Row(
+            modifier              = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            SkeletonBox(Modifier.size(width = 80.dp, height = 12.dp))
+            SkeletonBox(Modifier.size(width = 80.dp, height = 12.dp))
         }
     }
 }
@@ -348,14 +564,6 @@ private fun KhatmahStats(readCount: Int, totalCount: Int) {
 }
 
 // ── Placeholder cards ─────────────────────────────────────────────────────────
-
-@Composable
-private fun LoadingCard() {
-    Box(
-        modifier         = Modifier.fillMaxWidth().height(220.dp),
-        contentAlignment = Alignment.Center,
-    ) { CircularProgressIndicator() }
-}
 
 @Composable
 private fun NoKhatmahCard(onCreate: () -> Unit) {

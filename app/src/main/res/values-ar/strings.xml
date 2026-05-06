@@ -466,4 +466,7 @@
     <string name="today_settings">الإعدادات</string>
     <string name="today_cancel">إلغاء</string>
     <string name="today_juz">الجزء %d</string>
+
+    <string name="today_page_prefix">صفحة</string>
+    <string name="today_juz_prefix">الجزء</string>
 </resources>

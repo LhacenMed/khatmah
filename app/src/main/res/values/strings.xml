@@ -435,4 +435,7 @@
     <string name="today_settings">Settings</string>
     <string name="today_cancel">Cancel</string>
     <string name="today_juz">Juz\' %d</string>
+
+    <string name="today_page_prefix">Page</string>
+    <string name="today_juz_prefix">Juz\'</string>
 </resources>
