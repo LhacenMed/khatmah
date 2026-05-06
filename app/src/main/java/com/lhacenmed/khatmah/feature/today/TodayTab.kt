@@ -106,6 +106,13 @@ class TodayViewModel(private val repo: KhatmahRepository) : ViewModel() {
     }
 }
 
+/** Returns at most [maxWords] space-separated words from [text], appending "…" if truncated. */
+private fun truncateAya(text: String, maxWords: Int = 4): String {
+    val words = text.trim().split(' ')
+    return if (words.size <= maxWords) text
+    else words.take(maxWords).joinToString(" ") + "…"
+}
+
 // ── NavScreen entry ───────────────────────────────────────────────────────────
 
 val TodayTab = NavScreen(
@@ -229,10 +236,10 @@ private fun SessionCard(
 
             Spacer(Modifier.height(20.dp))
 
-            // First aya of the session (replaces hardcoded Basmala)
+            // First aya of the session, truncated to max 4 words.
             if (sess.firstAyaText.isNotBlank()) {
                 Text(
-                    text      = sess.firstAyaText,
+                    text      = truncateAya(sess.firstAyaText),
                     style     = TextStyle(
                         fontFamily    = WarshFamily,
                         fontSize      = 26.sp,
@@ -324,7 +331,7 @@ private fun KhatmahStats(readCount: Int, totalCount: Int) {
             style      = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             modifier   = Modifier.fillMaxWidth(),
-            textAlign  = TextAlign.End,
+            textAlign  = TextAlign.Start,
         )
         LinearProgressIndicator(
             progress = { progress },
