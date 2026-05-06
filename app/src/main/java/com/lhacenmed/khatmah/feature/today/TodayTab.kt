@@ -341,8 +341,8 @@ private fun KhatmahStats(readCount: Int, totalCount: Int) {
             modifier              = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(stringResource(R.string.today_upcoming, remaining), style = MaterialTheme.typography.bodySmall)
             Text(stringResource(R.string.today_previous, readCount), style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.today_upcoming, remaining), style = MaterialTheme.typography.bodySmall)
         }
     }
 }

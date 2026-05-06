@@ -94,8 +94,6 @@ fun ManualCorrectionsContent() {
                 onChange = { v -> isha = v; commit(ManualCorrections(fajr, sunrise, dhuhr, asr, maghrib, v)) },
             )
 
-            HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
-
             // Reset button — disabled when all corrections are already zero.
             Box(
                 modifier         = Modifier

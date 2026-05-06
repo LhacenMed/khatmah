@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AlternateEmail
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.DarkMode
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SkipNext
@@ -205,19 +207,19 @@ private fun MoreScreen(padding: PaddingValues) {
         item {
             PreferenceItem(
                 title = stringResource(R.string.more_surat_kahf),
-                icon  = Icons.Outlined.MenuBook,
+                icon  = R.drawable.round_book_24,
             )
         }
         item {
             PreferenceItem(
                 title = stringResource(R.string.more_surat_mulk),
-                icon  = Icons.Outlined.MenuBook,
+                icon  = R.drawable.round_book_24,
             )
         }
         item {
             PreferenceItem(
                 title = stringResource(R.string.more_surat_baqarah),
-                icon  = Icons.Outlined.MenuBook,
+                icon  = R.drawable.round_book_24,
             )
         }
 
@@ -241,14 +243,16 @@ private fun MoreScreen(padding: PaddingValues) {
         item { PreferenceSubtitle(text = stringResource(R.string.more_prayer_times)) }
         item {
             PreferenceItem(
-                title = stringResource(R.string.more_prayer_times_settings),
-                icon  = Icons.Outlined.Notifications, // TODO: Replace with prayer icon.
+                title   = stringResource(R.string.more_prayer_times_settings),
+                icon    = R.drawable.ic_mosque,
+                onClick = { nav.navigate(Route.PRAYER_SETTINGS) },
             )
         }
         item {
             PreferenceItem(
-                title = stringResource(R.string.more_qibla_direction),
-                icon  = Icons.Outlined.Explore,
+                title   = stringResource(R.string.more_qibla_direction),
+                icon    = R.drawable.ic_kaaba,
+                onClick = { nav.navigate(Route.QIBLA) },
             )
         }
 
@@ -327,7 +331,7 @@ private fun MoreScreen(padding: PaddingValues) {
         item {
             PreferenceItem(
                 title        = stringResource(R.string.theme_settings),
-                icon         = Icons.Outlined.AutoStories,
+                icon         = Icons.Outlined.Palette,
                 onClick      = { nav.navigate(Route.THEME_SETTINGS) },
             )
         }
@@ -391,6 +395,16 @@ private fun MoreScreen(padding: PaddingValues) {
             PreferenceItem(
                 title = stringResource(R.string.more_rate_khatmah),
                 icon  = Icons.Outlined.StarBorder,
+            )
+        }
+
+        // ── Debug ─────────────────────────────────────────────────────────────
+        item { PreferenceSubtitle(text = stringResource(R.string.more_debug)) }
+        item {
+            PreferenceItem(
+                title   = stringResource(R.string.more_debug_db),
+                icon    = Icons.Outlined.BugReport,
+                onClick = { nav.navigate(Route.DEBUG_DB) },
             )
         }
     }

@@ -324,10 +324,14 @@ private fun PrayerHeader(
         ) {
             if (prayer != null) {
                 val localName = localizedPrayerName(prayer.name)
-                val label = if (inElapsedMode)
-                    stringResource(R.string.prayers_since, localName)
-                else
-                    stringResource(R.string.prayers_till, localName)
+                val hasAdhan  = prayer.name.lowercase(Locale.ROOT) != "sunrise"
+                val label = if (inElapsedMode) {
+                    if (hasAdhan) stringResource(R.string.prayers_since, localName)
+                    else stringResource(R.string.prayers_since_no_adhan, localName)
+                } else {
+                    if (hasAdhan) stringResource(R.string.prayers_till, localName)
+                    else stringResource(R.string.prayers_till_no_adhan, localName)
+                }
 
                 Text(
                     text  = label,

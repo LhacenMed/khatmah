@@ -84,6 +84,8 @@
     <string name="more_share_app">مشاركة التطبيق</string>
     <string name="more_rate_khatmah">قيّم ختمة</string>
     <string name="more_reader_style">طريقة عرض القرآن</string>
+    <string name="more_debug">تصحيح الأخطاء</string>
+    <string name="more_debug_db">متصفح قاعدة البيانات</string>
     <string name="reader_style_text">نص</string>
     <string name="reader_style_text_desc">نص القرآن الكريم مع إمكانية البحث والتنقل</string>
     <string name="reader_style_images">صفحات المصحف</string>
@@ -167,7 +169,9 @@
     <string name="prayers_prev_day">اليوم السابق</string>
     <string name="prayers_next_day">اليوم التالي</string>
     <string name="prayers_requires_android_8">أوقات الصلاة تتطلب Android 8.0 أو أعلى</string>
+    <string name="prayers_till_no_adhan">باقي على %s</string>
     <string name="prayers_since">مضى على أذان %s</string>
+    <string name="prayers_since_no_adhan">مضى على %s</string>
 
     <!-- Individual prayer names -->
     <string name="prayer_fajr">الفجر</string>
@@ -198,6 +202,7 @@
 
     <!-- Main settings page -->
     <string name="prayer_settings_title">إعدادات أوقات الصلاة</string>
+    <string name="prayer_settings_qibla">القبلة</string>
     <string name="prayer_settings_reminders">التنبيهات</string>
     <string name="prayer_settings_adhan_reminders">تنبيهات الأذان</string>
     <string name="adhan_reminders_title">تنبيهات الأذان</string>

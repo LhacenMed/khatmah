@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.SettingsSectionHeader
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanConfig
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanPrefs
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanScheduler
@@ -129,7 +130,7 @@ fun AdhanSoundSelectionPage(prayerId: Int) {
                 .verticalScroll(rememberScrollState()),
         ) {
             // ── Pre-alert section ─────────────────────────────────────────────
-            SelectionHeader(stringResource(R.string.adhan_alarm_before_section))
+            SettingsSectionHeader(stringResource(R.string.adhan_alarm_before_section))
 
             ListItem(
                 modifier = Modifier.clickable(enabled = config.isEnabled) {
@@ -145,11 +146,10 @@ fun AdhanSoundSelectionPage(prayerId: Int) {
                 },
             )
 
-            Spacer(Modifier.height(8.dp))
-            SectionDivider()
+            HorizontalDivider()
 
             // ── Built-in sound section ────────────────────────────────────────
-            SelectionHeader(stringResource(R.string.adhan_sound_section_format, prayerName))
+            SettingsSectionHeader(stringResource(R.string.adhan_sound_section_format, prayerName))
 
             FixedSoundItem(
                 label    = stringResource(R.string.adhan_sound_stop),
@@ -190,10 +190,10 @@ fun AdhanSoundSelectionPage(prayerId: Int) {
                 )
             }
 
-            SectionDivider()
+            HorizontalDivider()
 
             // ── Custom file section ───────────────────────────────────────────
-            SelectionHeader(stringResource(R.string.adhan_sound_custom_section))
+            SettingsSectionHeader(stringResource(R.string.adhan_sound_custom_section))
 
             // Show the currently selected custom sound as a selectable item.
             if (config.sound is AdhanSound.Custom) {
@@ -241,27 +241,6 @@ private fun saveSound(
 }
 
 // ─── Composables ──────────────────────────────────────────────────────────────
-
-@Composable
-private fun SelectionHeader(text: String) {
-    Box(
-        modifier         = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        Text(text, style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-private fun SectionDivider() {
-    HorizontalDivider(
-        thickness = 8.dp,
-        color     = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-    )
-}
 
 @Composable
 private fun FixedSoundItem(

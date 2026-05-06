@@ -54,6 +54,19 @@ fun PrayerSettingsContent() {
                 .verticalScroll(rememberScrollState())
                 .padding(padding),
         ) {
+            // ── Qibla section ─────────────────────────────────────────────────
+            SettingsSectionHeader(stringResource(R.string.prayer_settings_qibla))
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.prayer_settings_qibla)) },
+                modifier        = Modifier.clickable { nav.navigate(Route.QIBLA) },
+                trailingContent = {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
+                },
+            )
+
+            HorizontalDivider()
+
             // ── Reminders section ─────────────────────────────────────────────
             SettingsSectionHeader(stringResource(R.string.prayer_settings_reminders))
 

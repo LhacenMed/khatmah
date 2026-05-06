@@ -84,6 +84,8 @@
     <string name="more_share_app">Share App</string>
     <string name="more_rate_khatmah">Rate Khatmah</string>
     <string name="more_reader_style">Reader Style</string>
+    <string name="more_debug">Debug</string>
+    <string name="more_debug_db">Database Browser</string>
     <string name="reader_style_text">Text</string>
     <string name="reader_style_text_desc">Rendered Quran text with search and navigation</string>
     <string name="reader_style_images">Mushaf Pages</string>
@@ -153,7 +155,8 @@
 
     <!-- Prayers tab screen -->
     <string name="prayers_screen_title">Prayer Times</string>
-    <string name="prayers_till">Till %s</string>
+    <string name="prayers_till">Till %s Adhan</string>
+    <string name="prayers_till_no_adhan">Till %s</string>
     <string name="prayers_city_unknown">Unknown Location</string>
     <string name="prayers_settings">Prayer Settings</string>
     <string name="prayers_qibla">Qibla Direction</string>
@@ -167,7 +170,8 @@
     <string name="prayers_prev_day">Previous day</string>
     <string name="prayers_next_day">Next day</string>
     <string name="prayers_requires_android_8">Prayer times require Android 8.0 or higher</string>
-    <string name="prayers_since">Since %s</string>
+    <string name="prayers_since">Since %s Adhan</string>
+    <string name="prayers_since_no_adhan">Since %s</string>
 
     <!-- Individual prayer names -->
     <string name="prayer_fajr">Fajr</string>
@@ -198,6 +202,7 @@
 
     <!-- Main settings page -->
     <string name="prayer_settings_title">Prayer Times Settings</string>
+    <string name="prayer_settings_qibla">Qibla</string>
     <string name="prayer_settings_reminders">Reminders</string>
     <string name="prayer_settings_adhan_reminders">Adhan Reminders</string>
     <string name="adhan_reminders_title">Adhan Reminders</string>
