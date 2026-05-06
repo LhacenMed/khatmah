@@ -1,0 +1,351 @@
+package com.lhacenmed.khatmah.feature.adhkar.data
+
+import android.content.ContentValues
+import android.content.Context
+import android.net.Uri
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.feature.adhkar.data.AdhkarCategory
+import com.lhacenmed.khatmah.feature.adhkar.data.BuiltInDefaults
+import com.lhacenmed.khatmah.feature.adhkar.data.IconSource
+import com.lhacenmed.khatmah.feature.adhkar.data.builtInDescriptors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+import java.util.UUID
+
+class AdhkarRepository(private val context: Context) {
+
+    private val db get() = AdhkarDatabase.open(context)
+
+    // ── Built-in resource maps ────────────────────────────────────────────────
+    // Direct @StringRes / @DrawableRes lookups for built-in seeded categories.
+    //
+    // WHY: Resources.getIdentifier(name, type, context.packageName) fails in debug
+    // builds because applicationIdSuffix (".debug") makes context.packageName differ
+    // from the resource namespace in build.gradle — getIdentifier returns 0 and the
+    // raw key (e.g. "adhkar_wakeup") is shown as the card title instead of its
+    // translation.  Direct R.* references are resolved at compile time and are
+    // immune to this mismatch.
+
+    private val builtInTitleIds: Map<String, Int> = mapOf(
+        "adhkar_morning"      to R.string.adhkar_morning,
+        "adhkar_evening"      to R.string.adhkar_evening,
+        "adhkar_after_prayer" to R.string.adhkar_after_prayer,
+        "adhkar_sleep"        to R.string.adhkar_sleep,
+        "adhkar_wakeup"       to R.string.adhkar_wakeup,
+        "adhkar_mosque"       to R.string.adhkar_mosque,
+        "adhkar_maathura"     to R.string.adhkar_maathura,
+        "adhkar_quran_duas"   to R.string.adhkar_quran_duas,
+        "adhkar_travel"       to R.string.adhkar_travel,
+        "adhkar_ruqyah"       to R.string.adhkar_ruqyah,
+    )
+
+    private val builtInIconIds: Map<String, Int> = mapOf(
+        "ic_fajr"    to R.drawable.ic_fajr,
+        "ic_isha"    to R.drawable.ic_isha,
+        "ic_mosque"  to R.drawable.ic_mosque,
+        "ic_sunrise" to R.drawable.ic_sunrise,
+        "ic_book"    to R.drawable.ic_book,
+        "ic_adhkar"  to R.drawable.ic_adhkar,
+    )
+
+    // ── Seeding ───────────────────────────────────────────────────────────────
+
+    suspend fun seedIfEmpty() = withContext(Dispatchers.IO) {
+        val isEmpty = db.rawQuery("SELECT COUNT(*) FROM categories", null)
+            .use { it.moveToFirst(); it.getInt(0) == 0 }
+        if (isEmpty) seedBuiltIns()
+    }
+
+    private fun seedBuiltIns() {
+        db.beginTransaction()
+        try {
+            builtInDescriptors.forEachIndexed { idx, desc ->
+                db.insert("categories", null, ContentValues().apply {
+                    put("id", desc.id)
+                    put("title_res", desc.titleResName)
+                    putNull("title_text")
+                    put("icon_res", desc.iconResName)
+                    putNull("icon_uri")
+                    put("color_argb", desc.colorArgb)
+                    put("span", desc.span)
+                    put("sort_order", idx)
+                })
+            }
+            AdhkarData.allCategories().forEach { (categoryId, list) ->
+                list.forEachIndexed { idx, dhikr ->
+                    db.insert("dhikr", null, ContentValues().apply {
+                        put("category_id", categoryId)
+                        put("sort_order", idx)
+                        put("repetitions", dhikr.repetitions)
+                        put("paragraphs", dhikr.paragraphs.toJson())
+                    })
+                }
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    // ── Categories ────────────────────────────────────────────────────────────
+
+    suspend fun getCategories(): List<AdhkarCategory> = withContext(Dispatchers.IO) {
+        db.rawQuery(
+            "SELECT id, title_res, title_text, icon_res, icon_uri, color_argb, span FROM categories ORDER BY sort_order",
+            null
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) {
+                    val id        = c.getString(0)
+                    val titleRes  = c.getString(1)
+                    val titleText = c.getString(2)
+                    val iconRes   = c.getString(3)
+                    val iconUri   = c.getString(4)
+
+                    // Built-in categories: resolve via compile-time R.* map (avoids
+                    // getIdentifier package-mismatch bug in debug builds).
+                    // User categories: use title_text directly (never null for custom entries).
+                    val title = titleText
+                        ?: titleRes?.let { builtInTitleIds[it]?.let(context::getString) ?: resolveString(it) }
+                        ?: ""
+
+                    val iconSource: IconSource = when {
+                        iconUri != null -> IconSource.Uri(iconUri)
+                        iconRes != null -> (builtInIconIds[iconRes] ?: resolveDrawableId(iconRes))
+                            ?.let { IconSource.Res(it) } ?: IconSource.None
+                        else            -> IconSource.None
+                    }
+
+                    add(
+                        AdhkarCategory(
+                            id = id,
+                            title = title,
+                            iconSource = iconSource,
+                            color = Color(c.getInt(5)),
+                            span = c.getInt(6),
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    suspend fun insertCategory(
+        category: AdhkarCategory,
+        dhikrList: List<Dhikr>,
+        sortOrder: Int,
+    ) = withContext(Dispatchers.IO) {
+        db.beginTransaction()
+        try {
+            db.insert("categories", null, ContentValues().apply {
+                put("id", category.id)
+                putNull("title_res")
+                put("title_text", category.title)
+                put("color_argb", category.color.toArgb())
+                put("span", category.span)
+                put("sort_order", sortOrder)
+                when (val src = category.iconSource) {
+                    is IconSource.Res  -> { put("icon_res", context.resources.getResourceEntryName(src.resId)); putNull("icon_uri") }
+                    is IconSource.Uri  -> { putNull("icon_res"); put("icon_uri", src.path) }
+                    is IconSource.None -> { putNull("icon_res"); putNull("icon_uri") }
+                }
+            })
+            dhikrList.forEachIndexed { idx, dhikr ->
+                db.insert("dhikr", null, ContentValues().apply {
+                    put("category_id", category.id)
+                    put("sort_order", idx)
+                    put("repetitions", dhikr.repetitions)
+                    put("paragraphs", dhikr.paragraphs.toJson())
+                })
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /**
+     * Updates an existing category row and replaces its entire dhikr list.
+     * Always uses [title_text] so that title changes survive locale switches;
+     * [resetCategoryToDefaults] restores [title_res] for built-ins.
+     */
+    suspend fun updateCategory(
+        category: AdhkarCategory,
+        dhikrList: List<Dhikr>,
+    ) = withContext(Dispatchers.IO) {
+        db.beginTransaction()
+        try {
+            db.update("categories", ContentValues().apply {
+                putNull("title_res")
+                put("title_text", category.title)
+                put("color_argb", category.color.toArgb())
+                put("span", category.span)
+                when (val src = category.iconSource) {
+                    is IconSource.Res  -> { put("icon_res", context.resources.getResourceEntryName(src.resId)); putNull("icon_uri") }
+                    is IconSource.Uri  -> { putNull("icon_res"); put("icon_uri", src.path) }
+                    is IconSource.None -> { putNull("icon_res"); putNull("icon_uri") }
+                }
+            }, "id = ?", arrayOf(category.id))
+
+            // Replace dhikr list entirely
+            db.delete("dhikr", "category_id = ?", arrayOf(category.id))
+            dhikrList.forEachIndexed { idx, dhikr ->
+                db.insert("dhikr", null, ContentValues().apply {
+                    put("category_id", category.id)
+                    put("sort_order", idx)
+                    put("repetitions", dhikr.repetitions)
+                    put("paragraphs", dhikr.paragraphs.toJson())
+                })
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /**
+     * Restores a built-in category to its original descriptor values and original dhikr
+     * from [AdhkarData]. No-op for user-created categories.
+     */
+    suspend fun resetCategoryToDefaults(categoryId: String) = withContext(Dispatchers.IO) {
+        val desc         = builtInDescriptors.firstOrNull { it.id == categoryId } ?: return@withContext
+        val originalDhikr = AdhkarData.allCategories()[categoryId]             ?: return@withContext
+
+        db.beginTransaction()
+        try {
+            db.update("categories", ContentValues().apply {
+                put("title_res", desc.titleResName)
+                putNull("title_text")
+                put("icon_res", desc.iconResName)
+                putNull("icon_uri")
+                put("color_argb", desc.colorArgb)
+                put("span", desc.span)
+            }, "id = ?", arrayOf(categoryId))
+
+            db.delete("dhikr", "category_id = ?", arrayOf(categoryId))
+            originalDhikr.forEachIndexed { idx, dhikr ->
+                db.insert("dhikr", null, ContentValues().apply {
+                    put("category_id", categoryId)
+                    put("sort_order", idx)
+                    put("repetitions", dhikr.repetitions)
+                    put("paragraphs", dhikr.paragraphs.toJson())
+                })
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /**
+     * Returns the original defaults for a built-in category, resolved from
+     * in-memory data (no DB access). Returns null for user-created categories.
+     */
+    fun getBuiltInDefaults(categoryId: String): BuiltInDefaults? {
+        val desc      = builtInDescriptors.firstOrNull { it.id == categoryId } ?: return null
+        val titleResId = builtInTitleIds[desc.titleResName]                    ?: return null
+        val dhikrList = AdhkarData.allCategories()[categoryId]                 ?: return null
+        return BuiltInDefaults(
+            title = context.getString(titleResId),
+            color = Color(desc.colorArgb),
+            iconResId = builtInIconIds[desc.iconResName],
+            span = desc.span,
+            dhikrList = dhikrList,
+        )
+    }
+
+    suspend fun deleteCategories(ids: List<String>) = withContext(Dispatchers.IO) {
+        if (ids.isEmpty()) return@withContext
+        val placeholders = ids.joinToString(",") { "?" }
+        db.execSQL("DELETE FROM categories WHERE id IN ($placeholders)", ids.toTypedArray())
+    }
+
+    // ── Dhikr ─────────────────────────────────────────────────────────────────
+
+    suspend fun getDhikrForCategory(categoryId: String): List<Dhikr> =
+        withContext(Dispatchers.IO) {
+            db.rawQuery(
+                "SELECT paragraphs, repetitions FROM dhikr WHERE category_id = ? ORDER BY sort_order",
+                arrayOf(categoryId)
+            ).use { c ->
+                buildList {
+                    while (c.moveToNext()) add(
+                        Dhikr(
+                            paragraphs  = c.getString(0).parseParagraphs(),
+                            repetitions = c.getInt(1),
+                        )
+                    )
+                }
+            }
+        }
+
+    // ── Image handling ────────────────────────────────────────────────────────
+
+    /** Copies a content URI image into app-private storage and returns the file path. */
+    fun copyImageToInternal(uri: Uri): String? = runCatching {
+        val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
+        val ext  = mime.substringAfterLast("/").let { if (it == "jpeg") "jpg" else it }
+        val dir  = File(context.filesDir, "adhkar_icons").apply { mkdirs() }
+        val dest = File(dir, "${UUID.randomUUID()}.$ext")
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            dest.outputStream().use(input::copyTo)
+        }
+        dest.absolutePath
+    }.getOrNull()
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Fallback resolver for non-built-in resource names (e.g. future extensibility).
+     * Note: unreachable for user-created categories (they use title_text) and for
+     * built-in categories (handled by builtInTitleIds map above).
+     */
+    private fun resolveString(resName: String): String {
+        val id = context.resources.getIdentifier(resName, "string", context.packageName)
+        return if (id != 0) context.getString(id) else resName
+    }
+
+    private fun resolveDrawableId(resName: String): Int? {
+        val id = context.resources.getIdentifier(resName, "drawable", context.packageName)
+        return if (id != 0) id else null
+    }
+}
+
+// ── JSON helpers ──────────────────────────────────────────────────────────────
+
+internal fun List<DhikrParagraph>.toJson(): String = JSONArray().also { arr ->
+    forEach { p ->
+        arr.put(JSONObject().apply {
+            put("type", when (p) {
+                is DhikrParagraph.Body  -> "BODY"
+                is DhikrParagraph.Quran -> "QURAN"
+                is DhikrParagraph.Note  -> "NOTE"
+            })
+            put("text", when (p) {
+                is DhikrParagraph.Body  -> p.text
+                is DhikrParagraph.Quran -> p.text
+                is DhikrParagraph.Note  -> p.text
+            })
+        })
+    }
+}.toString()
+
+internal fun String.parseParagraphs(): List<DhikrParagraph> {
+    val arr = JSONArray(this)
+    return buildList {
+        for (i in 0 until arr.length()) {
+            val obj  = arr.getJSONObject(i)
+            val text = obj.getString("text")
+            add(when (obj.getString("type")) {
+                "QURAN" -> DhikrParagraph.Quran(text)
+                "NOTE"  -> DhikrParagraph.Note(text)
+                else    -> DhikrParagraph.Body(text)
+            })
+        }
+    }
+}

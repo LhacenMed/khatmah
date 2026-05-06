@@ -1,11 +1,12 @@
 # context-builder.ps1
 # GUI context-file builder -- scrollable tree, mouse checkboxes, encoding-safe output.
+# Respects .gitignore files found in any scanned directory.
 #
 # Usage: .\context-builder.ps1 [-Path <dir>] [-Out <file.txt>] [-Hidden]
 # Keys : ENTER -> Generate   F5 -> Refresh   ESC -> Close
 #
 # Example:
-#   .\scripts\context-builder.ps1 -Path "C:\Users\lhacenmed\AndroidStudioProjects\Khatmah\app\src\main\"
+#   .\scripts\context-builder.ps1 -Path "C:\Users\lhacenmed\AndroidStudioProjects\Khatmah\app\src\"
 
 param (
     [string]$Path   = ".",
@@ -61,16 +62,100 @@ function Read-FileText {
     return $enc.GetString($bytes).TrimEnd()
 }
 
+# --- .gitignore support ------------------------------------------------------
+# Converts a single raw .gitignore pattern line into a regex + metadata object.
+# Returned object has: Pattern (regex string), Negate (bool), DirOnly (bool),
+# and Base (the folder path the .gitignore lives in -- added by Read-GitIgnore).
+function ConvertTo-GitIgnoreRegex {
+    param([string]$Raw)
+
+    $negate  = $Raw.StartsWith('!')
+    if ($negate)  { $Raw = $Raw.Substring(1) }
+    $dirOnly = $Raw.EndsWith('/')
+    if ($dirOnly) { $Raw = $Raw.TrimEnd('/') }
+
+    # A pattern containing a slash (after trimming the trailing one) is
+    # anchored to the directory containing the .gitignore file.
+    $rooted = $Raw.Contains('/')
+
+    # Convert glob syntax to regex (operate on the Regex.Escape'd string).
+    $r = [Text.RegularExpressions.Regex]::Escape($Raw)
+    $r = $r -replace '\\\*\\\*/', '(?:.+/)?'   # **/  -> zero-or-more path segments
+    $r = $r -replace '\\\*\\\*',  '.*'          # **   -> anything
+    $r = $r -replace '\\\*',      '[^/]*'        # *    -> any chars within one segment
+    $r = $r -replace '\\\?',      '[^/]'         # ?    -> single char within one segment
+
+    # Rooted patterns are anchored at the base dir; unrooted can match at any depth.
+    $r = if ($rooted) { '^' + $r + '(/|$)' } else { '(?:^|/)' + $r + '(/|$)' }
+
+    return [PSCustomObject]@{
+        Pattern = $r
+        Negate  = $negate
+        DirOnly = $dirOnly
+    }
+}
+
+# Reads and parses the .gitignore in $Folder (if present).
+# Returns an array of pattern objects tagged with the Base folder path.
+function Read-GitIgnore {
+    param([string]$Folder)
+    $file = Join-Path $Folder '.gitignore'
+    if (-not (Test-Path -LiteralPath $file)) { return @() }
+    $lines = Get-Content -LiteralPath $file -Encoding UTF8 -ErrorAction SilentlyContinue
+    if (-not $lines) { return @() }
+    return $lines |
+            Where-Object { $_ -and -not $_.TrimStart().StartsWith('#') } |
+            ForEach-Object {
+                $p = ConvertTo-GitIgnoreRegex $_.Trim()
+                # Tag the pattern with the folder it came from so relative paths
+                # can be computed correctly even for inherited (parent) rules.
+                $p | Add-Member -NotePropertyName Base -NotePropertyValue $Folder -PassThru
+            }
+}
+
+# Returns $true when $FullPath should be excluded based on the given pattern list.
+# Patterns are tested in order; the last matching rule wins (git semantics).
+# Negation (!) un-ignores a previously ignored path.
+function Test-GitIgnored {
+    param([string]$FullPath, [bool]$IsDir, [array]$Patterns)
+    if (-not $Patterns -or $Patterns.Count -eq 0) { return $false }
+    $result = $false
+    foreach ($p in $Patterns) {
+        if ($p.DirOnly -and -not $IsDir) { continue }
+        # Compute the path relative to the folder where the .gitignore lives.
+        $rel = $FullPath.Substring($p.Base.Length).TrimStart('\', '/').Replace('\', '/')
+        if ($rel -match $p.Pattern) { $result = -not $p.Negate }
+    }
+    return $result
+}
+
 # --- Tree population ---------------------------------------------------------
 # Eagerly builds all TreeNodes in one pass inside BeginUpdate/EndUpdate.
+# $InheritedPatterns carries .gitignore rules from ancestor directories so that
+# a rule defined higher up the tree is honoured in subdirectories too.
 function Add-ChildNodes {
-    param([System.Windows.Forms.TreeNodeCollection]$Nodes, [string]$Folder, [string]$Root)
+    param(
+        [System.Windows.Forms.TreeNodeCollection]$Nodes,
+        [string]$Folder,
+        [string]$Root,
+        [array]$InheritedPatterns = @()
+    )
+
+    # Combine rules from ancestor directories with any .gitignore in this folder.
+    $localPatterns = Read-GitIgnore $Folder
+    $allPatterns   = @($InheritedPatterns) + @($localPatterns)
 
     $opts  = @{ LiteralPath = $Folder; Force = $Hidden.IsPresent; ErrorAction = 'SilentlyContinue' }
     $items = Get-ChildItem @opts |
             Sort-Object @{ Expression = { $_.PSIsContainer }; Descending = $true }, Name
 
     foreach ($item in $items) {
+        # Always hide the .git metadata directory itself.
+        if ($item.Name -eq '.git') { continue }
+
+        # Skip anything matched by an active .gitignore rule.
+        if ($allPatterns.Count -gt 0 -and (Test-GitIgnored $item.FullName $item.PSIsContainer $allPatterns)) { continue }
+
         $rel  = '/' + $item.FullName.Substring($Root.Length).TrimStart('\', '/').Replace('\', '/')
         $node = [System.Windows.Forms.TreeNode]::new($item.Name)
         $node.Tag = [PSCustomObject]@{
@@ -80,7 +165,8 @@ function Add-ChildNodes {
             Name  = $item.Name
         }
         $node.ForeColor = if ($item.PSIsContainer) { $CLR.Dir } else { $CLR.File }
-        if ($item.PSIsContainer) { Add-ChildNodes $node.Nodes $item.FullName $Root }
+        # Recurse, passing the combined pattern list so child dirs inherit all rules.
+        if ($item.PSIsContainer) { Add-ChildNodes $node.Nodes $item.FullName $Root $allPatterns }
         [void]$Nodes.Add($node)
     }
 }
@@ -401,7 +487,7 @@ function Invoke-TreeRefresh {
     try {
         $tree.BeginUpdate()
         $tree.Nodes.Clear()
-        Add-ChildNodes $tree.Nodes $root $root
+        Add-ChildNodes $tree.Nodes $root $root   # InheritedPatterns defaults to @()
 
         if (-not $script:_initialized) {
             # First load: expand top-level directories by default

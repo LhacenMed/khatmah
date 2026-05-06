@@ -16,7 +16,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
-        android:name=".App"
+        android:name=".core.App"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -29,7 +29,7 @@
         tools:targetApi="33">
 
         <activity
-            android:name=".MainActivity"
+            android:name=".core.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -56,12 +56,12 @@
 
         <!-- Receives exact-alarm broadcasts to post adhan notifications -->
         <receiver
-            android:name=".notification.AdhanReceiver"
+            android:name=".feature.prayer.notification.AdhanReceiver"
             android:exported="false" />
 
         <!-- Re-schedules adhan alarms after device reboot -->
         <receiver
-            android:name=".notification.BootReceiver"
+            android:name=".feature.prayer.notification.BootReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -72,7 +72,7 @@
         Must be exported so the system notification service can read the audio files.
         Only serves static notification audio — no sensitive data is exposed. -->
         <provider
-            android:name=".util.AdhanAssetProvider"
+            android:name=".feature.prayer.notification.AdhanAssetProvider"
             android:authorities="${applicationId}.adhan_provider"
             android:exported="true"
             android:grantUriPermissions="true"
