@@ -453,7 +453,7 @@ private fun SkeletonCard() {
                     verticalAlignment     = Alignment.CenterVertically,
                 ) {
                     SkeletonBox(Modifier.size(width = 80.dp, height = 14.dp))
-                    Text(" · ", style = MaterialTheme.typography.bodyMedium)
+                    Text(" - ", style = MaterialTheme.typography.bodyMedium)
                     SkeletonBox(Modifier.size(width = 32.dp, height = 14.dp))
                 }
                 Row(
@@ -482,7 +482,7 @@ private fun SkeletonCard() {
                     verticalAlignment     = Alignment.CenterVertically,
                 ) {
                     SkeletonBox(Modifier.size(width = 80.dp, height = 14.dp))
-                    Text(" · ", style = MaterialTheme.typography.bodyMedium)
+                    Text(" - ", style = MaterialTheme.typography.bodyMedium)
                     SkeletonBox(Modifier.size(width = 32.dp, height = 14.dp))
                 }
                 Row(
