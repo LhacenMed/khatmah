@@ -422,6 +422,10 @@
     <string name="today_page">Page %d</string>
     <string name="today_sura_aya">Surat %1$s · Aya %2$d</string>
     <string name="today_to_sura_aya">To Surat %1$s · Aya %2$d</string>
+    <string name="today_sura_prefix">Surat</string>
+    <string name="today_aya_prefix">Aya</string>
+    <string name="today_to_prefix">To Surat</string>
+    <string name="today_separator"> · </string>
     <string name="today_start_reading">Start Reading</string>
     <string name="today_mark_read">Done Reading</string>
     <string name="today_khatmah_title">Khatmah Sessions</string>
