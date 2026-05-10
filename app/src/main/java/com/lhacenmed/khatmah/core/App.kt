@@ -8,14 +8,15 @@ import coil.ImageLoader
 import coil.decode.SvgDecoder
 import com.google.android.material.color.DynamicColors
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanPrefs
-import com.lhacenmed.khatmah.feature.prayer.notification.AdhanScheduler
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanSound
-import com.lhacenmed.khatmah.feature.prayer.notification.NotificationHelper
+import com.lhacenmed.khatmah.shared.reminders.ReminderNotifier
+import com.lhacenmed.khatmah.shared.reminders.ReminderPrefs
+import com.lhacenmed.khatmah.shared.reminders.ReminderScheduler
 import com.lhacenmed.khatmah.shared.util.AdhanSoundFiles
 import com.lhacenmed.khatmah.shared.util.AppPrefs
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.shared.util.LocaleManager
 import com.lhacenmed.khatmah.shared.util.ThemeManager
 import com.lhacenmed.khatmah.widget.PrayerWidgetWorker
@@ -41,18 +42,19 @@ class App : Application() {
         PrayerSettings.init(this)
         AppPrefs.init(this)
         MushafPrefs.init(this)
-        // Init adhan notification prefs and ensure notification channels exist.
+
+        // ReminderPrefs must be initialised before AdhanPrefs (which reads from it).
+        ReminderPrefs.init(this)
         AdhanPrefs.init(this)
-        // Init adhan notification prefs, channels, and alarms.
-        AdhanPrefs.init(this)
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationHelper.ensureChannels(this, AdhanSoundFiles.list(this))
-            // Recreate custom channels that may have been wiped on CH_VERSION bump.
+            ReminderNotifier.ensureChannels(this, AdhanSoundFiles.list(this))
+            // Recreate custom adhan channels that may have been wiped on CH_VERSION bump.
             AdhanPrefs.get().forEach { cfg ->
                 if (cfg.sound is AdhanSound.Custom)
-                    NotificationHelper.ensureCustomChannel(this, cfg.sound.uri, cfg.sound.displayName)
+                    ReminderNotifier.ensureCustomAdhanChannel(this, cfg.sound.uri, cfg.sound.displayName)
             }
-            AdhanScheduler.scheduleAll(this)
+            ReminderScheduler.scheduleAll(this)
         }
         PrayerWidgetWorker.Companion.enqueue(this)
         // Register SVG decoder so FlagCDN SVGs render via AsyncImage.

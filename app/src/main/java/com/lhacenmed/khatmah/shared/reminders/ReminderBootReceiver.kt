@@ -1,4 +1,4 @@
-package com.lhacenmed.khatmah.feature.prayer.notification
+package com.lhacenmed.khatmah.shared.reminders
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -8,15 +8,15 @@ import androidx.annotation.RequiresApi
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 
 /**
- * Re-schedules all prayer alarms after a device reboot.
- * Requires RECEIVE_BOOT_COMPLETED permission in the manifest.
+ * Re-schedules all reminders after device reboot.
+ * Requires RECEIVE_BOOT_COMPLETED permission in AndroidManifest.xml.
  */
 @RequiresApi(Build.VERSION_CODES.O)
-class BootReceiver : BroadcastReceiver() {
+class ReminderBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
-        AdhanPrefs.init(context)
+        ReminderPrefs.init(context)
         PrayerSettings.init(context)
-        AdhanScheduler.scheduleAll(context)
+        ReminderScheduler.scheduleAll(context)
     }
 }

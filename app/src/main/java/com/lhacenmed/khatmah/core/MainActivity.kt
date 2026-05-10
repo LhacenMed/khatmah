@@ -32,8 +32,8 @@ class MainActivity : AppCompatActivity() {
 
         enableEdgeToEdge()
 
-        // Handle a widget tap that cold-started the app.
-        handleWidgetIntent(intent)
+        // Handle a widget tap or reminder tap that cold-started the app.
+        handleLaunchIntent(intent)
 
         // Observe prayer settings changes while the app is active so the widget
         // refreshes immediately — covers split-screen and freeform window modes
@@ -45,7 +45,7 @@ class MainActivity : AppCompatActivity() {
                 // Surface fills the window with MaterialTheme.colorScheme.background,
                 // covering the XML windowBackground so it never bleeds through during
                 // NavHost transition frames where composables render at reduced alpha.
-                Surface(modifier = Modifier.Companion.fillMaxSize()) {
+                Surface(modifier = Modifier.fillMaxSize()) {
                     AppEntry()
                 }
             }
@@ -60,7 +60,7 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent) // Keep getIntent() in sync for any downstream readers.
-        handleWidgetIntent(intent)
+        handleLaunchIntent(intent)
     }
 
     /**
@@ -77,16 +77,24 @@ class MainActivity : AppCompatActivity() {
     // ── Private helpers ───────────────────────────────────────────────────────
 
     /**
-     * Routes a widget-tap intent to [com.lhacenmed.khatmah.widget.WidgetNavRequest] so [AppEntry]'s [MainScreen]
+     * Routes widget-tap and reminder-tap intents to [WidgetNavRequest] so [AppEntry]
      * can switch to the correct tab.
      *
      * Called from both [onCreate] (cold start) and [onNewIntent] (warm start).
      */
-    private fun handleWidgetIntent(intent: Intent?) {
+    private fun handleLaunchIntent(intent: Intent?) {
         when (intent?.action) {
-            WidgetAction.OPEN_PRAYERS -> WidgetNavRequest.request(
-                Route.PRAYERS
-            )
+            WidgetAction.OPEN_PRAYERS            -> WidgetNavRequest.request(Route.PRAYERS)
+            "com.lhacenmed.khatmah.REMINDER"     -> {
+                // Route strings from ReminderNotifier.defaultDeepLink match Route constants directly.
+                val route = when (intent.getStringExtra("route")) {
+                    "prayers" -> Route.PRAYERS
+                    "adhkar"  -> Route.ADHKAR
+                    "today"   -> Route.TODAY
+                    else      -> null
+                }
+                route?.let { WidgetNavRequest.request(it) }
+            }
         }
     }
 
