@@ -1,5 +1,7 @@
 package com.lhacenmed.khatmah.feature.more
 
+import android.app.TimePickerDialog
+import android.os.Build
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +28,7 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.SkipPrevious
@@ -47,7 +50,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -56,8 +58,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.shared.util.AppPrefs
-import com.lhacenmed.khatmah.feature.quran.data.WarshDownloadState
-import com.lhacenmed.khatmah.feature.quran.data.WarshXmlRepository
 import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
@@ -68,6 +68,9 @@ import com.lhacenmed.khatmah.core.ui.components.SheetOption
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.core.nav.NavScreen
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
+import com.lhacenmed.khatmah.shared.reminders.ReminderConfig
+import com.lhacenmed.khatmah.shared.reminders.ReminderPrefs
+import com.lhacenmed.khatmah.shared.reminders.ReminderScheduler
 import com.lhacenmed.khatmah.shared.util.LocaleManager
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -88,14 +91,34 @@ val MoreTab = NavScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MoreScreen(padding: PaddingValues) {
-    LocalContext.current
+    val context = LocalContext.current
 
-    // ── Alarm switch states ────────────────────────────────────────────────────
-    // Persisted across recompositions; drives enabled state on paired time items.
-    var dayAdhkarOn      by rememberSaveable { mutableStateOf(true) }
-    var nightAdhkarOn    by rememberSaveable { mutableStateOf(true) }
-    var alMulkAlarmOn    by rememberSaveable { mutableStateOf(false) }
-    var alBaqarahAlarmOn by rememberSaveable { mutableStateOf(false) }
+    // ── Reminder state from ReminderPrefs ──────────────────────────────────────
+    val reminders     by ReminderPrefs.flow.collectAsState()
+    val morningConfig  = reminders.find { it.id == "adhkar:morning"      }
+    val eveningConfig  = reminders.find { it.id == "adhkar:evening"      }
+    val mulkConfig     = reminders.find { it.id == "sunnah:al_mulk"     }
+    val baqarahConfig  = reminders.find { it.id == "sunnah:al_baqarah"  }
+
+    // Persist a config update and immediately reschedule the alarm.
+    fun saveReminder(config: ReminderConfig) {
+        ReminderPrefs.save(context, config)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ReminderScheduler.schedule(context, config)
+        }
+    }
+
+    // Opens the system time-picker for [config] if it is currently enabled.
+    fun pickTime(config: ReminderConfig?) {
+        config?.takeIf { it.enabled } ?: return
+        TimePickerDialog(
+            context,
+            { _, h, m -> saveReminder(config.copy(timeHour = h, timeMinute = m)) },
+            config.timeHour,
+            config.timeMinute,
+            true, // 24-hour
+        ).show()
+    }
 
     // ── Reader style bottom sheet ──────────────────────────────────────────────
     // Using explicit MutableState (not 'by' delegation) so assignments inside
@@ -201,8 +224,9 @@ private fun MoreScreen(padding: PaddingValues) {
         item { PreferenceSubtitle(text = stringResource(R.string.more_settings)) }
         item {
             PreferenceItem(
-                title = stringResource(R.string.more_daily_alarm),
-                icon  = Icons.Outlined.NotificationsActive,
+                title   = stringResource(R.string.more_daily_alarm),
+                icon    = Icons.Outlined.NotificationsActive,
+                onClick = { nav.navigate(Route.DAILY_ALARM) },
             )
         }
         item {
@@ -236,32 +260,42 @@ private fun MoreScreen(padding: PaddingValues) {
             PreferenceSwitch(
                 title     = stringResource(R.string.more_day_adhkar_alarm),
                 icon      = Icons.Outlined.WbSunny,
-                isChecked = dayAdhkarOn,
-                onClick   = { dayAdhkarOn = !dayAdhkarOn },
+                isChecked = morningConfig?.enabled ?: false,
+                onClick   = {
+                    morningConfig?.let { saveReminder(it.copy(enabled = !it.enabled)) }
+                },
             )
         }
         item {
             PreferenceItem(
                 title        = stringResource(R.string.more_day_adhkar_time),
                 icon         = Icons.Outlined.Schedule,
-                enabled      = dayAdhkarOn,
-                trailingIcon = { TrailingTimeText(time = "07:00 AM", enabled = dayAdhkarOn) },
+                enabled      = morningConfig?.enabled ?: false,
+                trailingIcon = {
+                    ReminderTrailing(config = morningConfig)
+                },
+                onClick = { pickTime(morningConfig) },
             )
         }
         item {
             PreferenceSwitch(
                 title     = stringResource(R.string.more_night_adhkar_alarm),
                 icon      = Icons.Outlined.DarkMode,
-                isChecked = nightAdhkarOn,
-                onClick   = { nightAdhkarOn = !nightAdhkarOn },
+                isChecked = eveningConfig?.enabled ?: false,
+                onClick   = {
+                    eveningConfig?.let { saveReminder(it.copy(enabled = !it.enabled)) }
+                },
             )
         }
         item {
             PreferenceItem(
                 title        = stringResource(R.string.more_night_adhkar_time),
                 icon         = Icons.Outlined.Schedule,
-                enabled      = nightAdhkarOn,
-                trailingIcon = { TrailingTimeText(time = "05:30 PM", enabled = nightAdhkarOn) },
+                enabled      = eveningConfig?.enabled ?: false,
+                trailingIcon = {
+                    ReminderTrailing(config = eveningConfig)
+                },
+                onClick = { pickTime(eveningConfig) },
             )
         }
 
@@ -271,32 +305,42 @@ private fun MoreScreen(padding: PaddingValues) {
             PreferenceSwitch(
                 title     = stringResource(R.string.more_al_mulk_alarm),
                 icon      = Icons.Outlined.Notifications,
-                isChecked = alMulkAlarmOn,
-                onClick   = { alMulkAlarmOn = !alMulkAlarmOn },
+                isChecked = mulkConfig?.enabled ?: false,
+                onClick   = {
+                    mulkConfig?.let { saveReminder(it.copy(enabled = !it.enabled)) }
+                },
             )
         }
         item {
             PreferenceItem(
                 title        = stringResource(R.string.more_al_mulk_time),
                 icon         = Icons.Outlined.Schedule,
-                enabled      = alMulkAlarmOn,
-                trailingIcon = { TrailingTimeText(time = "09:00 PM", enabled = alMulkAlarmOn) },
+                enabled      = mulkConfig?.enabled ?: false,
+                trailingIcon = {
+                    ReminderTrailing(config = mulkConfig)
+                },
+                onClick = { pickTime(mulkConfig) },
             )
         }
         item {
             PreferenceSwitch(
                 title     = stringResource(R.string.more_al_baqarah_alarm),
                 icon      = Icons.Outlined.Notifications,
-                isChecked = alBaqarahAlarmOn,
-                onClick   = { alBaqarahAlarmOn = !alBaqarahAlarmOn },
+                isChecked = baqarahConfig?.enabled ?: false,
+                onClick   = {
+                    baqarahConfig?.let { saveReminder(it.copy(enabled = !it.enabled)) }
+                },
             )
         }
         item {
             PreferenceItem(
                 title        = stringResource(R.string.more_al_baqarah_time),
                 icon         = Icons.Outlined.Schedule,
-                enabled      = alBaqarahAlarmOn,
-                trailingIcon = { TrailingTimeText(time = "08:30 PM", enabled = alBaqarahAlarmOn) },
+                enabled      = baqarahConfig?.enabled ?: false,
+                trailingIcon = {
+                    ReminderTrailing(config = baqarahConfig)
+                },
+                onClick = { pickTime(baqarahConfig) },
             )
         }
 
@@ -390,6 +434,23 @@ private fun MoreScreen(padding: PaddingValues) {
 // ─── Private composables ──────────────────────────────────────────────────────
 
 /**
+ * Trailing content for a reminder time row: gear icon (when enabled) + 24 h time label.
+ * Tapping the parent [PreferenceItem] opens the time picker via the [pickTime] callback above.
+ */
+@Composable
+private fun ReminderTrailing(config: ReminderConfig?) {
+    androidx.compose.foundation.layout.Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
+    ) {
+        TrailingTimeText(
+            time    = config?.let { "%02d:%02d".format(it.timeHour, it.timeMinute) } ?: "--:--",
+            enabled = config?.enabled ?: false,
+        )
+    }
+}
+
+/**
  * Green pill badge displaying a count — mirrors the screenshot's session counters.
  */
 @Composable
@@ -415,7 +476,7 @@ private fun CountBadge(count: Int) {
 private fun TrailingTimeText(time: String, enabled: Boolean) {
     Text(
         text  = time,
-        style = MaterialTheme.typography.bodyMedium,
+        style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
             .copy(alpha = if (enabled) 1f else 0.38f),
     )

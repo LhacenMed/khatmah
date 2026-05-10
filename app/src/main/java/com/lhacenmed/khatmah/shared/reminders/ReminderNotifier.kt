@@ -48,7 +48,8 @@ object ReminderNotifier {
         is ReminderType.Prayer       -> 2000 + t.prayerId
         is ReminderType.Adhkar       -> 2100 + t.categoryId.hashCode().and(0xFF)
         is ReminderType.QuranSunnah  -> 2200 + t.surahKey.hashCode().and(0xFF)
-        is ReminderType.DailyKhatmah -> 2300
+        // Use alarmCode to differentiate multiple khatmah slots (alarmCodes 25-29 → 2325-2329).
+        is ReminderType.DailyKhatmah -> 2300 + config.alarmCode
         is ReminderType.Custom       -> 2400 + t.customId.hashCode().and(0xFF)
     }
 
@@ -195,7 +196,12 @@ object ReminderNotifier {
 
     private fun defaultDeepLink(type: ReminderType): String = when (type) {
         is ReminderType.Prayer       -> "prayers"
-        is ReminderType.Adhkar       -> "adhkar"
+        // Morning and evening adhkar deep-link directly to their detail pages.
+        is ReminderType.Adhkar       -> when (type.categoryId) {
+            "morning" -> "adhkar_detail/morning"
+            "evening" -> "adhkar_detail/evening"
+            else      -> "adhkar"
+        }
         is ReminderType.QuranSunnah  -> "main"
         is ReminderType.DailyKhatmah -> "today"
         is ReminderType.Custom       -> "main"

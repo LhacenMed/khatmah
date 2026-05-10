@@ -78,20 +78,24 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Routes widget-tap and reminder-tap intents to [WidgetNavRequest] so [AppEntry]
-     * can switch to the correct tab.
+     * can switch to the correct tab or navigate to a detail screen.
+     *
+     * Simple route strings ("prayers", "adhkar", "today") map to their Route constants.
+     * All other non-null strings (e.g. "adhkar_detail/morning") are passed through
+     * directly so [AppEntry] can call navController.navigate() for deep links.
      *
      * Called from both [onCreate] (cold start) and [onNewIntent] (warm start).
      */
     private fun handleLaunchIntent(intent: Intent?) {
         when (intent?.action) {
-            WidgetAction.OPEN_PRAYERS            -> WidgetNavRequest.request(Route.PRAYERS)
-            "com.lhacenmed.khatmah.REMINDER"     -> {
+            WidgetAction.OPEN_PRAYERS        -> WidgetNavRequest.request(Route.PRAYERS)
+            "com.lhacenmed.khatmah.REMINDER" -> {
                 // Route strings from ReminderNotifier.defaultDeepLink match Route constants directly.
-                val route = when (intent.getStringExtra("route")) {
+                val route = when (val raw = intent.getStringExtra("route")) {
                     "prayers" -> Route.PRAYERS
                     "adhkar"  -> Route.ADHKAR
                     "today"   -> Route.TODAY
-                    else      -> null
+                    else      -> raw   // pass through deep-link routes (e.g. "adhkar_detail/morning")
                 }
                 route?.let { WidgetNavRequest.request(it) }
             }

@@ -463,4 +463,6 @@
     <string name="print_warsh_svg">Warsh — SVG Pages</string>
     <string name="print_warsh_svg_desc">Interactive Warsh vector pages · ~45 MB</string>
     <string name="print_download">Download</string>
+
+    <string name="daily_alarm_desc">You can set reminder times for your daily Quran reading</string>
 </resources>

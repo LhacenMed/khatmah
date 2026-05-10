@@ -45,7 +45,9 @@ object ReminderPrefs {
             writeAll(p, defaults)
             _flow.value = defaults
         } else {
-            _flow.value = ids.mapNotNull { readOne(p, it) }.sortedBy { it.alarmCode }
+            val configs = ids.mapNotNull { readOne(p, it) }.toMutableList()
+            migrateKhatmahSlots(p, configs)
+            _flow.value = configs.sortedBy { it.alarmCode }
         }
         _customSoundsFlow.value = readCustomSounds(p)
     }
@@ -105,21 +107,46 @@ object ReminderPrefs {
             ))
         }
         // Adhkar — alarmCodes 20-21
-        add(fixedOff("adhkar:morning",  ReminderType.Adhkar("morning"),       7,  0, 20))
-        add(fixedOff("adhkar:evening",  ReminderType.Adhkar("evening"),      17, 30, 21))
+        add(fixedOff("adhkar:morning",  ReminderType.Adhkar("morning"),  7,  0, 20))
+        add(fixedOff("adhkar:evening",  ReminderType.Adhkar("evening"), 17, 30, 21))
         // Quran sunnah — alarmCodes 22-24
         add(fixedOff("sunnah:al_mulk",    ReminderType.QuranSunnah("al_mulk"),   21,  0, 22))
         add(fixedOff("sunnah:al_baqarah", ReminderType.QuranSunnah("al_baqarah"),20, 30, 23))
         add(fixedOff("sunnah:al_kahf",    ReminderType.QuranSunnah("al_kahf"),   13,  0, 24))
-        // Daily khatmah — alarmCode 25
-        add(fixedOff("khatmah", ReminderType.DailyKhatmah, 8, 0, 25))
+        // Daily khatmah — 5 preset slots, alarmCodes 25-29
+        addAll(buildKhatmahSlots())
+    }
+
+    /**
+     * Five daily khatmah reminder slots at 16:00–20:00.
+     * Slot 0 is enabled by default; slots 1–4 start disabled.
+     */
+    private fun buildKhatmahSlots(): List<ReminderConfig> = buildList {
+        add(ReminderConfig(
+            id        = "khatmah:0",
+            type      = ReminderType.DailyKhatmah,
+            enabled   = true,
+            timeHour  = 16,
+            timeMinute = 0,
+            soundKey  = "device",
+            alarmCode = 25,
+        ))
+        for (i in 1..4) add(ReminderConfig(
+            id        = "khatmah:$i",
+            type      = ReminderType.DailyKhatmah,
+            enabled   = false,
+            timeHour  = 16 + i,
+            timeMinute = 0,
+            soundKey  = "device",
+            alarmCode = 25 + i,
+        ))
     }
 
     private fun fixedOff(id: String, type: ReminderType, h: Int, m: Int, code: Int) =
         ReminderConfig(id = id, type = type, enabled = false,
             timeHour = h, timeMinute = m, soundKey = "device", alarmCode = code)
 
-    // ── Migration ─────────────────────────────────────────────────────────────
+    // ── Migrations ────────────────────────────────────────────────────────────
 
     /**
      * One-time migration: reads prayer sound/pre-alert values from the old adhan_prefs
@@ -139,6 +166,19 @@ object ReminderPrefs {
             )
         }
         old.edit { clear() }
+    }
+
+    /**
+     * One-time migration: seeds the five khatmah slots for users who were on the old
+     * single "khatmah" config before multi-slot support was added.
+     */
+    private fun migrateKhatmahSlots(p: SharedPreferences, configs: MutableList<ReminderConfig>) {
+        if (configs.any { it.id.startsWith("khatmah:") }) return
+        val slots = buildKhatmahSlots()
+        slots.forEach { writeOne(p, it) }
+        configs.removeAll { it.id == "khatmah" }
+        configs.addAll(slots)
+        writeIds(p, configs.map { it.id })
     }
 
     // ── I/O ───────────────────────────────────────────────────────────────────

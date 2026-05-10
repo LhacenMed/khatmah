@@ -54,6 +54,7 @@ import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarViewModel
 import com.lhacenmed.khatmah.feature.more.MoreTab
 import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahPage
+import com.lhacenmed.khatmah.feature.khatmah.ui.DailyAlarmPage
 import com.lhacenmed.khatmah.feature.prayer.ui.PrayersTab
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.AdhanRemindersPage
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsContent
@@ -113,7 +114,15 @@ fun AppEntry() {
     LaunchedEffect(widgetRoute) {
         val route = widgetRoute ?: return@LaunchedEffect
         val idx = tabs.indexOfFirst { it.route == route }
-        if (idx >= 0) selectedTabIndex = idx
+        if (idx >= 0) {
+            selectedTabIndex = idx
+        } else {
+            // Deep link to a non-tab screen — ensure the right parent tab is visible behind it.
+            if (route.startsWith("adhkar_detail/")) {
+                selectedTabIndex = tabs.indexOfFirst { it.route == Route.ADHKAR }.coerceAtLeast(0)
+            }
+            navController.navigate(route)
+        }
         WidgetNavRequest.consume()
     }
 
@@ -219,9 +228,9 @@ fun AppEntry() {
             }
 
             // ── Khatmah ───────────────────────────────────────────────────────────────────
-            animatedComposable(Route.NEW_KHATMAH) { NewKhatmahPage() }
+            animatedComposable(Route.NEW_KHATMAH)   { NewKhatmahPage()   }
+            animatedComposable(Route.DAILY_ALARM)   { DailyAlarmPage()   }
 
-            // ← add this block ↓
             animatedComposable(
                 route     = Route.QURAN_SESSION_READER,
                 arguments = listOf(

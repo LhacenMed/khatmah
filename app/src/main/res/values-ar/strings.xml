@@ -494,4 +494,6 @@
     <string name="print_warsh_svg">ورش — صفحات SVG</string>
     <string name="print_warsh_svg_desc">صفحات متجهية تفاعلية لورش · حوالي 45 ميغابايت</string>
     <string name="print_download">تنزيل</string>
+
+    <string name="daily_alarm_desc">يمكنك تحديد وقت المنبه لتذكيرك بالورد يوميا</string>
 </resources>
