@@ -1,6 +1,5 @@
-package com.lhacenmed.khatmah.core.ui.components
+package com.lhacenmed.khatmah.feature.khatmah.ui.components
 
-import android.app.TimePickerDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.shared.reminders.ReminderConfig
+import com.lhacenmed.khatmah.core.ui.components.showTimePicker
 
 /**
  * Card row for a single reminder slot: time display (24 h) · gear icon · toggle.
@@ -61,15 +61,7 @@ fun ReminderTimeItem(
             if (config.enabled) {
                 Spacer(Modifier.width(4.dp))
                 IconButton(
-                    onClick = {
-                        TimePickerDialog(
-                            context,
-                            { _, h, m -> onTimeChange(h, m) },
-                            config.timeHour,
-                            config.timeMinute,
-                            true, // 24-hour
-                        ).show()
-                    },
+                    onClick = { showTimePicker(context, config.timeHour, config.timeMinute, onTimeChange) },
                 ) {
                     Icon(
                         imageVector        = Icons.Outlined.Settings,

@@ -1,53 +1,41 @@
 package com.lhacenmed.khatmah.feature.more
 
-import android.app.TimePickerDialog
 import android.os.Build
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AlternateEmail
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CameraAlt
-import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Email
-import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SkipNext
 import androidx.compose.material.icons.outlined.SkipPrevious
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.WbSunny
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -57,7 +45,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.shared.util.AppPrefs
 import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
@@ -65,6 +52,7 @@ import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSwitch
 import com.lhacenmed.khatmah.core.ui.components.OptionSelectBottomSheet
 import com.lhacenmed.khatmah.core.ui.components.SheetOption
+import com.lhacenmed.khatmah.core.ui.components.showTimePicker
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.core.nav.NavScreen
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
@@ -72,10 +60,6 @@ import com.lhacenmed.khatmah.shared.reminders.ReminderConfig
 import com.lhacenmed.khatmah.shared.reminders.ReminderPrefs
 import com.lhacenmed.khatmah.shared.reminders.ReminderScheduler
 import com.lhacenmed.khatmah.shared.util.LocaleManager
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
-import com.lhacenmed.khatmah.feature.quran.data.WarshImageRepository
-import com.lhacenmed.khatmah.feature.quran.data.WarshImageDownloadState
 
 // Items within this distance from the top animate directly; farther ones jump-then-animate.
 private const val SMOOTH_SCROLL_THRESHOLD = 4
@@ -111,13 +95,9 @@ private fun MoreScreen(padding: PaddingValues) {
     // Opens the system time-picker for [config] if it is currently enabled.
     fun pickTime(config: ReminderConfig?) {
         config?.takeIf { it.enabled } ?: return
-        TimePickerDialog(
-            context,
-            { _, h, m -> saveReminder(config.copy(timeHour = h, timeMinute = m)) },
-            config.timeHour,
-            config.timeMinute,
-            true, // 24-hour
-        ).show()
+        showTimePicker(context, config.timeHour, config.timeMinute) { h, m ->
+            saveReminder(config.copy(timeHour = h, timeMinute = m))
+        }
     }
 
     // ── Reader style bottom sheet ──────────────────────────────────────────────

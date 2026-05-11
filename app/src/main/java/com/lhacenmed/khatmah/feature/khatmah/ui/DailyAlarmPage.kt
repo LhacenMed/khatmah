@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
-import com.lhacenmed.khatmah.core.ui.components.ReminderTimeItem
+import com.lhacenmed.khatmah.feature.khatmah.ui.components.ReminderTimeItem
 import com.lhacenmed.khatmah.shared.reminders.ReminderConfig
 import com.lhacenmed.khatmah.shared.reminders.ReminderPrefs
 import com.lhacenmed.khatmah.shared.reminders.ReminderScheduler
