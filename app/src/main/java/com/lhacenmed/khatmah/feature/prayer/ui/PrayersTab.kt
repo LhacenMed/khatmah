@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
-import com.lhacenmed.khatmah.core.nav.NavScreen
+import com.lhacenmed.khatmah.core.nav.NavTab
 import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerRepository
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerTime
@@ -44,7 +44,7 @@ import java.util.Locale
 
 // ─── Tab registration ─────────────────────────────────────────────────────────
 
-val PrayersTab = NavScreen(
+val PrayersTab = NavTab(
     route = Route.PRAYERS,
     iconRes = R.drawable.ic_mosque,
     labelRes = R.string.prayers,

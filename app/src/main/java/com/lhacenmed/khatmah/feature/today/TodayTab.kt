@@ -16,13 +16,13 @@ import com.lhacenmed.khatmah.core.motion.initialOffset
 import com.lhacenmed.khatmah.core.motion.materialSharedAxisX
 import com.lhacenmed.khatmah.core.motion.materialSharedAxisZ
 import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.nav.NavScreen
+import com.lhacenmed.khatmah.core.nav.NavTab
 import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
 import com.lhacenmed.khatmah.feature.today.components.*
 
-val TodayTab = NavScreen(
+val TodayTab = NavTab(
     route    = Route.TODAY,
     iconRes  = R.drawable.ic_book,
     labelRes = R.string.today,

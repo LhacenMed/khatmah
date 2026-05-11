@@ -266,7 +266,7 @@ fun AppEntry() {
  */
 @Composable
 private fun MainScreen(
-    tabs: List<NavScreen>,
+    tabs: List<NavTab>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
 ) {
@@ -445,7 +445,7 @@ private fun MainScreen(
  */
 @Composable
 private fun TooltipAnchorRow(
-    screens: List<NavScreen>,
+    screens: List<NavTab>,
     onReady: (index: Int, view: View) -> Unit,
     modifier: Modifier = Modifier,
 ) {

@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
  * A bottom navigation destination — tab bar metadata and composable screen content.
  *
  * Developer flow:
- *  1. Create a NavScreen val in ui/page/tabs/ using Route.* for route.
+ *  1. Create a NavTab val in ui/page/tabs/ using Route.* for route.
  *  2. Append it to the tabs list in MainActivity.
  *
  * NavHost registration and bottom bar wiring derive from the list automatically.
@@ -20,7 +20,7 @@ import androidx.compose.runtime.Composable
  * @param labelRes  String resource for the tab label and system long-press tooltip.
  * @param content   Screen composable; receives the Scaffold's inner PaddingValues.
  */
-class NavScreen(
+class NavTab(
     val route: String,
     @DrawableRes val iconRes: Int,
     @StringRes val labelRes: Int,
