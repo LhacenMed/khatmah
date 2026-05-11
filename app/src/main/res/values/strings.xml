@@ -69,10 +69,10 @@
     <string name="more_start_new_khatmah">Start New Khatmah</string>
     <string name="more_prayer_times_settings">Prayer Times Settings</string>
     <string name="more_qibla_direction">Qibla Direction</string>
-    <string name="more_day_adhkar_alarm">Day Adhkar Alarm</string>
-    <string name="more_day_adhkar_time">Day Adhkar Time</string>
-    <string name="more_night_adhkar_alarm">Night Adhkar Alarm</string>
-    <string name="more_night_adhkar_time">Night Adhkar Time</string>
+    <string name="more_day_adhkar_alarm">Morning Adhkar Alarm</string>
+    <string name="more_day_adhkar_time">Morning Adhkar Time</string>
+    <string name="more_night_adhkar_alarm">Evening Adhkar Alarm</string>
+    <string name="more_night_adhkar_time">Evening Adhkar Time</string>
     <string name="more_al_mulk_alarm">Al-Mulk Alarm</string>
     <string name="more_al_mulk_time">Al-Mulk Time</string>
     <string name="more_al_baqarah_alarm">Al-Baqarah Alarm</string>
