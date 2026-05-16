@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.DirectionsBus
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Language
@@ -228,6 +229,8 @@ private fun MoreScreen(padding: PaddingValues) {
         subtitle(R.string.more_debug)
         prefItem(R.string.more_debug_db, Icons.Outlined.BugReport,
             onClick = { nav.navigate(Route.DEBUG_DB) })
+        prefItem(R.string.more_trip_requests, Icons.Outlined.DirectionsBus,
+            onClick = { nav.navigate(Route.TRIP_REQUESTS) })
     }
 
     if (showLanguageSheet.value) {

@@ -90,6 +90,7 @@
     <string name="reader_style_text_desc">Rendered Quran text with search and navigation</string>
     <string name="reader_style_images">Mushaf Pages</string>
     <string name="reader_style_images_desc">Scanned pages of the Mushaf, page by page</string>
+    <string name="more_trip_requests">Trip Requests</string>
 
     <!-- Index tab -->
     <string name="index_read_quran">Read Quran</string>
@@ -465,4 +466,10 @@
     <string name="print_download">Download</string>
 
     <string name="daily_alarm_desc">You can set reminder times for your daily Quran reading</string>
+
+    <!-- Trip request notification -->
+    <string name="trip_notif_channel">Trip Requests</string>
+    <string name="trip_notif_title">New Trip Request</string>
+    <string name="trip_notif_reason">Reason</string>
+    <string name="trip_notif_description">Details</string>
 </resources>

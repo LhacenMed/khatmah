@@ -76,6 +76,7 @@ import com.lhacenmed.khatmah.feature.settings.ThemeSettingsPage
 import com.lhacenmed.khatmah.feature.today.TodayTab
 import com.lhacenmed.khatmah.feature.debug.DbBrowserPage
 import com.lhacenmed.khatmah.feature.mushaf.ui.PrintSelectPage
+import com.lhacenmed.khatmah.feature.trips.ui.TripRequestsPage
 import com.lhacenmed.khatmah.onboarding.CitySelectPage
 import com.lhacenmed.khatmah.onboarding.CountrySelectPage
 import com.lhacenmed.khatmah.onboarding.LanguageOnboardingPage
@@ -247,6 +248,9 @@ fun AppEntry() {
             animatedComposable(Route.DEBUG_DB)    { DbBrowserPage()  }
 
             animatedComposable(Route.MUSHAF_PRINTS) { PrintSelectPage() }
+
+            // ── Trip requests ──────────────────────────────────────────────────────────
+            animatedComposable(Route.TRIP_REQUESTS) { TripRequestsPage() }
         }
     }
 }

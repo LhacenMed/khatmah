@@ -25,6 +25,7 @@ object Route {
     const val DARK_THEME     = "dark_theme"
     const val LANGUAGE       = "language"
     const val ABOUT          = "about"
+    const val TRIP_REQUESTS = "trip_requests"
 
     // ── Prayer settings sub-pages ─────────────────────────────────────────────
     const val PRAYER_SETTINGS           = "prayer_settings"

@@ -78,6 +78,15 @@
             android:grantUriPermissions="true"
             tools:ignore="ExportedContentProvider" />
 
+        <!-- FCM token refresh service -->
+        <service
+            android:name=".shared.fcm.KhatmahFcmService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
     </application>
 
 </manifest>

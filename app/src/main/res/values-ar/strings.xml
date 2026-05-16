@@ -90,6 +90,7 @@
     <string name="reader_style_text_desc">نص القرآن الكريم مع إمكانية البحث والتنقل</string>
     <string name="reader_style_images">صفحات المصحف</string>
     <string name="reader_style_images_desc">صفحات المصحف المصوّرة، صفحة تلو الأخرى</string>
+    <string name="more_trip_requests">طلبات الرحلات</string>
 
     <!-- Index tab -->
     <string name="index_read_quran">قراءة القرآن</string>
@@ -496,4 +497,10 @@
     <string name="print_download">تنزيل</string>
 
     <string name="daily_alarm_desc">يمكنك تحديد وقت المنبه لتذكيرك بالورد يوميا</string>
+
+    <!-- Trip request notification -->
+    <string name="trip_notif_channel">طلبات الرحلات</string>
+    <string name="trip_notif_title">طلب رحلة جديدة</string>
+    <string name="trip_notif_reason">السبب</string>
+    <string name="trip_notif_description">التفاصيل</string>
 </resources>

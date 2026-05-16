@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "571392512504",
+    "project_id": "uesmk-events",
+    "storage_bucket": "uesmk-events.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:571392512504:android:e0058806e85f5301b9460d",
+        "android_client_info": {
+          "package_name": "com.lhacenmed.events"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDo4oByC3rEVEcH0hE26k-GnVBGj-3IM34"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:571392512504:android:ab96c9296c2c4e60b9460d",
+        "android_client_info": {
+          "package_name": "com.lhacenmed.khatmah"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDo4oByC3rEVEcH0hE26k-GnVBGj-3IM34"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:571392512504:android:ab96c9296c2c4e60b9460d",
+        "android_client_info": {
+          "package_name": "com.lhacenmed.khatmah.debug"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDo4oByC3rEVEcH0hE26k-GnVBGj-3IM34"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

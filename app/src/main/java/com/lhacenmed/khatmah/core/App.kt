@@ -12,6 +12,7 @@ import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanPrefs
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanSound
+import com.lhacenmed.khatmah.shared.fcm.FcmTokenManager
 import com.lhacenmed.khatmah.shared.reminders.ReminderNotifier
 import com.lhacenmed.khatmah.shared.reminders.ReminderPrefs
 import com.lhacenmed.khatmah.shared.reminders.ReminderScheduler
@@ -64,6 +65,8 @@ class App : Application() {
                 .components { add(SvgDecoder.Factory()) }
                 .build()
         }
+        // Start FCM token registration (non-blocking)
+        FcmTokenManager.init(this)
 
         // Pre-warm the Quran sura-name cache so TodayTab loads instantly.
         appScope.launch { KhatmahRepository(this@App).warmCache() }
