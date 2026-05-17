@@ -70,6 +70,7 @@ fun QuranSessionReaderScreen(startPage: Int, endPage: Int) {
         when (print) {
             MushafPrint.WarshImages -> SessionImagePager(startPage, endPage)
             MushafPrint.WarshSvg    -> SessionXmlPager(startPage, endPage)
+            MushafPrint.HafsQcf4 -> SessionQcf4Pager(startPage, endPage)
             MushafPrint.WarshText    -> {
                 // Guard: TodayTab should have prevented this path.
                 Box(Modifier.fillMaxSize(), Alignment.Center) {

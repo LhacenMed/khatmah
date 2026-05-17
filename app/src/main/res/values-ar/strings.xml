@@ -503,4 +503,7 @@
     <string name="trip_notif_title">طلب رحلة جديدة</string>
     <string name="trip_notif_reason">السبب</string>
     <string name="trip_notif_description">التفاصيل</string>
+
+    <string name="print_hafs_qcf4">حفص — مصحف QCF4</string>
+    <string name="print_hafs_qcf4_desc">مصحف المدينة النبوية بخط رواية حفص عن عاصم</string>
 </resources>

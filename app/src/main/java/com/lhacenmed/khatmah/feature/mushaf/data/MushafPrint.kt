@@ -39,4 +39,12 @@ sealed class MushafPrint(
         descRes          = R.string.print_warsh_svg_desc,
         requiresDownload = true,
     )
+
+    data object HafsQcf4 : MushafPrint(
+        id               = "hafs_qcf4",
+        riwaya           = Riwaya.HAFS,
+        nameRes          = R.string.print_hafs_qcf4,
+        descRes          = R.string.print_hafs_qcf4_desc,
+        requiresDownload = true,
+    )
 }

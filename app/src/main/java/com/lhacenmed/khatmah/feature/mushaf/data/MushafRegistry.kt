@@ -7,6 +7,7 @@ object MushafRegistry {
         MushafPrint.WarshText,
         MushafPrint.WarshImages,
         MushafPrint.WarshSvg,
+        MushafPrint.HafsQcf4,
     )
 
     val default: MushafPrint = MushafPrint.WarshText

@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
 import com.lhacenmed.khatmah.feature.quran.data.QuranRepository
+import com.lhacenmed.khatmah.feature.quran.data.HafsQcf4Repository
 import com.lhacenmed.khatmah.feature.quran.data.WarshXmlRepository
 import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranPageBuilder
 import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranPageData
@@ -32,6 +33,7 @@ class QuranViewModel(
         data class ImageReady(val pageCount: Int)        : State()
         /** Warsh XML reader mode: 604 vector mushaf pages rendered via VectorDrawable. */
         data class XmlReady(val pageCount: Int)          : State()
+        data class Qcf4Ready(val pageCount: Int)         : State()
     }
 
     private val repo  = QuranRepository(app)
@@ -59,6 +61,7 @@ class QuranViewModel(
             when (MushafPrefs.selected.value) {
                 MushafPrint.WarshImages -> initImageMode()
                 MushafPrint.WarshSvg    -> initXmlMode()
+                MushafPrint.HafsQcf4    -> initQcf4Mode()
                 else                    -> initTextMode()
             }
         }
@@ -98,6 +101,22 @@ class QuranViewModel(
             savedPage.coerceIn(0, PAGE_COUNT - 1)
         }
         _state.value = State.XmlReady(PAGE_COUNT)
+    }
+
+    private suspend fun initQcf4Mode() {
+        val repo = HafsQcf4Repository.get(getApplication())
+        if (!repo.isFullyDownloaded()) { initTextMode(); return }
+
+        ayaPageIndex = withContext(Dispatchers.IO) { repo.ayaPageIndex() }
+
+        val targetSura = handle.get<Int>("suraNum") ?: 0
+        savedPage = if (targetSura > 0) {
+            val targetAya = (handle.get<Int>("ayaNum") ?: 0).coerceAtLeast(1)
+            pageForAya(targetSura, targetAya) ?: 0
+        } else {
+            savedPage.coerceIn(0, HafsQcf4Repository.PAGE_COUNT - 1)
+        }
+        _state.value = State.Qcf4Ready(HafsQcf4Repository.PAGE_COUNT)
     }
 
     private suspend fun initTextMode() {

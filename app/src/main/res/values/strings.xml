@@ -472,4 +472,7 @@
     <string name="trip_notif_title">New Trip Request</string>
     <string name="trip_notif_reason">Reason</string>
     <string name="trip_notif_description">Details</string>
+
+    <string name="print_hafs_qcf4">Hafs — QCF4 Mushaf</string>
+    <string name="print_hafs_qcf4_desc">Madinah Mushaf · Hafs recitation · QCF4 fonts</string>
 </resources>
