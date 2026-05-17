@@ -54,6 +54,7 @@ import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarViewModel
 import com.lhacenmed.khatmah.feature.more.MoreTab
 import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahPage
+import com.lhacenmed.khatmah.feature.khatmah.ui.DailyAlarmPage
 import com.lhacenmed.khatmah.feature.prayer.ui.PrayersTab
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.AdhanRemindersPage
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsContent
@@ -74,6 +75,8 @@ import com.lhacenmed.khatmah.feature.settings.LanguagePage
 import com.lhacenmed.khatmah.feature.settings.ThemeSettingsPage
 import com.lhacenmed.khatmah.feature.today.TodayTab
 import com.lhacenmed.khatmah.feature.debug.DbBrowserPage
+import com.lhacenmed.khatmah.feature.mushaf.ui.PrintSelectPage
+import com.lhacenmed.khatmah.feature.trips.ui.TripRequestsPage
 import com.lhacenmed.khatmah.onboarding.CitySelectPage
 import com.lhacenmed.khatmah.onboarding.CountrySelectPage
 import com.lhacenmed.khatmah.onboarding.LanguageOnboardingPage
@@ -112,7 +115,15 @@ fun AppEntry() {
     LaunchedEffect(widgetRoute) {
         val route = widgetRoute ?: return@LaunchedEffect
         val idx = tabs.indexOfFirst { it.route == route }
-        if (idx >= 0) selectedTabIndex = idx
+        if (idx >= 0) {
+            selectedTabIndex = idx
+        } else {
+            // Deep link to a non-tab screen — ensure the right parent tab is visible behind it.
+            if (route.startsWith("adhkar_detail/")) {
+                selectedTabIndex = tabs.indexOfFirst { it.route == Route.ADHKAR }.coerceAtLeast(0)
+            }
+            navController.navigate(route)
+        }
         WidgetNavRequest.consume()
     }
 
@@ -218,9 +229,9 @@ fun AppEntry() {
             }
 
             // ── Khatmah ───────────────────────────────────────────────────────────────────
-            animatedComposable(Route.NEW_KHATMAH) { NewKhatmahPage() }
+            animatedComposable(Route.NEW_KHATMAH)   { NewKhatmahPage()   }
+            animatedComposable(Route.DAILY_ALARM)   { DailyAlarmPage()   }
 
-            // ← add this block ↓
             animatedComposable(
                 route     = Route.QURAN_SESSION_READER,
                 arguments = listOf(
@@ -235,6 +246,11 @@ fun AppEntry() {
             }
 
             animatedComposable(Route.DEBUG_DB)    { DbBrowserPage()  }
+
+            animatedComposable(Route.MUSHAF_PRINTS) { PrintSelectPage() }
+
+            // ── Trip requests ──────────────────────────────────────────────────────────
+            animatedComposable(Route.TRIP_REQUESTS) { TripRequestsPage() }
         }
     }
 }
@@ -254,7 +270,7 @@ fun AppEntry() {
  */
 @Composable
 private fun MainScreen(
-    tabs: List<NavScreen>,
+    tabs: List<NavTab>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
 ) {
@@ -433,7 +449,7 @@ private fun MainScreen(
  */
 @Composable
 private fun TooltipAnchorRow(
-    screens: List<NavScreen>,
+    screens: List<NavTab>,
     onReady: (index: Int, view: View) -> Unit,
     modifier: Modifier = Modifier,
 ) {

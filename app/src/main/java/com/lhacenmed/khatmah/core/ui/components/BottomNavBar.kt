@@ -15,10 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.lhacenmed.khatmah.core.nav.NavScreen
+import com.lhacenmed.khatmah.core.nav.NavTab
 
 /**
- * Full-width bottom navigation bar driven by a NavScreen list.
+ * Full-width bottom navigation bar driven by a NavTab list.
  *
  * Colours are resolved from MaterialTheme.colorScheme — dynamic colour and
  * dark/light theming are handled automatically without hardcoded values.
@@ -40,7 +40,7 @@ import com.lhacenmed.khatmah.core.nav.NavScreen
  */
 @Composable
 fun BottomNavBar(
-    screens: List<NavScreen>,
+    screens: List<NavTab>,
     currentRoute: String?,
     onNavigate: (String) -> Unit,
     anchorViewAt: (Int) -> View? = { null },

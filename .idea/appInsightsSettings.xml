@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.lhacenmed.khatmah" />
+                  <option name="mobileSdkAppId" value="1:571392512504:android:ab96c9296c2c4e60b9460d" />
+                  <option name="projectId" value="uesmk-events" />
+                  <option name="projectNumber" value="571392512504" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

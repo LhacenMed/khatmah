@@ -6,7 +6,7 @@
 # Keys : ENTER -> Generate   F5 -> Refresh   ESC -> Close
 #
 # Example:
-#   .\scripts\context-builder.ps1 -Path "C:\Users\lhacenmed\AndroidStudioProjects\Khatmah\app\src\"
+#   .\scripts\context-builder.ps1 -Path "C:\Users\lhacenmed\AndroidStudioProjects\Khatmah\app\"
 
 param (
     [string]$Path   = ".",

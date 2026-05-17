@@ -2,25 +2,20 @@ package com.lhacenmed.khatmah.feature.prayer.notification
 
 import android.content.Context
 import androidx.core.content.edit
+import com.lhacenmed.khatmah.shared.reminders.ReminderPrefs
+import com.lhacenmed.khatmah.shared.reminders.ReminderType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Persists per-prayer [AdhanConfig] to SharedPreferences.
- *
- * Key schema:
- *   adhan_sound_<prayerId>      → [AdhanSound.toKey]
- *   adhan_pre_<prayerId>        → pre-alert minutes (Int)
- *
- * [init] must be called once in [App.onCreate].
- * [version] increments on every [save] so [AdhanScheduler] can detect changes.
+ * Prayer-specific accessor over [ReminderPrefs].
+ * Preserves the same public API consumed by the prayer settings UI.
+ * Must be initialised after [ReminderPrefs.init] in [App.onCreate].
  */
 object AdhanPrefs {
 
-    private const val PREFS = "adhan_prefs"
-
-    /** Prayer indices mirror [PrayerEngine] output order: 0=Fajr … 5=Isha. */
+    // ── Prayer indices — mirror PrayerEngine output order ─────────────────────
     const val FAJR    = 0
     const val SUNRISE = 1
     const val DHUHR   = 2
@@ -29,8 +24,13 @@ object AdhanPrefs {
     const val ISHA    = 5
     const val COUNT   = 6
 
+    /** Incremented on every [save]; consumed by prayer UI to trigger re-scheduling. */
     @Volatile var version: Int = 0
         private set
+
+    // Custom adhan sounds are stored separately from non-prayer reminder sounds.
+    private const val ADHAN_PREFS  = "adhan_custom"
+    private const val K_CUSTOM_SND = "adhan_custom_sounds"
 
     private val _flow = MutableStateFlow(defaultConfigs())
     val flow: StateFlow<List<AdhanConfig>> = _flow.asStateFlow()
@@ -38,83 +38,73 @@ object AdhanPrefs {
     private val _customSoundsFlow = MutableStateFlow<List<AdhanSound.Custom>>(emptyList())
     val customSoundsFlow: StateFlow<List<AdhanSound.Custom>> = _customSoundsFlow.asStateFlow()
 
+    /**
+     * Syncs in-memory state from [ReminderPrefs].
+     * [ReminderPrefs.init] must be called before this.
+     */
     fun init(context: Context) {
-        _flow.value = load(context.applicationContext)
-        _customSoundsFlow.value = loadCustomSounds(context.applicationContext)
+        _flow.value = buildConfigs()
+        _customSoundsFlow.value = readCustomSounds(context.applicationContext)
     }
 
-    fun get(): List<AdhanConfig> = _flow.value
+    fun get(): List<AdhanConfig> = buildConfigs()
 
-    fun getFor(prayerId: Int): AdhanConfig = _flow.value.getOrElse(prayerId) { AdhanConfig() }
+    fun getFor(prayerId: Int): AdhanConfig = buildConfigs().getOrElse(prayerId) { AdhanConfig() }
 
     fun save(context: Context, prayerId: Int, config: AdhanConfig) {
-        val updated = _flow.value.toMutableList().also { it[prayerId] = config }
-        prefs(context).edit {
-            putString("adhan_sound_$prayerId", config.sound.toKey())
-            putInt("adhan_pre_$prayerId", config.preAlertMinutes)
-        }
-        _flow.value = updated
+        val existing = ReminderPrefs.getById("prayer:$prayerId") ?: return
+        ReminderPrefs.save(context, existing.copy(
+            enabled         = config.isEnabled,
+            soundKey        = config.sound.toKey(),
+            preAlertMinutes = config.preAlertMinutes,
+        ))
+        _flow.value = buildConfigs()
         version++
-
-        // If it's a custom sound, also save it to the global custom sounds list
-        if (config.sound is AdhanSound.Custom) {
-            addCustomSound(context, config.sound)
-        }
+        if (config.sound is AdhanSound.Custom) addCustomSound(context, config.sound)
     }
 
     fun getCustomSounds(context: Context): List<AdhanSound.Custom> = _customSoundsFlow.value
 
     fun addCustomSound(context: Context, sound: AdhanSound.Custom) {
-        val p = prefs(context)
-        val set = p.getStringSet("adhan_custom_sounds", emptySet())?.toMutableSet() ?: mutableSetOf()
-        val key = sound.toKey()
-        if (set.add(key)) {
-            p.edit { putStringSet("adhan_custom_sounds", set) }
-            _customSoundsFlow.value = loadCustomSounds(context)
+        val p   = adhanPrefs(context)
+        val set = p.getStringSet(K_CUSTOM_SND, emptySet())!!.toMutableSet()
+        if (set.add(sound.toKey())) {
+            p.edit { putStringSet(K_CUSTOM_SND, set) }
+            _customSoundsFlow.value = readCustomSounds(context)
         }
     }
 
     fun removeCustomSound(context: Context, sound: AdhanSound.Custom) {
-        val p = prefs(context)
-        val set = p.getStringSet("adhan_custom_sounds", emptySet())?.toMutableSet() ?: mutableSetOf()
+        val p   = adhanPrefs(context)
+        val set = p.getStringSet(K_CUSTOM_SND, emptySet())!!.toMutableSet()
         if (set.remove(sound.toKey())) {
-            p.edit { putStringSet("adhan_custom_sounds", set) }
-            _customSoundsFlow.value = loadCustomSounds(context)
+            p.edit { putStringSet(K_CUSTOM_SND, set) }
+            _customSoundsFlow.value = readCustomSounds(context)
         }
     }
 
     // ── Internal ──────────────────────────────────────────────────────────────
 
-    private fun loadCustomSounds(context: Context): List<AdhanSound.Custom> {
-        val p = prefs(context)
-        val set = p.getStringSet("adhan_custom_sounds", emptySet()) ?: emptySet()
-        return set.mapNotNull { key ->
-            val sound = AdhanSound.fromKey(key)
-            if (sound is AdhanSound.Custom) sound else null
-        }.sortedBy { it.displayName }
-    }
-
-    private fun load(context: Context): List<AdhanConfig> {
-        val p = prefs(context)
-        return List(COUNT) { i ->
-            val soundKey = p.getString("adhan_sound_$i", null)
-            val sound    = if (soundKey != null) AdhanSound.fromKey(soundKey)
-            else if (i == SUNRISE) AdhanSound.Off   // Sunrise off by default
-            else AdhanSound.Asset(AdhanSound.DEFAULT_ASSET)
+    private fun buildConfigs(): List<AdhanConfig> = (0 until COUNT).map { i ->
+        ReminderPrefs.getById("prayer:$i")?.let {
             AdhanConfig(
-                sound          = sound,
-                preAlertMinutes = p.getInt("adhan_pre_$i", 0),
+                sound           = AdhanSound.fromKey(it.soundKey),
+                preAlertMinutes = it.preAlertMinutes,
             )
-        }
+        } ?: AdhanConfig(sound = if (i == SUNRISE) AdhanSound.Off
+        else AdhanSound.Asset(AdhanSound.DEFAULT_ASSET))
     }
 
     private fun defaultConfigs(): List<AdhanConfig> = List(COUNT) { i ->
-        AdhanConfig(
-            sound = if (i == SUNRISE) AdhanSound.Off
-            else AdhanSound.Asset(AdhanSound.DEFAULT_ASSET),
-        )
+        AdhanConfig(sound = if (i == SUNRISE) AdhanSound.Off
+        else AdhanSound.Asset(AdhanSound.DEFAULT_ASSET))
     }
 
-    private fun prefs(context: Context) =
-        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private fun readCustomSounds(context: Context): List<AdhanSound.Custom> =
+        adhanPrefs(context).getStringSet(K_CUSTOM_SND, emptySet())!!
+            .mapNotNull { AdhanSound.fromKey(it) as? AdhanSound.Custom }
+            .sortedBy { it.displayName }
+
+    private fun adhanPrefs(context: Context) =
+        context.applicationContext.getSharedPreferences(ADHAN_PREFS, Context.MODE_PRIVATE)
 }

@@ -69,10 +69,10 @@
     <string name="more_start_new_khatmah">Start New Khatmah</string>
     <string name="more_prayer_times_settings">Prayer Times Settings</string>
     <string name="more_qibla_direction">Qibla Direction</string>
-    <string name="more_day_adhkar_alarm">Day Adhkar Alarm</string>
-    <string name="more_day_adhkar_time">Day Adhkar Time</string>
-    <string name="more_night_adhkar_alarm">Night Adhkar Alarm</string>
-    <string name="more_night_adhkar_time">Night Adhkar Time</string>
+    <string name="more_day_adhkar_alarm">Morning Adhkar Alarm</string>
+    <string name="more_day_adhkar_time">Morning Adhkar Time</string>
+    <string name="more_night_adhkar_alarm">Evening Adhkar Alarm</string>
+    <string name="more_night_adhkar_time">Evening Adhkar Time</string>
     <string name="more_al_mulk_alarm">Al-Mulk Alarm</string>
     <string name="more_al_mulk_time">Al-Mulk Time</string>
     <string name="more_al_baqarah_alarm">Al-Baqarah Alarm</string>
@@ -90,6 +90,7 @@
     <string name="reader_style_text_desc">Rendered Quran text with search and navigation</string>
     <string name="reader_style_images">Mushaf Pages</string>
     <string name="reader_style_images_desc">Scanned pages of the Mushaf, page by page</string>
+    <string name="more_trip_requests">Trip Requests</string>
 
     <!-- Index tab -->
     <string name="index_read_quran">Read Quran</string>
@@ -422,6 +423,10 @@
     <string name="today_page">Page %d</string>
     <string name="today_sura_aya">Surat %1$s · Aya %2$d</string>
     <string name="today_to_sura_aya">To Surat %1$s · Aya %2$d</string>
+    <string name="today_sura_prefix">Surat</string>
+    <string name="today_aya_prefix">Aya</string>
+    <string name="today_to_prefix">To Surat</string>
+    <string name="today_separator"> · </string>
     <string name="today_start_reading">Start Reading</string>
     <string name="today_mark_read">Done Reading</string>
     <string name="today_khatmah_title">Khatmah Sessions</string>
@@ -444,4 +449,30 @@
     <string name="today_khatmah_completed">Khatmah completed</string>
     <string name="today_dua_khatm">Khatm Al-Quran Dua</string>
     <string name="today_new_khatmah">Start New Khatmah</string>
+
+    <!-- Riwaya names -->
+    <string name="riwaya_hafs">Hafs</string>
+    <string name="riwaya_warsh">Warsh</string>
+
+    <!-- Mushaf prints -->
+    <string name="mushaf_print_title">Mushaf Print</string>
+    <string name="more_mushaf_print">Mushaf Print</string>
+    <string name="print_warsh_text">Warsh — Text</string>
+    <string name="print_warsh_text_desc">Rendered Arabic text with search and audio playback</string>
+    <string name="print_warsh_images">Warsh — Mushaf Pages</string>
+    <string name="print_warsh_images_desc">Scanned Warsh mushaf pages · ~120 MB</string>
+    <string name="print_warsh_svg">Warsh — SVG Pages</string>
+    <string name="print_warsh_svg_desc">Interactive Warsh vector pages · ~45 MB</string>
+    <string name="print_download">Download</string>
+
+    <string name="daily_alarm_desc">You can set reminder times for your daily Quran reading</string>
+
+    <!-- Trip request notification -->
+    <string name="trip_notif_channel">Trip Requests</string>
+    <string name="trip_notif_title">New Trip Request</string>
+    <string name="trip_notif_reason">Reason</string>
+    <string name="trip_notif_description">Details</string>
+
+    <string name="print_hafs_qcf4">Hafs — QCF4 Mushaf</string>
+    <string name="print_hafs_qcf4_desc">Madinah Mushaf · Hafs recitation · QCF4 fonts</string>
 </resources>

@@ -459,19 +459,20 @@ class WarshXmlRepository(private val context: Context) {
     // ── Constants ─────────────────────────────────────────────────────────────
 
     companion object {
-        /**
-         * Number of full mushaf pages rendered in the reader (files 001–604).
-         * The Drive folder also contains surah-variant files (e.g. "106-surah4"),
-         * bringing the total drawables to 722 — but only full-page files are shown.
-         */
         const val PAGE_COUNT = 604
 
-        /** Max parallel download coroutines — balances speed vs. connection limits. */
         private const val CONCURRENCY     = 8
         private const val PAGE_CACHE_SIZE = 5
 
         // Google Drive folder IDs for the Warsh mushaf assets.
         private const val FOLDER_XML_BR_ID = "1fOVjmK3N-zwL1rSvLDzX7cysgQUyHS0N"
         private const val FOLDER_JSON_ID   = "12TVhLcC5NHGKXobc_DfE31TD2YbjSDq-"
+
+        @Volatile private var instance: WarshXmlRepository? = null
+
+        /** Returns the process-scoped singleton — state survives ViewModel recreation. */
+        fun get(context: Context): WarshXmlRepository = instance ?: synchronized(this) {
+            instance ?: WarshXmlRepository(context.applicationContext).also { instance = it }
+        }
     }
 }

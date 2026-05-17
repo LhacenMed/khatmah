@@ -124,6 +124,11 @@ fun QuranReaderScreen() {
                 vm        = vm,
                 onSearch  = { nav.navigate(Route.QURAN_SEARCH) },
             )
+            is QuranViewModel.State.Qcf4Ready   -> QuranQcf4Pager(
+                pageCount = s.pageCount,
+                vm        = vm,
+                onSearch  = { nav.navigate(Route.QURAN_SEARCH) },
+            )
         }
     }
 }
@@ -326,7 +331,7 @@ private fun MushhafPage(pageNum: Int, isDark: Boolean, modifier: Modifier = Modi
         Image(
             bitmap             = bmp!!,
             contentDescription = null,
-            contentScale       = ContentScale.FillBounds,
+            contentScale       = ContentScale.Fit,
             colorFilter        = if (isDark) ColorFilter.colorMatrix(InvertMatrix) else null,
             modifier           = modifier,
         )

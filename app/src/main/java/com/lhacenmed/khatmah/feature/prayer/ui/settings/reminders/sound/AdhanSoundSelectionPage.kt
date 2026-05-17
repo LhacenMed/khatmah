@@ -33,7 +33,7 @@ import com.lhacenmed.khatmah.feature.prayer.notification.AdhanConfig
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanPrefs
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanScheduler
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanSound
-import com.lhacenmed.khatmah.feature.prayer.notification.NotificationHelper
+import com.lhacenmed.khatmah.shared.reminders.ReminderNotifier
 import com.lhacenmed.khatmah.shared.util.AdhanSoundFiles
 import com.lhacenmed.khatmah.core.ui.theme.applyOpacity
 import androidx.core.net.toUri
@@ -78,7 +78,7 @@ fun AdhanSoundSelectionPage(prayerId: Int) {
         )
         val displayName = context.resolveAudioName(uri)
         val custom = AdhanSound.Custom(uri.toString(), displayName)
-        NotificationHelper.ensureCustomChannel(context, uri.toString(), displayName)
+        ReminderNotifier.ensureCustomAdhanChannel(context, uri.toString(), displayName)
         saveSound(context, prayerId, config, custom)
         AdhanScheduler.schedulePrayer(context, prayerId)
     }

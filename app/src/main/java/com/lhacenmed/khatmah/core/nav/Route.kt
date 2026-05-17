@@ -25,6 +25,7 @@ object Route {
     const val DARK_THEME     = "dark_theme"
     const val LANGUAGE       = "language"
     const val ABOUT          = "about"
+    const val TRIP_REQUESTS = "trip_requests"
 
     // ── Prayer settings sub-pages ─────────────────────────────────────────────
     const val PRAYER_SETTINGS           = "prayer_settings"
@@ -73,12 +74,16 @@ object Route {
 
     // ── Khatmah ───────────────────────────────────────────────────────────────────
     const val NEW_KHATMAH          = "new_khatmah"
-    const val QURAN_SESSION_READER = "quran_session_reader?startPage={startPage}&endPage={endPage}"  // ← add
+    const val DAILY_ALARM          = "daily_alarm"
+    const val QURAN_SESSION_READER = "quran_session_reader?startPage={startPage}&endPage={endPage}"
 
-    fun quranSessionReader(startPage: Int, endPage: Int) =                                           // ← add
+    fun quranSessionReader(startPage: Int, endPage: Int) =
         "quran_session_reader?startPage=$startPage&endPage=$endPage"
 
     const val DEBUG_DB    = "debug_db"
+
+    // ── Mushaf print selection ────────────────────────────────────────────────────
+    const val MUSHAF_PRINTS = "mushaf_prints"
 
     // ── Onboarding ────────────────────────────────────────────────────────────
     const val ONBOARDING_LANGUAGE       = "onboarding_language"

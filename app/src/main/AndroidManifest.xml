@@ -54,14 +54,14 @@
             android:name=".widget.PrayerAlarmReceiver"
             android:exported="false" />
 
-        <!-- Receives exact-alarm broadcasts to post adhan notifications -->
+        <!-- Receives exact-alarm broadcasts to post notifications -->
         <receiver
-            android:name=".feature.prayer.notification.AdhanReceiver"
+            android:name=".shared.reminders.ReminderReceiver"
             android:exported="false" />
 
-        <!-- Re-schedules adhan alarms after device reboot -->
+        <!-- Re-schedules alarms after device reboot -->
         <receiver
-            android:name=".feature.prayer.notification.BootReceiver"
+            android:name=".shared.reminders.ReminderBootReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -77,6 +77,15 @@
             android:exported="true"
             android:grantUriPermissions="true"
             tools:ignore="ExportedContentProvider" />
+
+        <!-- FCM token refresh service -->
+        <service
+            android:name=".shared.fcm.KhatmahFcmService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
 
     </application>
 

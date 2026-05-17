@@ -90,6 +90,7 @@
     <string name="reader_style_text_desc">نص القرآن الكريم مع إمكانية البحث والتنقل</string>
     <string name="reader_style_images">صفحات المصحف</string>
     <string name="reader_style_images_desc">صفحات المصحف المصوّرة، صفحة تلو الأخرى</string>
+    <string name="more_trip_requests">طلبات الرحلات</string>
 
     <!-- Index tab -->
     <string name="index_read_quran">قراءة القرآن</string>
@@ -453,6 +454,10 @@
     <string name="today_page">صفحة %d</string>
     <string name="today_sura_aya">سورة %1$s - آية %2$d</string>
     <string name="today_to_sura_aya">إلى سورة %1$s - آية %2$d</string>
+    <string name="today_sura_prefix">سورة</string>
+    <string name="today_aya_prefix">آية</string>
+    <string name="today_to_prefix">إلى سورة</string>
+    <string name="today_separator"> - </string>
     <string name="today_start_reading">اقرأ الورد</string>
     <string name="today_mark_read">أتممت القراءة</string>
     <string name="today_khatmah_title">الختمة الحالية</string>
@@ -475,4 +480,30 @@
     <string name="today_khatmah_completed">تم الإنتهاء من الختمة الحالية</string>
     <string name="today_dua_khatm">دعاء ختم القران</string>
     <string name="today_new_khatmah">بدء ختمة جديدة</string>
+
+    <!-- Riwaya names -->
+    <string name="riwaya_hafs">حفص</string>
+    <string name="riwaya_warsh">ورش</string>
+
+    <!-- Mushaf prints -->
+    <string name="mushaf_print_title">طبعة المصحف</string>
+    <string name="more_mushaf_print">طبعة المصحف</string>
+    <string name="print_warsh_text">ورش — نص</string>
+    <string name="print_warsh_text_desc">نص عربي معروض مع البحث وتشغيل الصوت</string>
+    <string name="print_warsh_images">ورش — صفحات المصحف</string>
+    <string name="print_warsh_images_desc">صور ممسوحة لصفحات مصحف ورش · حوالي 120 ميغابايت</string>
+    <string name="print_warsh_svg">ورش — صفحات SVG</string>
+    <string name="print_warsh_svg_desc">صفحات متجهية تفاعلية لورش · حوالي 45 ميغابايت</string>
+    <string name="print_download">تنزيل</string>
+
+    <string name="daily_alarm_desc">يمكنك تحديد وقت المنبه لتذكيرك بالورد يوميا</string>
+
+    <!-- Trip request notification -->
+    <string name="trip_notif_channel">طلبات الرحلات</string>
+    <string name="trip_notif_title">طلب رحلة جديدة</string>
+    <string name="trip_notif_reason">السبب</string>
+    <string name="trip_notif_description">التفاصيل</string>
+
+    <string name="print_hafs_qcf4">حفص — مصحف QCF4</string>
+    <string name="print_hafs_qcf4_desc">مصحف المدينة النبوية بخط رواية حفص عن عاصم</string>
 </resources>
