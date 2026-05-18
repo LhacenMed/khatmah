@@ -17,6 +17,7 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.DirectionsBus
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.NotificationsActive
@@ -231,6 +232,8 @@ private fun MoreScreen(padding: PaddingValues) {
             onClick = { nav.navigate(Route.DEBUG_DB) })
         prefItem(R.string.more_trip_requests, Icons.Outlined.DirectionsBus,
             onClick = { nav.navigate(Route.TRIP_REQUESTS) })
+        prefItem(R.string.more_files_browser, Icons.Outlined.FolderOpen,
+            onClick = { nav.navigate(Route.FILES_BROWSER) })
     }
 
     if (showLanguageSheet.value) {

@@ -35,7 +35,7 @@ class DbBrowserViewModel(private val context: Context) : ViewModel() {
 
     companion object {
         private const val MAX_ROWS   = 500
-        private val KNOWN_DBS        = listOf("khatmah.db", "quran.db")
+        private val KNOWN_DBS        = listOf("khatmah.db", "quran.db", "mushaf.db")
     }
 
     private val _state = MutableStateFlow(DbBrowserState())

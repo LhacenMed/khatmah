@@ -506,4 +506,6 @@
 
     <string name="print_hafs_qcf4">حفص — مصحف QCF4</string>
     <string name="print_hafs_qcf4_desc">مصحف المدينة النبوية بخط رواية حفص عن عاصم</string>
+
+    <string name="more_files_browser">متصفح الملفات</string>
 </resources>

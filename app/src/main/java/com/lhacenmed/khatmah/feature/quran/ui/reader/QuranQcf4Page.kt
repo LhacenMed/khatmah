@@ -99,8 +99,8 @@ private fun computeLayout(
     val w = size.width.toFloat()
     val h = size.height.toFloat()
 
-    val hPad    = w * 0.05f
-    val vPad    = h * 0.04f
+    val hPad    = w * 0.02f
+    val vPad    = h * 0.14f
     val usableW = w - 2f * hPad
     val usableH = h - 2f * vPad
 
@@ -332,58 +332,51 @@ internal fun QuranQcf4Pager(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)
-                .windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility),
-        ) {
-            HorizontalPager(
-                state    = pagerState,
-                modifier = Modifier.fillMaxSize(),
-                key      = { it },
-            ) { idx ->
-                val pageNum = idx + 1
-                when (val entry   = pageCache[pageNum]) {
-                    null, PageCacheEntry.Loading -> {
-                        // Trigger load if not already in flight
-                        LaunchedEffect(pageNum) {
-                            scope.launch(Dispatchers.IO) { loadPageIntoCache(pageNum, repo, pageCache) }
-                        }
-                        Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
+        HorizontalPager(
+            state    = pagerState,
+            modifier = Modifier.fillMaxSize(),
+            key      = { it },
+        ) { idx ->
+            val pageNum = idx + 1
+            when (val entry = pageCache[pageNum]) {
+                null, PageCacheEntry.Loading -> {
+                    // Trigger load if not already in flight
+                    LaunchedEffect(pageNum) {
+                        scope.launch(Dispatchers.IO) { loadPageIntoCache(pageNum, repo, pageCache) }
                     }
-                    is PageCacheEntry.Err -> {
-                        // Show error + retry button
-                        Box(Modifier.fillMaxSize(), Alignment.Center) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text  = "فشل تحميل الصفحة ${entry.msg}",
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                Button(onClick = {
-                                    pageCache.remove(pageNum)
-                                    scope.launch(Dispatchers.IO) { loadPageIntoCache(pageNum, repo, pageCache) }
-                                }) { Text("إعادة المحاولة") }
+                    Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
+                }
+                is PageCacheEntry.Err -> {
+                    // Show error + retry button
+                    Box(Modifier.fillMaxSize(), Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text  = "فشل تحميل الصفحة ${entry.msg}",
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Button(onClick = {
+                                pageCache.remove(pageNum)
+                                scope.launch(Dispatchers.IO) { loadPageIntoCache(pageNum, repo, pageCache) }
+                            }) { Text("إعادة المحاولة") }
+                        }
+                    }
+                }
+                is PageCacheEntry.Ready -> {
+                    QuranQcf4Page(
+                        pageData    = entry.page,
+                        typefaces   = entry.faces,
+                        selectedAya = selectedAya,
+                        onTap       = { barsVisible = !barsVisible },
+                        onAyaPress  = { sura, aya ->
+                            if (selectedAya?.first == sura && selectedAya?.second == aya) {
+                                selectedAya = null; AyaAudioManager.stop()
+                            } else {
+                                selectedAya = sura to aya
+                                AyaAudioManager.play(context, sura, aya, "")
                             }
-                        }
-                    }
-                    is PageCacheEntry.Ready -> {
-                        QuranQcf4Page(
-                            pageData    = entry.page,
-                            typefaces   = entry.faces,
-                            selectedAya = selectedAya,
-                            onTap       = { barsVisible = !barsVisible },
-                            onAyaPress  = { sura, aya ->
-                                if (selectedAya?.first == sura && selectedAya?.second == aya) {
-                                    selectedAya = null; AyaAudioManager.stop()
-                                } else {
-                                    selectedAya = sura to aya
-                                    AyaAudioManager.play(context, sura, aya, "")
-                                }
-                            },
-                        )
-                    }
+                        },
+                    )
                 }
             }
         }
@@ -486,52 +479,45 @@ internal fun SessionQcf4Pager(startPage: Int, endPage: Int) {
     }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)
-                .windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility),
-        ) {
-            HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), key = { it }) { idx ->
-                val pageNum = startPage + idx
-                when (val entry   = pageCache[pageNum]) {
-                    null, PageCacheEntry.Loading -> {
-                        LaunchedEffect(pageNum) {
-                            scope.launch(Dispatchers.IO) { loadPageIntoCache(pageNum, repo, pageCache) }
-                        }
-                        Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), key = { it }) { idx ->
+            val pageNum = startPage + idx
+            when (val entry = pageCache[pageNum]) {
+                null, PageCacheEntry.Loading -> {
+                    LaunchedEffect(pageNum) {
+                        scope.launch(Dispatchers.IO) { loadPageIntoCache(pageNum, repo, pageCache) }
                     }
-                    is PageCacheEntry.Err -> {
-                        Box(Modifier.fillMaxSize(), Alignment.Center) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text  = "فشل تحميل الصفحة ${entry.msg}",
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                Button(onClick = {
-                                    pageCache.remove(pageNum)
-                                    scope.launch(Dispatchers.IO) { loadPageIntoCache(pageNum, repo, pageCache) }
-                                }) { Text("إعادة المحاولة") }
+                    Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
+                }
+                is PageCacheEntry.Err -> {
+                    Box(Modifier.fillMaxSize(), Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text  = "فشل تحميل الصفحة ${entry.msg}",
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Button(onClick = {
+                                pageCache.remove(pageNum)
+                                scope.launch(Dispatchers.IO) { loadPageIntoCache(pageNum, repo, pageCache) }
+                            }) { Text("إعادة المحاولة") }
+                        }
+                    }
+                }
+                is PageCacheEntry.Ready -> {
+                    QuranQcf4Page(
+                        pageData    = entry.page,
+                        typefaces   = entry.faces,
+                        selectedAya = selectedAya,
+                        onTap       = { barsVisible = !barsVisible },
+                        onAyaPress  = { sura, aya ->
+                            if (selectedAya?.first == sura && selectedAya?.second == aya) {
+                                selectedAya = null; AyaAudioManager.stop()
+                            } else {
+                                selectedAya = sura to aya
+                                AyaAudioManager.play(context, sura, aya, "")
                             }
-                        }
-                    }
-                    is PageCacheEntry.Ready -> {
-                        QuranQcf4Page(
-                            pageData    = entry.page,
-                            typefaces   = entry.faces,
-                            selectedAya = selectedAya,
-                            onTap       = { barsVisible = !barsVisible },
-                            onAyaPress  = { sura, aya ->
-                                if (selectedAya?.first == sura && selectedAya?.second == aya) {
-                                    selectedAya = null; AyaAudioManager.stop()
-                                } else {
-                                    selectedAya = sura to aya
-                                    AyaAudioManager.play(context, sura, aya, "")
-                                }
-                            },
-                        )
-                    }
+                        },
+                    )
                 }
             }
         }

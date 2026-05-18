@@ -81,6 +81,7 @@ object Route {
         "quran_session_reader?startPage=$startPage&endPage=$endPage"
 
     const val DEBUG_DB    = "debug_db"
+    const val FILES_BROWSER = "files_browser"
 
     // ── Mushaf print selection ────────────────────────────────────────────────────
     const val MUSHAF_PRINTS = "mushaf_prints"
