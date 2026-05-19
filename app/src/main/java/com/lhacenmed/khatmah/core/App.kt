@@ -12,6 +12,7 @@ import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanPrefs
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanSound
+import com.lhacenmed.khatmah.feature.qadaa.data.QadaaPrefs
 import com.lhacenmed.khatmah.shared.fcm.FcmTokenManager
 import com.lhacenmed.khatmah.shared.reminders.ReminderNotifier
 import com.lhacenmed.khatmah.shared.reminders.ReminderPrefs
@@ -42,21 +43,20 @@ class App : Application() {
         // Load persisted prayer calculation settings before any UI is created.
         PrayerSettings.init(this)
         AppPrefs.init(this)
+        QadaaPrefs.init(this)
         MushafPrefs.init(this)
 
         // ReminderPrefs must be initialised before AdhanPrefs (which reads from it).
         ReminderPrefs.init(this)
         AdhanPrefs.init(this)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            ReminderNotifier.ensureChannels(this, AdhanSoundFiles.list(this))
-            // Recreate custom adhan channels that may have been wiped on CH_VERSION bump.
-            AdhanPrefs.get().forEach { cfg ->
-                if (cfg.sound is AdhanSound.Custom)
-                    ReminderNotifier.ensureCustomAdhanChannel(this, cfg.sound.uri, cfg.sound.displayName)
-            }
-            ReminderScheduler.scheduleAll(this)
+        ReminderNotifier.ensureChannels(this, AdhanSoundFiles.list(this))
+        // Recreate custom adhan channels that may have been wiped on CH_VERSION bump.
+        AdhanPrefs.get().forEach { cfg ->
+            if (cfg.sound is AdhanSound.Custom)
+                ReminderNotifier.ensureCustomAdhanChannel(this, cfg.sound.uri, cfg.sound.displayName)
         }
+        ReminderScheduler.scheduleAll(this)
         PrayerWidgetWorker.Companion.enqueue(this)
         // Register SVG decoder so FlagCDN SVGs render via AsyncImage.
         // Coil's default disk + memory cache handles flag caching automatically.

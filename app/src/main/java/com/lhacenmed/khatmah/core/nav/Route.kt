@@ -86,6 +86,10 @@ object Route {
     // ── Mushaf print selection ────────────────────────────────────────────────────
     const val MUSHAF_PRINTS = "mushaf_prints"
 
+    // ── Qadaa ─────────────────────────────────────────────────────────────────────
+    const val QADAA         = "qadaa"
+    const val QADAA_HISTORY = "qadaa_history"
+
     // ── Onboarding ────────────────────────────────────────────────────────────
     const val ONBOARDING_LANGUAGE       = "onboarding_language"
     const val ONBOARDING_NOTIFICATIONS  = "onboarding_notifications"

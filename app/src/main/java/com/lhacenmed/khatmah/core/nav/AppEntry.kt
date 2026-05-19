@@ -77,6 +77,8 @@ import com.lhacenmed.khatmah.feature.today.TodayTab
 import com.lhacenmed.khatmah.feature.debug.DbBrowserPage
 import com.lhacenmed.khatmah.feature.debug.FileBrowserPage
 import com.lhacenmed.khatmah.feature.mushaf.ui.PrintSelectPage
+import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaHistoryPage
+import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaPage
 import com.lhacenmed.khatmah.feature.trips.ui.TripRequestsPage
 import com.lhacenmed.khatmah.onboarding.CitySelectPage
 import com.lhacenmed.khatmah.onboarding.CountrySelectPage
@@ -253,6 +255,10 @@ fun AppEntry() {
 
             // ── Trip requests ──────────────────────────────────────────────────────────
             animatedComposable(Route.TRIP_REQUESTS) { TripRequestsPage() }
+
+            // ── Qadaa ─────────────────────────────────────────────────────────────────────
+            animatedComposable(Route.QADAA)         { QadaaPage()        }
+            animatedComposable(Route.QADAA_HISTORY) { QadaaHistoryPage() }
         }
     }
 }

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AlternateEmail
 import androidx.compose.material.icons.outlined.AutoStories
+import androidx.compose.material.icons.outlined.Autorenew
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CameraAlt
@@ -152,6 +153,11 @@ private fun MoreScreen(padding: PaddingValues) {
             onClick = { nav.navigate(Route.DAILY_ALARM) })
         prefItem(R.string.more_start_new_khatmah, Icons.Outlined.Add,
             onClick = { nav.navigate(Route.NEW_KHATMAH) })
+        prefItem(
+            titleRes = R.string.more_qadaa,
+            icon     = Icons.Outlined.Autorenew,
+            onClick  = { nav.navigate(Route.QADAA) },
+        )
 
         // ── Prayer Times ──────────────────────────────────────────────────────
         subtitle(R.string.more_prayer_times)
