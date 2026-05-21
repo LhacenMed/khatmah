@@ -39,8 +39,8 @@ import com.lhacenmed.khatmah.core.ui.components.SheetOption
 import com.lhacenmed.khatmah.feature.audio.AyaAudioManager
 import com.lhacenmed.khatmah.feature.audio.AyaPlayerBar
 import com.lhacenmed.khatmah.feature.audio.DriveAudioRepository
-import com.lhacenmed.khatmah.feature.quran.data.HafsQcf4Repository
 import com.lhacenmed.khatmah.feature.quran.data.Qcf4Page
+import com.lhacenmed.khatmah.feature.quran.data.Qcf4PageSource
 import com.lhacenmed.khatmah.feature.quran.ui.QuranViewModel
 import com.lhacenmed.khatmah.feature.quran.ui.components.ImageTopBar
 import com.lhacenmed.khatmah.feature.quran.ui.components.QuranBottomBar
@@ -145,8 +145,8 @@ private fun computeLayout(
                 textSize    = sz
                 isAntiAlias = true
                 color       = when (word.type) {
-                    "surah_header", "bismillah", "end" -> accentArgb
-                    else                               -> textArgb
+                    "surah_header", "bismillah", "end", "aya_end" -> accentArgb
+                    else                                           -> textArgb
                 }
             }
             Triple(word, p, p.measureText(word.char))
@@ -262,7 +262,7 @@ internal fun QuranQcf4Page(
  */
 private suspend fun loadPageIntoCache(
     pageNum: Int,
-    repo:    HafsQcf4Repository,
+    repo:    Qcf4PageSource,
     cache:   androidx.compose.runtime.snapshots.SnapshotStateMap<Int, PageCacheEntry>,
 ) {
     if (cache[pageNum] is PageCacheEntry.Ready) return
@@ -283,13 +283,13 @@ private suspend fun loadPageIntoCache(
 @Composable
 internal fun QuranQcf4Pager(
     pageCount: Int,
+    repo:      Qcf4PageSource,
     vm:        QuranViewModel,
     onSearch:  () -> Unit,
 ) {
     val nav        = LocalNavController.current
     val context    = LocalContext.current
     val scope      = rememberCoroutineScope()
-    val repo       = remember { HafsQcf4Repository.get(context) }
     val pagerState = rememberPagerState(
         initialPage = vm.savedPage.coerceIn(0, pageCount - 1)
     ) { pageCount }
@@ -444,11 +444,10 @@ internal fun QuranQcf4Pager(
 /** Khatmah session variant: renders pages [startPage]..[endPage] (1-based) only. */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
-internal fun SessionQcf4Pager(startPage: Int, endPage: Int) {
+internal fun SessionQcf4Pager(startPage: Int, endPage: Int, repo: Qcf4PageSource) {
     val nav        = LocalNavController.current
     val context    = LocalContext.current
     val scope      = rememberCoroutineScope()
-    val repo       = remember { HafsQcf4Repository.get(context) }
     val pageCount  = endPage - startPage + 1
     val pagerState = rememberPagerState(0) { pageCount }
 

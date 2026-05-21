@@ -509,4 +509,7 @@
 
     <string name="more_files_browser">متصفح الملفات</string>
     <string name="more_qadaa">قضاء</string>
+
+    <string name="print_warsh_qcf4">ورش — مصحف QCF4</string>
+    <string name="print_warsh_qcf4_desc">مصحف المغرب بخط رواية ورش عن نافع</string>
 </resources>

@@ -40,6 +40,14 @@ sealed class MushafPrint(
         requiresDownload = true,
     )
 
+    data object WarshQcf4 : MushafPrint(
+        id               = "warsh_qcf4",
+        riwaya           = Riwaya.WARSH,
+        nameRes          = R.string.print_warsh_qcf4,
+        descRes          = R.string.print_warsh_qcf4_desc,
+        requiresDownload = true,
+    )
+
     data object HafsQcf4 : MushafPrint(
         id               = "hafs_qcf4",
         riwaya           = Riwaya.HAFS,

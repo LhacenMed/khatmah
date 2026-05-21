@@ -43,6 +43,8 @@ import com.lhacenmed.khatmah.feature.quran.ui.components.ImageTopBar
 import com.lhacenmed.khatmah.feature.quran.ui.components.QuranBottomBar
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
+import com.lhacenmed.khatmah.feature.quran.data.HafsQcf4Repository
+import com.lhacenmed.khatmah.feature.quran.data.WarshQcf4Repository
 import com.lhacenmed.khatmah.shared.util.AppPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -64,13 +66,17 @@ private const val ANIM = 280
  */
 @Composable
 fun QuranSessionReaderScreen(startPage: Int, endPage: Int) {
+    val context = LocalContext.current
     val print by MushafPrefs.selected.collectAsState()
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         when (print) {
             MushafPrint.WarshImages -> SessionImagePager(startPage, endPage)
             MushafPrint.WarshSvg    -> SessionXmlPager(startPage, endPage)
-            MushafPrint.HafsQcf4 -> SessionQcf4Pager(startPage, endPage)
+            MushafPrint.HafsQcf4    -> SessionQcf4Pager(startPage, endPage,
+                remember { HafsQcf4Repository.get(context) })
+            MushafPrint.WarshQcf4   -> SessionQcf4Pager(startPage, endPage,
+                remember { WarshQcf4Repository.get(context) })
             MushafPrint.WarshText    -> {
                 // Guard: TodayTab should have prevented this path.
                 Box(Modifier.fillMaxSize(), Alignment.Center) {

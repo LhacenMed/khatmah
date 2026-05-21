@@ -478,4 +478,7 @@
 
     <string name="more_files_browser">File Browser</string>
     <string name="more_qadaa">Qadaa</string>
+
+    <string name="print_warsh_qcf4">Warsh — QCF4 Mushaf</string>
+    <string name="print_warsh_qcf4_desc">Moroccan Mushaf in Warsh narration from Nafiʿ</string>
 </resources>

@@ -9,6 +9,8 @@ import com.lhacenmed.khatmah.feature.quran.data.HafsQcf4Repository
 import com.lhacenmed.khatmah.feature.quran.data.WarshDownloadState
 import com.lhacenmed.khatmah.feature.quran.data.WarshImageDownloadState
 import com.lhacenmed.khatmah.feature.quran.data.WarshImageRepository
+import com.lhacenmed.khatmah.feature.quran.data.WarshQcf4DownloadState
+import com.lhacenmed.khatmah.feature.quran.data.WarshQcf4Repository
 import com.lhacenmed.khatmah.feature.quran.data.WarshXmlRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -17,6 +19,7 @@ class PrintSelectViewModel(app: Application) : AndroidViewModel(app) {
 
     private val warshImgRepo  = WarshImageRepository.get(app)
     private val warshXmlRepo  = WarshXmlRepository.get(app)
+    private val warshQcf4Repo = WarshQcf4Repository.get(app)
     private val hafsQcf4Repo  = HafsQcf4Repository.get(app)
 
     val selected: StateFlow<MushafPrint> = MushafPrefs.selected
@@ -24,12 +27,14 @@ class PrintSelectViewModel(app: Application) : AndroidViewModel(app) {
     val downloadStates: StateFlow<Map<String, PrintDownloadState>> = combine(
         warshImgRepo.downloadState,
         warshXmlRepo.downloadState,
+        warshQcf4Repo.downloadState,
         hafsQcf4Repo.downloadState,
-    ) { img, xml, hafs ->
+    ) { img, xml, warshQcf4, hafsQcf4 ->
         mapOf(
             MushafPrint.WarshImages.id to img.toPrintState(),
             MushafPrint.WarshSvg.id    to xml.toPrintState(),
-            MushafPrint.HafsQcf4.id   to hafs.toPrintState(),
+            MushafPrint.WarshQcf4.id   to warshQcf4.toPrintState(),
+            MushafPrint.HafsQcf4.id    to hafsQcf4.toPrintState(),
         )
     }.stateIn(
         viewModelScope,
@@ -37,7 +42,8 @@ class PrintSelectViewModel(app: Application) : AndroidViewModel(app) {
         mapOf(
             MushafPrint.WarshImages.id to warshImgRepo.downloadState.value.toPrintState(),
             MushafPrint.WarshSvg.id    to warshXmlRepo.downloadState.value.toPrintState(),
-            MushafPrint.HafsQcf4.id   to hafsQcf4Repo.downloadState.value.toPrintState(),
+            MushafPrint.WarshQcf4.id   to warshQcf4Repo.downloadState.value.toPrintState(),
+            MushafPrint.HafsQcf4.id    to hafsQcf4Repo.downloadState.value.toPrintState(),
         ),
     )
 
@@ -51,9 +57,10 @@ class PrintSelectViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             when (print) {
                 MushafPrint.WarshImages -> warshImgRepo.downloadAll().collect()
-                MushafPrint.WarshSvg   -> warshXmlRepo.downloadAll().collect()
-                MushafPrint.HafsQcf4   -> hafsQcf4Repo.downloadAll().collect()
-                MushafPrint.WarshText  -> Unit
+                MushafPrint.WarshSvg    -> warshXmlRepo.downloadAll().collect()
+                MushafPrint.WarshQcf4   -> warshQcf4Repo.downloadAll().collect()
+                MushafPrint.HafsQcf4    -> hafsQcf4Repo.downloadAll().collect()
+                MushafPrint.WarshText   -> Unit
             }
         }
     }
@@ -79,6 +86,14 @@ class PrintSelectViewModel(app: Application) : AndroidViewModel(app) {
         is WarshDownloadState.Downloading   -> PrintDownloadState.Downloading(progress)
         is WarshDownloadState.Downloaded    -> PrintDownloadState.Downloaded
         is WarshDownloadState.Error         -> PrintDownloadState.Error(message)
+    }
+
+    private fun WarshQcf4DownloadState.toPrintState(): PrintDownloadState = when (this) {
+        is WarshQcf4DownloadState.NotDownloaded -> PrintDownloadState.NotDownloaded
+        is WarshQcf4DownloadState.Connecting    -> PrintDownloadState.Connecting
+        is WarshQcf4DownloadState.Downloading   -> PrintDownloadState.Downloading(progress)
+        is WarshQcf4DownloadState.Downloaded    -> PrintDownloadState.Downloaded
+        is WarshQcf4DownloadState.Error         -> PrintDownloadState.Error(message)
     }
 
     private fun HafsQcf4DownloadState.toPrintState(): PrintDownloadState = when (this) {

@@ -50,7 +50,11 @@ import com.lhacenmed.khatmah.core.ui.components.SheetOption
 import com.lhacenmed.khatmah.feature.audio.AyaAudioManager
 import com.lhacenmed.khatmah.feature.audio.AyaPlayerBar
 import com.lhacenmed.khatmah.feature.audio.DriveAudioRepository
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
+import com.lhacenmed.khatmah.feature.quran.data.HafsQcf4Repository
+import com.lhacenmed.khatmah.feature.quran.data.Qcf4PageSource
 import com.lhacenmed.khatmah.feature.quran.data.WarshPageData
+import com.lhacenmed.khatmah.feature.quran.data.WarshQcf4Repository
 import com.lhacenmed.khatmah.feature.quran.data.WarshXmlRepository
 import com.lhacenmed.khatmah.feature.quran.ui.QuranViewModel
 import com.lhacenmed.khatmah.feature.quran.ui.components.QuranBottomBar
@@ -87,6 +91,7 @@ fun QuranReaderScreen() {
     val vm: QuranViewModel = viewModel()
     val nav   = LocalNavController.current
     val state by vm.state.collectAsState()
+    val context = LocalContext.current
 
     val backEntry = nav.currentBackStackEntry
     val jumpSura by remember(backEntry) {
@@ -124,11 +129,20 @@ fun QuranReaderScreen() {
                 vm        = vm,
                 onSearch  = { nav.navigate(Route.QURAN_SEARCH) },
             )
-            is QuranViewModel.State.Qcf4Ready   -> QuranQcf4Pager(
-                pageCount = s.pageCount,
-                vm        = vm,
-                onSearch  = { nav.navigate(Route.QURAN_SEARCH) },
-            )
+            is QuranViewModel.State.Qcf4Ready -> {
+                val repo = remember(s.print) {
+                    when (s.print) {
+                        MushafPrint.WarshQcf4 -> WarshQcf4Repository.get(context) as Qcf4PageSource
+                        else                  -> HafsQcf4Repository.get(context)  as Qcf4PageSource
+                    }
+                }
+                QuranQcf4Pager(
+                    pageCount = s.pageCount,
+                    repo      = repo,
+                    vm        = vm,
+                    onSearch  = { nav.navigate(Route.QURAN_SEARCH) },
+                )
+            }
         }
     }
 }
