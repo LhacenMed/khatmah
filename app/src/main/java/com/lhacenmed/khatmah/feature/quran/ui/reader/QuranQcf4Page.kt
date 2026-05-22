@@ -13,6 +13,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
@@ -50,9 +52,9 @@ import kotlinx.coroutines.launch
 
 private const val QCF4_ANIM_MS   = 280
 private const val MIN_LINE_COUNT = 15
-private const val CENTER_SCALE   = 1f
 private const val HDR_LINE_SCALE = 1.6f  // header slot height multiplier vs normal line
 private const val HDR_NAME_SCALE = 0.50f // name glyph height as fraction of lineH
+private const val ZOOM_SCALE     = 2.5f
 
 // ── Rendered word ─────────────────────────────────────────────────────────────
 
@@ -241,7 +243,11 @@ internal fun QuranQcf4Page(
     pageData:    Qcf4Page,
     typefaces:   Map<String, Typeface>,
     selectedAya: Pair<Int, Int>?,
+    isZoomed:    Boolean,
+    zoomOffset:  Offset,
     onTap:       () -> Unit,
+    onDoubleTap: () -> Unit,
+    onDrag:      (Offset) -> Unit,
     onAyaPress:  (sura: Int, aya: Int) -> Unit,
 ) {
     val isDark        = isSystemInDarkTheme()
@@ -263,49 +269,68 @@ internal fun QuranQcf4Page(
         }
     }
 
-    Canvas(
-        modifier = Modifier
-            .fillMaxSize()
-            .onSizeChanged { size = it }
-            .pointerInput(pageData.page) {
-                detectTapGestures(
-                    onTap       = { onTap() },
-                    onLongPress = { offset ->
-                        val hit = hitWord(layout, offset) ?: return@detectTapGestures
-                        val key = hit.verseKey ?: return@detectTapGestures
-                        val parts = key.split(":")
-                        if (parts.size == 2) {
-                            val sura = parts[0].toIntOrNull() ?: return@detectTapGestures
-                            val aya  = parts[1].toIntOrNull() ?: return@detectTapGestures
-                            onAyaPress(sura, aya)
-                        }
-                    },
-                )
-            },
-    ) {
-        drawIntoCanvas { canvas ->
-            val native = canvas.nativeCanvas
-            for (line in layout) {
-                // Draw surah header ornamental container behind the name glyph.
-                line.container?.let { ctr ->
-                    native.drawText(CONTAINER_CHAR, ctr.x, ctr.baseline, ctr.paint)
-                }
-                for (word in line.words) {
-                    if (word.verseKey != null && selectedAya != null) {
-                        val parts = word.verseKey.split(":")
-                        if (parts.size == 2 &&
-                            parts[0].toIntOrNull() == selectedAya.first &&
-                            parts[1].toIntOrNull() == selectedAya.second
-                        ) {
-                            val top    = word.baseline + word.paint.ascent() - 4f
-                            val bottom = word.baseline + word.paint.descent() + 4f
-                            native.drawRect(word.x, top, word.x + word.width, bottom, hlPaint)
-                        }
+    Box(modifier = Modifier.fillMaxSize().onSizeChanged { size = it }) {
+        // ── Zoomed canvas ──────────────────────────────────────────────────────
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    val s = if (isZoomed) ZOOM_SCALE else 1f
+                    scaleX        = s
+                    scaleY        = s
+                    translationX  = if (isZoomed) zoomOffset.x else 0f
+                    translationY  = if (isZoomed) zoomOffset.y else 0f
+                },
+        ) {
+            drawIntoCanvas { canvas ->
+                val native = canvas.nativeCanvas
+                for (line in layout) {
+                    line.container?.let { ctr ->
+                        native.drawText(CONTAINER_CHAR, ctr.x, ctr.baseline, ctr.paint)
                     }
-                    native.drawText(word.char, word.x, word.baseline, word.paint)
+                    for (word in line.words) {
+                        if (word.verseKey != null && selectedAya != null) {
+                            val parts = word.verseKey.split(":")
+                            if (parts.size == 2 &&
+                                parts[0].toIntOrNull() == selectedAya.first &&
+                                parts[1].toIntOrNull() == selectedAya.second
+                            ) {
+                                val top    = word.baseline + word.paint.ascent() - 4f
+                                val bottom = word.baseline + word.paint.descent() + 4f
+                                native.drawRect(word.x, top, word.x + word.width, bottom, hlPaint)
+                            }
+                        }
+                        native.drawText(word.char, word.x, word.baseline, word.paint)
+                    }
                 }
             }
         }
+
+        // ── Gesture overlay (original coords, no transform) ────────────────────
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(isZoomed) {
+                    if (isZoomed) detectDragGestures { _, drag -> onDrag(drag) }
+                }
+                .pointerInput(pageData.page) {
+                    detectTapGestures(
+                        onTap       = { onTap() },
+                        onDoubleTap = { onDoubleTap() },
+                        onLongPress = { offset ->
+                            if (isZoomed) return@detectTapGestures
+                            val hit   = hitWord(layout, offset) ?: return@detectTapGestures
+                            val key   = hit.verseKey ?: return@detectTapGestures
+                            val parts = key.split(":")
+                            if (parts.size == 2) {
+                                val sura = parts[0].toIntOrNull() ?: return@detectTapGestures
+                                val aya  = parts[1].toIntOrNull() ?: return@detectTapGestures
+                                onAyaPress(sura, aya)
+                            }
+                        },
+                    )
+                },
+        )
     }
 }
 
@@ -357,6 +382,9 @@ internal fun QuranQcf4Pager(
 
     var barsVisible by remember { mutableStateOf(true) }
     var selectedAya by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var isZoomed    by remember { mutableStateOf(false) }
+    var zoomOffset  by remember { mutableStateOf(Offset.Zero) }
+    var pageSize    by remember { mutableStateOf(IntSize.Zero) }
     val audioState  by AyaAudioManager.state.collectAsState()
     val showReaderSheet = remember { mutableStateOf(false) }
     val readers         = remember { DriveAudioRepository(context).readers().readers }
@@ -367,6 +395,8 @@ internal fun QuranQcf4Pager(
     LaunchedEffect(pagerState.settledPage) {
         vm.savePage(pagerState.settledPage)
         selectedAya = null
+        isZoomed    = false
+        zoomOffset  = Offset.Zero
     }
     LaunchedEffect(audioState.suraNum, audioState.ayaNum) {
         if (audioState.active) selectedAya = audioState.suraNum to audioState.ayaNum
@@ -392,9 +422,10 @@ internal fun QuranQcf4Pager(
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         HorizontalPager(
-            state    = pagerState,
-            modifier = Modifier.fillMaxSize(),
-            key      = { it },
+            state             = pagerState,
+            modifier          = Modifier.fillMaxSize().onSizeChanged { pageSize = it },
+            key               = { it },
+            userScrollEnabled = !isZoomed,
         ) { idx ->
             val pageNum = idx + 1
             when (val entry = pageCache[pageNum]) {
@@ -426,7 +457,21 @@ internal fun QuranQcf4Pager(
                         pageData    = entry.page,
                         typefaces   = entry.faces,
                         selectedAya = selectedAya,
+                        isZoomed    = isZoomed,
+                        zoomOffset  = zoomOffset,
                         onTap       = { barsVisible = !barsVisible },
+                        onDoubleTap = {
+                            isZoomed   = !isZoomed
+                            zoomOffset = Offset.Zero
+                        },
+                        onDrag      = { drag ->
+                            val maxX = pageSize.width  * (ZOOM_SCALE - 1) / 2f
+                            val maxY = pageSize.height * (ZOOM_SCALE - 1) / 2f
+                            zoomOffset = Offset(
+                                (zoomOffset.x + drag.x).coerceIn(-maxX, maxX),
+                                (zoomOffset.y + drag.y).coerceIn(-maxY, maxY),
+                            )
+                        },
                         onAyaPress  = { sura, aya ->
                             if (selectedAya?.first == sura && selectedAya?.second == aya) {
                                 selectedAya = null; AyaAudioManager.stop()
@@ -513,6 +558,9 @@ internal fun SessionQcf4Pager(startPage: Int, endPage: Int, repo: Qcf4PageSource
     val pageCache       = remember { androidx.compose.runtime.snapshots.SnapshotStateMap<Int, PageCacheEntry>() }
     var barsVisible     by remember { mutableStateOf(true) }
     var selectedAya     by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var isZoomed        by remember { mutableStateOf(false) }
+    var zoomOffset      by remember { mutableStateOf(Offset.Zero) }
+    var pageSize        by remember { mutableStateOf(IntSize.Zero) }
     val audioState      by AyaAudioManager.state.collectAsState()
     val showReaderSheet = remember { mutableStateOf(false) }
     val readers         = remember { DriveAudioRepository(context).readers().readers }
@@ -520,7 +568,11 @@ internal fun SessionQcf4Pager(startPage: Int, endPage: Int, repo: Qcf4PageSource
     SyncQcf4SystemBars(barsVisible)
     DisposableEffect(Unit) { onDispose { AyaAudioManager.stop() } }
 
-    LaunchedEffect(pagerState.settledPage) { selectedAya = null }
+    LaunchedEffect(pagerState.settledPage) {
+        selectedAya = null
+        isZoomed    = false
+        zoomOffset  = Offset.Zero
+    }
     LaunchedEffect(audioState.suraNum, audioState.ayaNum) {
         if (audioState.active) selectedAya = audioState.suraNum to audioState.ayaNum
     }
@@ -537,7 +589,12 @@ internal fun SessionQcf4Pager(startPage: Int, endPage: Int, repo: Qcf4PageSource
     }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize(), key = { it }) { idx ->
+        HorizontalPager(
+            state             = pagerState,
+            modifier          = Modifier.fillMaxSize().onSizeChanged { pageSize = it },
+            key               = { it },
+            userScrollEnabled = !isZoomed,
+        ) { idx ->
             val pageNum = startPage + idx
             when (val entry = pageCache[pageNum]) {
                 null, PageCacheEntry.Loading -> {
@@ -566,7 +623,21 @@ internal fun SessionQcf4Pager(startPage: Int, endPage: Int, repo: Qcf4PageSource
                         pageData    = entry.page,
                         typefaces   = entry.faces,
                         selectedAya = selectedAya,
+                        isZoomed    = isZoomed,
+                        zoomOffset  = zoomOffset,
                         onTap       = { barsVisible = !barsVisible },
+                        onDoubleTap = {
+                            isZoomed   = !isZoomed
+                            zoomOffset = Offset.Zero
+                        },
+                        onDrag      = { drag ->
+                            val maxX = pageSize.width  * (ZOOM_SCALE - 1) / 2f
+                            val maxY = pageSize.height * (ZOOM_SCALE - 1) / 2f
+                            zoomOffset = Offset(
+                                (zoomOffset.x + drag.x).coerceIn(-maxX, maxX),
+                                (zoomOffset.y + drag.y).coerceIn(-maxY, maxY),
+                            )
+                        },
                         onAyaPress  = { sura, aya ->
                             if (selectedAya?.first == sura && selectedAya?.second == aya) {
                                 selectedAya = null; AyaAudioManager.stop()
