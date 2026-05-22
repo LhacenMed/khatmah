@@ -234,17 +234,24 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
         private const val CONCURRENCY  = 6
         private const val PREFS_NAME   = "warsh_qcf4_prefs"
         private const val KEY_DB_READY = "db_ready"
-        private const val CDN_DATA     = "https://cdn.jsdelivr.net/gh/LhacenMed/khatmah-warsh-qcf4@v1.0.0"
-        private const val CDN_FONTS    = "https://cdn.jsdelivr.net/gh/LhacenMed/khatmah-warsh-qcf4@v1.0.0/fonts"
+        private const val CDN_DATA     = "https://cdn.jsdelivr.net/gh/LhacenMed/khatmah-warsh-qcf4@main"
+        private const val CDN_FONTS    = "https://cdn.jsdelivr.net/gh/LhacenMed/khatmah-warsh-qcf4@main/fonts"
 
-        /** 50 numbered Warsh fonts + QCF4_QBSML = 51 total. */
+        /** 50 numbered Warsh fonts + QCF4_QBSML + QCF2_QBSML (surah container) = 52 total. */
         val ALL_FONT_FILES: List<String> = buildList {
             (1..50).forEach { n -> add("QCF4_Warsh_%02d_W.ttf".format(n)) }
             add("QCF4_QBSML.ttf")
+            add("QCF2_QBSML.ttf")
         }
 
-        fun fontFileName(fontName: String): String =
-            if (fontName == "QCF4_QBSML") "QCF4_QBSML.ttf" else "${fontName}_W.ttf"
+        /**
+         * Maps a JSON font name to its TTF file name.
+         * QCF4_QBSML and QCF2_QBSML have no _W suffix; all Warsh glyph fonts do.
+         */
+        fun fontFileName(fontName: String): String = when (fontName) {
+            "QCF4_QBSML", "QCF2_QBSML" -> "$fontName.ttf"
+            else                         -> "${fontName}_W.ttf"
+        }
 
         @SuppressLint("StaticFieldLeak")
         @Volatile private var instance: WarshQcf4Repository? = null

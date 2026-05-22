@@ -293,25 +293,28 @@ class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4Pag
     companion object {
         const val PAGE_COUNT = 604
 
-        private const val RIWAYA      = "hafs"
-        private const val CONCURRENCY = 6
-        private const val PREFS_NAME  = "hafs_qcf4_prefs"
+        private const val RIWAYA       = "hafs"
+        private const val CONCURRENCY  = 6
+        private const val PREFS_NAME   = "hafs_qcf4_prefs"
         private const val KEY_DB_READY = "db_ready"
-        private const val CDN_FONTS = "https://cdn.jsdelivr.net/gh/LhacenMed/khatmah-hafs-qcf4@v1.0.0/fonts"
-        private const val CDN_DATA  = "https://cdn.jsdelivr.net/gh/LhacenMed/khatmah-hafs-qcf4@v1.0.0"
+        private const val CDN_FONTS = "https://cdn.jsdelivr.net/gh/LhacenMed/khatmah-hafs-qcf4@main/fonts"
+        private const val CDN_DATA  = "https://cdn.jsdelivr.net/gh/LhacenMed/khatmah-hafs-qcf4@main"
 
-        /** All 48 font file names as they appear on disk and CDN. */
+        /** 47 numbered Hafs fonts + QCF4_QBSML + QCF2_QBSML (surah container) = 49 total. */
         val ALL_FONT_FILES: List<String> = buildList {
             (1..47).forEach { n -> add("QCF4_Hafs_%02d_W.ttf".format(n)) }
             add("QCF4_QBSML.ttf")
+            add("QCF2_QBSML.ttf")
         }
 
         /**
-         * Maps a JSON font name (e.g. "QCF4_Hafs_01") to its TTF file name.
-         * QCF4_QBSML has no _W suffix; all Hafs fonts do.
+         * Maps a JSON font name to its TTF file name.
+         * QCF4_QBSML and QCF2_QBSML have no _W suffix.
          */
-        fun fontFileName(fontName: String): String =
-            if (fontName == "QCF4_QBSML") "QCF4_QBSML.ttf" else "${fontName}_W.ttf"
+        fun fontFileName(fontName: String): String = when (fontName) {
+            "QCF4_QBSML", "QCF2_QBSML" -> "$fontName.ttf"
+            else                         -> "${fontName}_W.ttf"
+        }
 
         @SuppressLint("StaticFieldLeak")
         @Volatile private var instance: HafsQcf4Repository? = null

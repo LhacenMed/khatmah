@@ -51,6 +51,8 @@ import kotlinx.coroutines.launch
 private const val QCF4_ANIM_MS   = 280
 private const val MIN_LINE_COUNT = 15
 private const val CENTER_SCALE   = 1f
+private const val HDR_LINE_SCALE = 1.6f  // header slot height multiplier vs normal line
+private const val HDR_NAME_SCALE = 0.50f // name glyph height as fraction of lineH
 
 // ── Rendered word ─────────────────────────────────────────────────────────────
 
@@ -63,7 +65,22 @@ private data class WordRender(
     val verseKey: String?,
 )
 
-private data class LineRender(val words: List<WordRender>)
+/** Surah header ornamental frame, drawn behind the name glyph. */
+private data class ContainerRender(
+    val x:        Float,
+    val baseline: Float,
+    val paint:    android.graphics.Paint,
+)
+
+private data class LineRender(
+    val words:     List<WordRender>,
+    val container: ContainerRender? = null,
+)
+
+// ── Container glyph ───────────────────────────────────────────────────────────
+
+/** Surah header frame glyph in QCF2_QBSML (U+00F2 / U+FC20). */
+private const val CONTAINER_CHAR = "\u00F2"
 
 // ── Page cache entry ──────────────────────────────────────────────────────────
 
@@ -104,42 +121,73 @@ private fun computeLayout(
     val usableW = w - 2f * hPad
     val usableH = h - 2f * vPad
 
-    // Height-constrained slot, capped so sparse pages don't produce oversized glyphs.
-    val lineH = (usableH / lineCount).coerceAtMost(usableH / MIN_LINE_COUNT.toFloat())
-
+    val lineH      = (usableH / lineCount).coerceAtMost(usableH / MIN_LINE_COUNT.toFloat())
     val candWordSz = lineH * 0.65f
-    val candHdrSz  = candWordSz * CENTER_SCALE
 
-    // Pass 1 — measure every line at candidate sizes; find the widest.
-    // One shared Paint avoids allocations in this probe loop.
+    // Pass 1 — measure only non-header lines.
+    // Header lines use an independently sized name glyph and don't affect fontScale.
     val probe = android.graphics.Paint().apply { isAntiAlias = true }
     var maxLineW = 0f
     for (line in page.lines) {
+        if (line.words.any { it.type == "surah_header" }) continue
         var lineW = 0f
         for (word in line.words) {
             probe.typeface = faces[word.font] ?: Typeface.DEFAULT
-            probe.textSize = if (word.type == "surah_header") candHdrSz else candWordSz
+            probe.textSize = candWordSz
             lineW += probe.measureText(word.char)
         }
         if (lineW > maxLineW) maxLineW = lineW
     }
 
-    // Derive a single uniform scale so the widest line fits usableW exactly.
-    // All lines share this scale → consistent glyph size across the whole page,
-    // in both portrait and landscape.
-    val fontScale    = if (maxLineW > usableW) usableW / maxLineW else 1f
-    val wordFontSz   = candWordSz * fontScale
-    val headerFontSz = candHdrSz  * fontScale
+    val fontScale  = if (maxLineW > usableW) usableW / maxLineW else 1f
+    val wordFontSz = candWordSz * fontScale
+    // Name glyph: fixed fraction of lineH, never affected by fontScale.
+    val nameFontSz = lineH * HDR_NAME_SCALE
 
-    // Vertically center the content block.
-    val topOffset = vPad + (usableH - lineH * lineCount) / 2f
+    // Header lines reserve extra vertical room so the container glyph isn't clipped.
+    val slotHeights   = page.lines.map { line ->
+        if (line.words.any { it.type == "surah_header" }) lineH * HDR_LINE_SCALE else lineH
+    }
+    val totalContentH = slotHeights.sum()
+    val topOffset     = vPad + (usableH - totalContentH) / 2f
 
-    // Pass 2 — render every line centered. No short/full distinction, no per-line scaling.
+    // Pass 2 — cumulative Y, per-line slot heights.
+    var cumY = 0f
     return page.lines.mapIndexed { idx, line ->
-        val baseline = topOffset + idx * lineH + lineH * 0.78f
+        val slotH   = slotHeights[idx]
+        val slotTop = topOffset + cumY
+        cumY += slotH
+
+        val isHeader = line.words.any { it.type == "surah_header" }
+
+        // Build ornamental container for surah-header lines, centered in the slot.
+        val container: ContainerRender? = if (isHeader) run {
+            val qcf2Face = faces["QCF2_QBSML"] ?: return@run null
+            val p = android.graphics.Paint().apply {
+                typeface    = qcf2Face
+                isAntiAlias = true
+                textSize    = 1f
+                color       = accentArgb
+            }
+            val natW = p.measureText(CONTAINER_CHAR)
+            if (natW <= 0f) return@run null
+            p.textSize = usableW / natW
+            // Center: baseline = slotMidY - (ascent + descent) / 2
+            val ctrBaseline = slotTop + slotH / 2f - (p.ascent() + p.descent()) / 2f
+            ContainerRender(x = hPad, baseline = ctrBaseline, paint = p)
+        } else null
+
+        // Baseline: name glyph aligned to slot vertical center; normal lines use 78% rule.
+        val baseline: Float = if (isHeader && container != null) {
+            probe.typeface = faces["QCF4_QBSML"] ?: Typeface.DEFAULT
+            probe.textSize = nameFontSz
+            slotTop + slotH / 2f - (probe.ascent() + probe.descent()) / 2f
+        } else {
+            slotTop + slotH * 0.78f
+        }
 
         val measured = line.words.map { word ->
-            val sz = if (word.type == "surah_header") headerFontSz else wordFontSz
+            val sz = if (isHeader) nameFontSz else wordFontSz
             val p  = android.graphics.Paint().apply {
                 typeface    = faces[word.font] ?: Typeface.DEFAULT
                 textSize    = sz
@@ -152,14 +200,17 @@ private fun computeLayout(
             Triple(word, p, p.measureText(word.char))
         }
 
-        // Center the line block. Guaranteed to fit usableW after fontScale.
+        // Center the line block horizontally (RTL: start from right edge of centered block).
         val totalW = measured.sumOf { it.third.toDouble() }.toFloat()
-        var x      = (w + totalW) / 2f   // RTL: begin from right edge of centered block
+        var x      = (w + totalW) / 2f
 
-        LineRender(measured.map { (word, paint, ww) ->
-            WordRender(word.char, x - ww, baseline, ww, paint, word.verseKey)
-                .also { x -= ww }
-        })
+        LineRender(
+            words = measured.map { (word, paint, ww) ->
+                WordRender(word.char, x - ww, baseline, ww, paint, word.verseKey)
+                    .also { x -= ww }
+            },
+            container = container,
+        )
     }
 }
 
@@ -235,6 +286,10 @@ internal fun QuranQcf4Page(
         drawIntoCanvas { canvas ->
             val native = canvas.nativeCanvas
             for (line in layout) {
+                // Draw surah header ornamental container behind the name glyph.
+                line.container?.let { ctr ->
+                    native.drawText(CONTAINER_CHAR, ctr.x, ctr.baseline, ctr.paint)
+                }
                 for (word in line.words) {
                     if (word.verseKey != null && selectedAya != null) {
                         val parts = word.verseKey.split(":")
@@ -268,9 +323,13 @@ private suspend fun loadPageIntoCache(
     if (cache[pageNum] is PageCacheEntry.Ready) return
     cache[pageNum] = PageCacheEntry.Loading
     try {
-        val data  = repo.pageData(pageNum)
-        val faces = data.lines.flatMap { it.words }.map { it.font }.toSet()
-            .associateWith { repo.typefaceFor(it) }
+        val data      = repo.pageData(pageNum)
+        val fontNames = data.lines.flatMap { it.words }.map { it.font }.toMutableSet()
+        // Include the shared container font for pages that have a surah header line.
+        if (data.lines.any { l -> l.words.any { it.type == "surah_header" } }) {
+            fontNames += "QCF2_QBSML"
+        }
+        val faces = fontNames.associateWith { repo.typefaceFor(it) }
         cache[pageNum] = PageCacheEntry.Ready(data, faces)
     } catch (e: Exception) {
         cache[pageNum] = PageCacheEntry.Err(e.message ?: "Unknown error")
