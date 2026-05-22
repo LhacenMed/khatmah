@@ -10,106 +10,62 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
-enum class FsGroupType { DATABASES, HAFS_FONTS, WARSH_IMAGES, WARSH_SVG }
-
-data class FsEntry(val name: String, val sizeBytes: Long)
-
-data class FsGroup(
-    val id:         String,
-    val type:       FsGroupType,
-    val label:      String,
-    val dir:        File?,
-    val entries:    List<FsEntry>,
-    val totalBytes: Long,
-    val canDelete:  Boolean,
-    val expanded:   Boolean = false,
-)
-
 data class FileBrowserState(
-    val groups:     List<FsGroup> = emptyList(),
-    val isLoading:  Boolean       = true,
-    val deletingId: String?       = null,
-    val error:      String?       = null,
+    val currentDir: File,
+    val files:      List<File> = emptyList(),
+    val loading:    Boolean    = true,
+    val infoText:   String?    = null,
 )
 
-class FileBrowserViewModel(private val ctx: Context) : ViewModel() {
+class FileBrowserViewModel(rootDir: File) : ViewModel() {
 
-    private val _state = MutableStateFlow(FileBrowserState())
+    val rootDir: File = rootDir
+
+    private val _state = MutableStateFlow(FileBrowserState(currentDir = rootDir))
     val state: StateFlow<FileBrowserState> = _state.asStateFlow()
 
-    init { scan() }
+    init { loadDir(rootDir) }
 
-    fun refresh() = scan()
-
-    fun toggleExpand(id: String) = _state.update { s ->
-        s.copy(groups = s.groups.map { if (it.id == id) it.copy(expanded = !it.expanded) else it })
+    fun openDir(dir: File) {
+        _state.update { it.copy(currentDir = dir, loading = true) }
+        loadDir(dir)
     }
 
-    fun delete(id: String) {
-        val group = _state.value.groups.find { it.id == id }?.takeIf { it.canDelete } ?: return
-        _state.update { it.copy(deletingId = id, error = null) }
-        viewModelScope.launch(Dispatchers.IO) {
-            runCatching { group.dir?.deleteRecursively() }
-                .onFailure { e -> _state.update { it.copy(error = e.message) } }
-            _state.update { it.copy(groups = buildGroups(), deletingId = null) }
-        }
+    fun rename(oldPath: String, newName: String): Boolean {
+        val ok = NativeBindings.rename(oldPath, newName)
+        if (ok) reload()
+        return ok
     }
+
+    fun delete(path: String): Boolean {
+        val ok = NativeBindings.delete(path)
+        if (ok) reload()
+        return ok
+    }
+
+    fun metadata(path: String): FileMetadata? = NativeBindings.metadata(path)
+
+    fun dismissInfo() = _state.update { it.copy(infoText = null) }
+
+    fun showInfo(text: String) = _state.update { it.copy(infoText = text) }
 
     // ── Private ───────────────────────────────────────────────────────────────
 
-    private fun scan() {
-        _state.update { it.copy(isLoading = true, error = null) }
-        viewModelScope.launch(Dispatchers.IO) {
-            _state.update { it.copy(groups = buildGroups(), isLoading = false) }
+    private fun reload() = loadDir(_state.value.currentDir)
+
+    private fun loadDir(dir: File) {
+        viewModelScope.launch {
+            val list = withContext(Dispatchers.IO) { listDirectoryFiles(dir) }
+            _state.update { it.copy(files = list, loading = false) }
         }
-    }
-
-    private fun buildGroups(): List<FsGroup> = buildList {
-        // Databases — view-only (Room holds files open; deleting here is unsafe)
-        val dbDir  = ctx.getDatabasePath("_").parentFile
-        val dbList = dbDir?.listFiles()
-            ?.filter { it.extension == "db" }
-            ?.sortedBy { it.name }
-            ?.map { FsEntry(it.name, it.length()) }
-            ?: emptyList()
-        add(FsGroup("databases", FsGroupType.DATABASES, "Databases",
-            dbDir, dbList, dbList.sumOf { it.sizeBytes }, canDelete = false))
-
-        // Hafs QCF4 font files
-        add(dirGroup("hafs_fonts", FsGroupType.HAFS_FONTS, "Hafs QCF4 — Fonts",
-            File(ctx.filesDir, "hafs-qcf4/fonts"), canDelete = true))
-
-        // Warsh JPEG mushaf pages
-        add(dirGroup("warsh_images", FsGroupType.WARSH_IMAGES, "Warsh — Mushaf Images",
-            File(ctx.filesDir, "warsh-images"), canDelete = true))
-
-        // Warsh SVG/JSON pages + Drive index
-        add(dirGroup("warsh_svg", FsGroupType.WARSH_SVG, "Warsh — SVG Pages",
-            File(ctx.filesDir, "warsh"), canDelete = true))
-    }
-
-    private fun dirGroup(
-        id:        String,
-        type:      FsGroupType,
-        label:     String,
-        dir:       File,
-        canDelete: Boolean,
-    ): FsGroup {
-        val entries = if (dir.exists()) {
-            dir.walkTopDown()
-                .filter { it.isFile }
-                .sortedBy { it.name }
-                .map { FsEntry(it.relativeTo(dir).path, it.length()) }
-                .toList()
-        } else emptyList()
-        return FsGroup(id, type, label, dir.takeIf { it.exists() },
-            entries, entries.sumOf { it.sizeBytes }, canDelete)
     }
 
     class Factory(private val ctx: Context) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = FileBrowserViewModel(ctx) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            FileBrowserViewModel(ctx.dataDir) as T
     }
 }
