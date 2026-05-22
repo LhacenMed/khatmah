@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Typeface
 import androidx.core.content.edit
+import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
 import com.lhacenmed.khatmah.feature.mushaf.data.db.PageEntity
 import com.lhacenmed.khatmah.feature.mushaf.data.db.VersePage
@@ -31,6 +32,8 @@ sealed class WarshQcf4DownloadState {
 // ── Repository ────────────────────────────────────────────────────────────────
 
 class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4PageSource {
+
+    override val riwaya = Riwaya.WARSH
 
     private val fontsDir = File(ctx.filesDir, "warsh-qcf4/fonts")
     private val prefs    = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

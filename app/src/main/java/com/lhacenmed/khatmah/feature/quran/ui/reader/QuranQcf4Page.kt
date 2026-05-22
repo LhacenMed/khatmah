@@ -8,12 +8,12 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,6 +41,7 @@ import com.lhacenmed.khatmah.core.ui.components.SheetOption
 import com.lhacenmed.khatmah.feature.audio.AyaAudioManager
 import com.lhacenmed.khatmah.feature.audio.AyaPlayerBar
 import com.lhacenmed.khatmah.feature.audio.DriveAudioRepository
+import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 import com.lhacenmed.khatmah.feature.quran.data.Qcf4Page
 import com.lhacenmed.khatmah.feature.quran.data.Qcf4PageSource
 import com.lhacenmed.khatmah.feature.quran.ui.QuranViewModel
@@ -49,12 +50,63 @@ import com.lhacenmed.khatmah.feature.quran.ui.components.QuranBottomBar
 import com.lhacenmed.khatmah.shared.util.AppPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.core.content.res.ResourcesCompat
 
 private const val QCF4_ANIM_MS   = 280
 private const val MIN_LINE_COUNT = 15
 private const val HDR_LINE_SCALE = 1.6f  // header slot height multiplier vs normal line
 private const val HDR_NAME_SCALE = 0.50f // name glyph height as fraction of lineH
 private const val ZOOM_SCALE     = 2.5f
+
+// Proportional x-offset of the glyph's built-in circle centers from each edge (0..1).
+// Calibrated to the QCF2_QBSML font design — tune if circles drift.
+private const val CIRCLE_OFFSET = 0.21f
+
+private const val CIRCLE_LABEL_SCALE = 0.12f  // label font as fraction of containerH — decrease to shrink
+private const val CIRCLE_NUM_SCALE   = 0.09f  // number font as fraction of containerH — decrease to shrink
+private const val CIRCLE_GAP_SCALE   = -0.05f  // gap between label and number as fraction of containerH
+
+// ── Surah info ────────────────────────────────────────────────────────────────
+
+private val EAST_ARABIC_DIGITS = charArrayOf('٠','١','٢','٣','٤','٥','٦','٧','٨','٩')
+
+private val SURA_AYA_COUNTS_HAFS = intArrayOf(
+    7,   286, 200, 176, 120, 165, 206,  75, 129, 109,
+    123, 111,  43,  52,  99, 128, 111, 110,  98, 135,
+    112,  78, 118,  64,  77, 227,  93,  88,  69,  60,
+    34,  30,  73,  54,  45,  83, 182,  88,  75,  85,
+    54,  53,  89,  59,  37,  35,  38,  29,  18,  45,
+    60,  49,  62,  55,  78,  96,  29,  22,  24,  13,
+    14,  11,  11,  18,  12,  12,  30,  52,  52,  44,
+    28,  28,  20,  56,  40,  31,  50,  40,  46,  42,
+    29,  19,  36,  25,  22,  17,  19,  26,  30,  20,
+    15,  21,  11,   8,   8,  19,   5,   8,   8,  11,
+    11,   8,   3,   9,   5,   4,   7,   3,   6,   3,
+    5,   4,   5,   6,
+)
+
+private val SURA_AYA_COUNTS_WARSH = intArrayOf(
+    7,   285, 200, 175, 122, 167, 206,  76, 130, 109,
+    121, 111,  44,  54,  99, 128, 110, 105,  99, 134,
+    111,  76, 119,  62,  77, 226,  95,  88,  69,  59,
+    33,  30,  73,  54,  46,  82, 182,  86,  72,  84,
+    53,  50,  89,  56,  36,  34,  39,  29,  18,  45,
+    60,  47,  61,  55,  77,  99,  28,  21,  24,  13,
+    14,  11,  11,  18,  12,  12,  31,  52,  52,  44,
+    30,  28,  18,  55,  39,  31,  50,  40,  45,  42,
+    29,  19,  36,  25,  22,  17,  19,  26,  32,  20,
+    15,  21,  11,   8,   8,  20,   5,   8,   9,  11,
+    10,   8,   3,   9,   5,   5,   6,   3,   6,   3,
+    5,   4,   5,   6,
+)
+
+private fun ayaCount(riwaya: Riwaya, suraNum: Int): Int =
+    if (suraNum in 1..114)
+        (if (riwaya == Riwaya.HAFS) SURA_AYA_COUNTS_HAFS else SURA_AYA_COUNTS_WARSH)[suraNum - 1]
+    else 0
+
+private fun toEastArabic(n: Int): String =
+    n.toString().map { EAST_ARABIC_DIGITS[it - '0'] }.joinToString("")
 
 // ── Rendered word ─────────────────────────────────────────────────────────────
 
@@ -72,6 +124,26 @@ private data class ContainerRender(
     val x:        Float,
     val baseline: Float,
     val paint:    android.graphics.Paint,
+    /** Non-null when sura is valid; text is placed inside the glyph's own circle slots. */
+    val circles:  SurahCircles? = null,
+)
+
+/**
+ * Numbers and labels positioned inside the two ornamental circle slots already present in
+ * [CONTAINER_CHAR]. Label uses KFGQPC calligraphic font; number uses system medium face.
+ *
+ * [orderCx] — canvas-right circle = sura order ("ترتيبها" + number)
+ * [ayaCx]   — canvas-left  circle = aya count  ("آياتها" + number)
+ */
+private class SurahCircles(
+    val orderCx:    Float,
+    val ayaCx:      Float,
+    val labelY:     Float,      // baseline for the calligraphic label
+    val numY:       Float,      // baseline for the east-arabic number
+    val orderStr:   String,
+    val ayaStr:     String,
+    val labelPaint: android.graphics.Paint,
+    val numPaint:   android.graphics.Paint,
 )
 
 private data class LineRender(
@@ -111,6 +183,8 @@ private fun computeLayout(
     size:       IntSize,
     textArgb:   Int,
     accentArgb: Int,
+    riwaya:     Riwaya,
+    kfgqpcFace: Typeface,
 ): List<LineRender> {
     val lineCount = page.lines.size
     if (lineCount == 0 || size == IntSize.Zero) return emptyList()
@@ -176,7 +250,58 @@ private fun computeLayout(
             p.textSize = usableW / natW
             // Center: baseline = slotMidY - (ascent + descent) / 2
             val ctrBaseline = slotTop + slotH / 2f - (p.ascent() + p.descent()) / 2f
-            ContainerRender(x = hPad, baseline = ctrBaseline, paint = p)
+
+            // ── Numbers inside the glyph's built-in circle slots ──────────────
+            // The circles are negative space (holes) in the frame glyph.
+            // We measure the rendered container height to size the numbers correctly,
+            // then place them at the fixed proportional offsets from each edge.
+            val suraNum = line.words.firstOrNull()?.sura ?: 0
+            val circles: SurahCircles? = if (suraNum in 1..114) {
+                val fm         = p.fontMetrics
+                val containerH = fm.descent - fm.ascent
+                val circleCy   = ctrBaseline + (fm.ascent + fm.descent) / 2f
+
+                val labelFontSz = containerH * CIRCLE_LABEL_SCALE
+                val numFontSz   = containerH * CIRCLE_NUM_SCALE
+
+                val labelP = android.graphics.Paint().apply {
+                    isAntiAlias = true
+                    color       = accentArgb
+                    textSize    = labelFontSz
+                    textAlign   = android.graphics.Paint.Align.CENTER
+                    typeface    = kfgqpcFace
+                }
+                val numP = android.graphics.Paint().apply {
+                    isAntiAlias = true
+                    color       = accentArgb
+                    textSize    = numFontSz
+                    textAlign   = android.graphics.Paint.Align.CENTER
+                    typeface    = android.graphics.Typeface.create(
+                        "sans-serif-medium", android.graphics.Typeface.NORMAL
+                    )
+                }
+
+                // Stack label above number, center the block at circleCy.
+                val labelLineH = labelP.descent() - labelP.ascent()
+                val numLineH   = numP.descent()   - numP.ascent()
+                val gap        = containerH * CIRCLE_GAP_SCALE
+                val stackTop   = circleCy - (labelLineH + gap + numLineH) / 2f
+                val labelY     = stackTop - labelP.ascent()
+                val numY       = stackTop + labelLineH + gap - numP.ascent()
+
+                SurahCircles(
+                    orderCx    = hPad + usableW * (1f - CIRCLE_OFFSET),
+                    ayaCx      = hPad + usableW * CIRCLE_OFFSET,
+                    labelY     = labelY,
+                    numY       = numY,
+                    orderStr   = toEastArabic(suraNum),
+                    ayaStr     = toEastArabic(ayaCount(riwaya, suraNum)),
+                    labelPaint = labelP,
+                    numPaint   = numP,
+                )
+            } else null
+
+            ContainerRender(x = hPad, baseline = ctrBaseline, paint = p, circles = circles)
         } else null
 
         // Baseline: name glyph aligned to slot vertical center; normal lines use 78% rule.
@@ -232,11 +357,11 @@ private fun hitWord(layout: List<LineRender>, offset: Offset): WordRender? {
 // ── Single page ───────────────────────────────────────────────────────────────
 
 /**
- * Renders one QCF4 Hafs mushaf page using Android Canvas.
+ * Renders one QCF4 mushaf page using Android Canvas.
  *
  * Layout is recomputed only when [pageData], composable [size], or colors change.
  * Long-press on a word triggers [onAyaPress] with the word's (sura, aya).
- * Tap anywhere fires [onTap].
+ * Tap anywhere fires [onTap]; double-tap toggles zoom.
  */
 @Composable
 internal fun QuranQcf4Page(
@@ -245,6 +370,7 @@ internal fun QuranQcf4Page(
     selectedAya: Pair<Int, Int>?,
     isZoomed:    Boolean,
     zoomOffset:  Offset,
+    riwaya:      Riwaya,
     onTap:       () -> Unit,
     onDoubleTap: () -> Unit,
     onDrag:      (Offset) -> Unit,
@@ -254,11 +380,15 @@ internal fun QuranQcf4Page(
     val textArgb      = MaterialTheme.colorScheme.onBackground.toArgb()
     val accentArgb    = MaterialTheme.colorScheme.primary.toArgb()
     val highlightArgb = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f).toArgb()
+    val context    = LocalContext.current
+    val kfgqpcFace = remember {
+        ResourcesCompat.getFont(context, R.font.kfgqpc_warsh_v2_regular) ?: Typeface.DEFAULT
+    }
 
     var size by remember { mutableStateOf(IntSize.Zero) }
 
-    val layout = remember(pageData.page, size, isDark, accentArgb) {
-        computeLayout(pageData, typefaces, size, textArgb, accentArgb)
+    val layout = remember(pageData.page, size, isDark, accentArgb, riwaya) {
+        computeLayout(pageData, typefaces, size, textArgb, accentArgb, riwaya, kfgqpcFace)
     }
 
     val hlPaint = remember(highlightArgb) {
@@ -276,17 +406,27 @@ internal fun QuranQcf4Page(
                 .fillMaxSize()
                 .graphicsLayer {
                     val s = if (isZoomed) ZOOM_SCALE else 1f
-                    scaleX        = s
-                    scaleY        = s
-                    translationX  = if (isZoomed) zoomOffset.x else 0f
-                    translationY  = if (isZoomed) zoomOffset.y else 0f
+                    scaleX       = s
+                    scaleY       = s
+                    translationX = if (isZoomed) zoomOffset.x else 0f
+                    translationY = if (isZoomed) zoomOffset.y else 0f
                 },
         ) {
             drawIntoCanvas { canvas ->
                 val native = canvas.nativeCanvas
                 for (line in layout) {
                     line.container?.let { ctr ->
+                        // Draw the ornamental frame glyph (includes the circular slots).
                         native.drawText(CONTAINER_CHAR, ctr.x, ctr.baseline, ctr.paint)
+                        // Place sura order + aya count inside the glyph's existing circle slots.
+                        ctr.circles?.let { c ->
+                            // Right circle: sura order label + number
+                            native.drawText("ترتيبها", c.orderCx, c.labelY, c.labelPaint)
+                            native.drawText(c.orderStr, c.orderCx, c.numY,   c.numPaint)
+                            // Left circle: aya count label + number
+                            native.drawText("آياتها",  c.ayaCx,   c.labelY, c.labelPaint)
+                            native.drawText(c.ayaStr,  c.ayaCx,   c.numY,   c.numPaint)
+                        }
                     }
                     for (word in line.words) {
                         if (word.verseKey != null && selectedAya != null) {
@@ -430,14 +570,12 @@ internal fun QuranQcf4Pager(
             val pageNum = idx + 1
             when (val entry = pageCache[pageNum]) {
                 null, PageCacheEntry.Loading -> {
-                    // Trigger load if not already in flight
                     LaunchedEffect(pageNum) {
                         scope.launch(Dispatchers.IO) { loadPageIntoCache(pageNum, repo, pageCache) }
                     }
                     Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
                 }
                 is PageCacheEntry.Err -> {
-                    // Show error + retry button
                     Box(Modifier.fillMaxSize(), Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
@@ -459,6 +597,7 @@ internal fun QuranQcf4Pager(
                         selectedAya = selectedAya,
                         isZoomed    = isZoomed,
                         zoomOffset  = zoomOffset,
+                        riwaya      = repo.riwaya,
                         onTap       = { barsVisible = !barsVisible },
                         onDoubleTap = {
                             isZoomed   = !isZoomed
@@ -625,6 +764,7 @@ internal fun SessionQcf4Pager(startPage: Int, endPage: Int, repo: Qcf4PageSource
                         selectedAya = selectedAya,
                         isZoomed    = isZoomed,
                         zoomOffset  = zoomOffset,
+                        riwaya      = repo.riwaya,
                         onTap       = { barsVisible = !barsVisible },
                         onDoubleTap = {
                             isZoomed   = !isZoomed

@@ -17,6 +17,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.atomic.AtomicInteger
 import androidx.core.content.edit
+import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 
 // ── Download state ────────────────────────────────────────────────────────────
 
@@ -45,6 +46,8 @@ sealed class HafsQcf4DownloadState {
  *   [MushafDb] (mushaf.db)               — page, word, and verse-page tables
  */
 class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4PageSource {
+
+    override val riwaya = Riwaya.HAFS
 
     private val fontsDir = File(ctx.filesDir, "hafs-qcf4/fonts")
     private val prefs    = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
