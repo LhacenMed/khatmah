@@ -203,6 +203,8 @@ dependencies {
     implementation(libs.androidsvg)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.org.brotli.dec)
+    implementation(libs.commons.compress)
+    implementation(libs.xz)
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

@@ -12,20 +12,20 @@ object AdhanSoundFiles {
      * New sounds should be added here to be visible in the app.
      */
     private val soundsMap = listOf(
-        "short_alert.mp3" to "صوت تنبيه قصير",
-        "madinah.mp3" to "أذان المدينة",
-        "makkah.mp3" to "أذان الحرم المكي - كامل",
-        "aqsa.mp3" to "أذان الأقصى",
-        "qutami.mp3" to "أذان - ناصر القطامي",
-        "abdulbasit.mp3" to "أذان - عبد الباسط عبد الصمد",
-        "assafi_1.mp3" to "أذان - مشاري العسافي 1",
-        "assafi_2.mp3" to "أذان - مشاري العسافي 2",
-        "nafis_1.mp3" to "أذان - أحمد النفيس 1",
-        "nafis_2.mp3" to "أذان - أحمد النفيس 2",
+        "short_alert.opus" to "صوت تنبيه قصير",
+        "madinah.opus" to "أذان المدينة",
+        "makkah.opus" to "أذان الحرم المكي - كامل",
+        "aqsa.opus" to "أذان الأقصى",
+        "qutami.opus" to "أذان - ناصر القطامي",
+        "abdulbasit.opus" to "أذان - عبد الباسط عبد الصمد",
+        "assafi_1.opus" to "أذان - مشاري العسافي 1",
+        "assafi_2.opus" to "أذان - مشاري العسافي 2",
+        "nafis_1.opus" to "أذان - أحمد النفيس 1",
+        "nafis_2.opus" to "أذان - أحمد النفيس 2",
     )
 
     /**
-     * Returns the adhan mp3 filenames in the controlled order.
+     * Returns the adhan opus filenames in the controlled order.
      * Only returns files that actually exist in the assets.
      */
     fun list(context: Context): List<String> {
@@ -38,6 +38,6 @@ object AdhanSoundFiles {
      */
     fun getDisplayName(filename: String): String {
         return soundsMap.find { it.first == filename }?.second 
-            ?: filename.removeSuffix(".mp3")
+            ?: filename.removeSuffix(".opus")
     }
 }

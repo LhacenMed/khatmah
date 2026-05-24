@@ -41,7 +41,7 @@ private fun TodayScreen(padding: PaddingValues) {
 
     if (showDlDialog) {
         MushafDownloadDialog(
-            onSettings = { showDlDialog = false; nav.navigate(Route.THEME_SETTINGS) },
+            onSettings = { showDlDialog = false; nav.navigate(Route.MUSHAF_PRINTS) },
             onDismiss  = { showDlDialog = false },
         )
     }
@@ -92,7 +92,7 @@ private fun TodayScreen(padding: PaddingValues) {
                     state      = s,
                     onMarkRead = { vm.markRead(s.session.entity.id) },
                     onRead     = {
-                        if (mushaf == MushafPrint.WarshText) {
+                        if (mushaf == MushafPrint.WarshText || mushaf == MushafPrint.HafsText) {
                             showDlDialog = true
                         } else {
                             nav.navigate(

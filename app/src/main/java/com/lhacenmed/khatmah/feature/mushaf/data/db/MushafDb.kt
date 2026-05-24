@@ -6,8 +6,12 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities     = [PageEntity::class, WordEntity::class, VersePage::class],
-    version      = 1,
+    entities     = [
+        PageEntity::class, WordEntity::class, VersePage::class,
+        SurahEntity::class, DivisionEntity::class, SajdaEntity::class,
+        PageStartEntity::class, VerseEntity::class,
+    ],
+    version      = 3,
     exportSchema = false,
 )
 abstract class MushafDb : RoomDatabase() {
@@ -22,6 +26,7 @@ abstract class MushafDb : RoomDatabase() {
         fun get(context: Context): MushafDb = instance ?: synchronized(this) {
             instance ?: Room
                 .databaseBuilder(context.applicationContext, MushafDb::class.java, DB_NAME)
+                .fallbackToDestructiveMigration()
                 .build()
                 .also { instance = it }
         }

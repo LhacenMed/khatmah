@@ -381,14 +381,15 @@ internal fun QuranQcf4Page(
     val accentArgb    = MaterialTheme.colorScheme.primary.toArgb()
     val highlightArgb = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f).toArgb()
     val context    = LocalContext.current
-    val kfgqpcFace = remember {
-        ResourcesCompat.getFont(context, R.font.kfgqpc_warsh_v2_regular) ?: Typeface.DEFAULT
+    val calligraphicFace = remember(riwaya) {
+        val fontRes = if (riwaya == Riwaya.HAFS) R.font.kfgqpc_hafs_uthmanic else R.font.kfgqpc_warsh_uthmanic
+        ResourcesCompat.getFont(context, fontRes) ?: Typeface.DEFAULT
     }
 
     var size by remember { mutableStateOf(IntSize.Zero) }
 
     val layout = remember(pageData.page, size, isDark, accentArgb, riwaya) {
-        computeLayout(pageData, typefaces, size, textArgb, accentArgb, riwaya, kfgqpcFace)
+        computeLayout(pageData, typefaces, size, textArgb, accentArgb, riwaya, calligraphicFace)
     }
 
     val hlPaint = remember(highlightArgb) {

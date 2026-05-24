@@ -206,7 +206,7 @@ class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4Pag
     fun clearCache() {
         fontsDir.listFiles()?.forEach { it.delete() }
         synchronized(typefaceCache) { typefaceCache.clear() }
-        prefs.edit { putBoolean(KEY_DB_READY, false)}
+        prefs.edit { putBoolean(KEY_DB_READY, false) }
         _downloadState.value = HafsQcf4DownloadState.NotDownloaded
         scope.launch { dao.clearRiwaya(RIWAYA) }
     }

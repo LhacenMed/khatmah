@@ -77,7 +77,8 @@ fun QuranSessionReaderScreen(startPage: Int, endPage: Int) {
                 remember { HafsQcf4Repository.get(context) })
             MushafPrint.WarshQcf4   -> SessionQcf4Pager(startPage, endPage,
                 remember { WarshQcf4Repository.get(context) })
-            MushafPrint.WarshText    -> {
+            MushafPrint.WarshText,
+            MushafPrint.HafsText    -> {
                 // Guard: TodayTab should have prevented this path.
                 Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Text("الرجاء اختيار نوع المصحف من الإعدادات")

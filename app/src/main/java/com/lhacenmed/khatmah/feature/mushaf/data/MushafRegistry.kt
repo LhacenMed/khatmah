@@ -7,6 +7,7 @@ object MushafRegistry {
         MushafPrint.WarshImages,
         MushafPrint.WarshSvg,
         MushafPrint.WarshQcf4,
+        MushafPrint.HafsText,
         MushafPrint.HafsQcf4,
     )
 

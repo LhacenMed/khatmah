@@ -51,6 +51,7 @@ import com.lhacenmed.khatmah.feature.audio.AyaAudioManager
 import com.lhacenmed.khatmah.feature.audio.AyaPlayerBar
 import com.lhacenmed.khatmah.feature.audio.DriveAudioRepository
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
+import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 import com.lhacenmed.khatmah.feature.quran.data.HafsQcf4Repository
 import com.lhacenmed.khatmah.feature.quran.data.Qcf4PageSource
 import com.lhacenmed.khatmah.feature.quran.data.WarshPageData
@@ -114,10 +115,12 @@ fun QuranReaderScreen() {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         when (val s = state) {
             is QuranViewModel.State.Loading    -> LoadingBox()
-            is QuranViewModel.State.Ready      -> QuranPager(
-                pages    = s.pages,
-                vm       = vm,
-                onSearch = { nav.navigate(Route.QURAN_SEARCH) },
+            is QuranViewModel.State.Ready -> QuranPager(
+                pages     = s.pages,
+                riwaya    = s.riwaya,
+                bismillah = s.bismillah,
+                vm        = vm,
+                onSearch  = { nav.navigate(Route.QURAN_SEARCH) },
             )
             is QuranViewModel.State.ImageReady -> QuranImagePager(
                 pageCount = s.pageCount,
@@ -178,9 +181,11 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun QuranPager(
-    pages:    List<QuranPageData>,
-    vm:       QuranViewModel,
-    onSearch: () -> Unit,
+    pages:     List<QuranPageData>,
+    riwaya:    Riwaya,
+    bismillah: String,
+    vm:        QuranViewModel,
+    onSearch:  () -> Unit,
 ) {
     val nav        = LocalNavController.current
     val context    = LocalContext.current
@@ -240,6 +245,8 @@ private fun QuranPager(
             ) { idx ->
                 PageContent(
                     page           = pages[idx],
+                    riwaya         = riwaya,
+                    bismillah      = bismillah,
                     selectedAya    = selectedAya,
                     onTap          = { barsVisible = !barsVisible },
                     onAyaLongPress = { suraNum, ayaNum ->

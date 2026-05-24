@@ -481,4 +481,7 @@
 
     <string name="print_warsh_qcf4">Warsh — QCF4 Mushaf</string>
     <string name="print_warsh_qcf4_desc">Moroccan Mushaf in Warsh narration from Nafiʿ</string>
+
+    <string name="print_hafs_text">نص حفص</string>
+    <string name="print_hafs_text_desc">قراءة نصية بخط عثماني - رواية حفص</string>
 </resources>

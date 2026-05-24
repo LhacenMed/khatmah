@@ -37,8 +37,10 @@ import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.core.nav.NavTab
 import com.lhacenmed.khatmah.core.nav.Route
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.quran.data.QuranRepository
 import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
+import androidx.compose.runtime.collectAsState
 
 // Items within this distance from the top animate directly; farther ones jump-then-animate.
 private const val SMOOTH_SCROLL_THRESHOLD = 4
@@ -60,10 +62,11 @@ private fun IndexScreen(padding: PaddingValues) {
     val listState   = rememberLazyListState()
     val scrollToTop = LocalScrollToTop.current
 
-    val repo = remember { QuranRepository(context) }
+    val repo        = remember { QuranRepository(context) }
+    val riwaya      = MushafPrefs.selected.collectAsState().value.riwaya.dbKey   // "hafs" | "warsh"
     var surahs by remember { mutableStateOf<List<SurahInfo>>(emptyList()) }
 
-    LaunchedEffect(Unit) { surahs = repo.surahList() }
+    LaunchedEffect(riwaya) { surahs = repo.surahList(riwaya) }
 
     // Two-phase scroll-to-top: instant jump near the top, then smooth animation.
     LaunchedEffect(scrollToTop) {

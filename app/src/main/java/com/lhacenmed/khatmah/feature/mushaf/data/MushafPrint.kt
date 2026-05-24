@@ -24,6 +24,14 @@ sealed class MushafPrint(
         requiresDownload = false,
     )
 
+    data object HafsText : MushafPrint(
+        id               = "hafs_text",
+        riwaya           = Riwaya.HAFS,
+        nameRes          = R.string.print_hafs_text,
+        descRes          = R.string.print_hafs_text_desc,
+        requiresDownload = false,
+    )
+
     data object WarshImages : MushafPrint(
         id               = "warsh_images",
         riwaya           = Riwaya.WARSH,

@@ -512,4 +512,7 @@
 
     <string name="print_warsh_qcf4">ورش — مصحف QCF4</string>
     <string name="print_warsh_qcf4_desc">مصحف المغرب بخط رواية ورش عن نافع</string>
+
+    <string name="print_hafs_text">نص حفص</string>
+    <string name="print_hafs_text_desc">قراءة نصية بخط عثماني - رواية حفص</string>
 </resources>

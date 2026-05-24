@@ -60,7 +60,8 @@ class PrintSelectViewModel(app: Application) : AndroidViewModel(app) {
                 MushafPrint.WarshSvg    -> warshXmlRepo.downloadAll().collect()
                 MushafPrint.WarshQcf4   -> warshQcf4Repo.downloadAll().collect()
                 MushafPrint.HafsQcf4    -> hafsQcf4Repo.downloadAll().collect()
-                MushafPrint.WarshText   -> Unit
+                MushafPrint.WarshText,
+                MushafPrint.HafsText    -> Unit
             }
         }
     }

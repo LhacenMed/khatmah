@@ -8,6 +8,7 @@ import coil.ImageLoader
 import coil.decode.SvgDecoder
 import com.google.android.material.color.DynamicColors
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafInitializer
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanPrefs
@@ -70,5 +71,7 @@ class App : Application() {
 
         // Pre-warm the Quran sura-name cache so TodayTab loads instantly.
         appScope.launch { KhatmahRepository(this@App).warmCache() }
+        // Seed MushafDb from bundled riwaya JSON files (hafs.json + warsh.json in quran.7z).
+        MushafInitializer.init(this, appScope)
     }
 }

@@ -35,7 +35,7 @@ class AdhanAssetProvider : ContentProvider() {
         return ParcelFileDescriptor.open(cached, ParcelFileDescriptor.MODE_READ_ONLY)
     }
 
-    override fun getType(uri: Uri): String = "audio/mpeg"
+    override fun getType(uri: Uri): String = "audio/ogg"
 
     // Unused stubs
     override fun query(u: Uri, p: Array<String>?, s: String?, a: Array<String>?, o: String?): Cursor? = null

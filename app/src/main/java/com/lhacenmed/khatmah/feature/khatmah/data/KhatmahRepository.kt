@@ -1,7 +1,13 @@
 package com.lhacenmed.khatmah.feature.khatmah.data
 
 import android.content.Context
-import android.database.sqlite.SQLiteDatabase
+import com.lhacenmed.khatmah.feature.mushaf.data.DivType
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
+import com.lhacenmed.khatmah.feature.mushaf.data.db.DivisionEntity
+import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDao
+import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
+import com.lhacenmed.khatmah.feature.mushaf.data.db.PageStartEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -19,111 +25,43 @@ data class SessionMeta(
 class KhatmahRepository(private val context: Context) {
 
     private val khatmahDb by lazy { KhatmahDatabase.get(context) }
+    private val mushafDao  by lazy { MushafDb.get(context).dao() }
 
     // ── Constants ─────────────────────────────────────────────────────────────
 
     /** Maximum representable daily reading: 10 Juz' + 7 Rub' = 87 Rub'. */
     private val MAX_DAILY_RUB = 87
 
-    // ── Quran DB ──────────────────────────────────────────────────────────────
+    // ── Riwaya ────────────────────────────────────────────────────────────────
 
-    private fun openQuranDb(): SQLiteDatabase {
-        val file = context.getDatabasePath("quran.db")
-        if (!file.exists()) {
-            file.parentFile?.mkdirs()
-            context.assets.open("databases/quran.db").use { it.copyTo(file.outputStream()) }
-        }
-        return SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-    }
+    /** Current riwaya DB key — read live so khatmah always uses the selected riwaya. */
+    private val riwayaKey: String
+        get() = MushafPrefs.selected.value.riwaya.dbKey
 
-    private fun loadAthmanRows(db: SQLiteDatabase): List<AthmanRow> {
-        val rows = mutableListOf<AthmanRow>()
-        db.rawQuery(
-            "SELECT start_sura, start_ayah, end_sura, CAST(end_ayah AS INTEGER), end_page_number" +
-                    " FROM quran_athman",
-            null,
-        ).use { c ->
-            while (c.moveToNext()) {
-                rows += AthmanRow(c.getInt(0), c.getInt(1), c.getInt(2), c.getInt(3), c.getInt(4))
-            }
-        }
-        return rows
-    }
+    // ── Name cache ────────────────────────────────────────────────────────────
 
-    private fun loadSuraNames(db: SQLiteDatabase): Map<Int, String> {
-        val map = mutableMapOf<Int, String>()
-        db.rawQuery("SELECT id_sura, sura FROM quran_index", null).use { c ->
-            while (c.moveToNext()) map[c.getInt(0)] = c.getString(1)
-        }
-        return map
-    }
-
-    private fun getJuzStart(db: SQLiteDatabase, juz: Int): Pair<Int, Int> {
-        db.rawQuery(
-            "SELECT sura, aya FROM quran_ajzaa WHERE num_joza=? LIMIT 1",
-            arrayOf(juz.toString()),
-        ).use { c ->
-            if (c.moveToFirst()) return c.getInt(0) to c.getInt(1)
-        }
-        return 1 to 1
-    }
-
-    private fun getStartPage(db: SQLiteDatabase, sura: Int, aya: Int): Int {
-        db.rawQuery(
-            "SELECT page_number FROM arabic_text WHERE sura=? AND ayah=? LIMIT 1",
-            arrayOf(sura.toString(), aya.toString()),
-        ).use { c ->
-            if (c.moveToFirst()) return c.getInt(0)
-        }
-        return 1
-    }
-
-    // ── Caches ────────────────────────────────────────────────────────────────
-
-    @Volatile private var cachedSuraNames: Map<Int, String>? = null
+    /** (riwayaKey → surahNum → name). Invalidated when riwaya changes. */
+    @Volatile private var cachedNames: Pair<String, Map<Int, String>>? = null
 
     /**
-     * Pre-warms the sura name cache from the Quran DB.
-     * Call once from [App.onCreate] on a background thread so the first
-     * [sessionMeta] call returns immediately without opening the DB.
+     * Pre-warms the surah name cache from [MushafDb] so TodayTab loads instantly.
+     * No-op if the DB hasn't been seeded yet (re-queried on next real access).
      */
     suspend fun warmCache() = withContext(Dispatchers.IO) {
-        if (cachedSuraNames != null) return@withContext
-        openQuranDb().use { db -> cachedSuraNames = loadSuraNames(db) }
+        val key = riwayaKey
+        if (cachedNames?.let { it.first == key && it.second.isNotEmpty() } == true) return@withContext
+        val names = mushafDao.surahs(key).associate { it.num to it.name }
+        if (names.isNotEmpty()) cachedNames = key to names
     }
 
-    private fun getJuzForSura(db: SQLiteDatabase, sura: Int): Int {
-        db.rawQuery(
-            "SELECT num_joza FROM quran_ajzaa WHERE sura <= ? ORDER BY sura DESC LIMIT 1",
-            arrayOf(sura.toString()),
-        ).use { c -> if (c.moveToFirst()) return c.getInt(0) }
-        return 1
-    }
-
-    /** Fetches the Warsh text of a single aya from arabic_text. */
-    private fun getAyaText(db: SQLiteDatabase, sura: Int, aya: Int): String {
-        db.rawQuery(
-            "SELECT text FROM arabic_text WHERE sura=? AND ayah=? LIMIT 1",
-            arrayOf(sura.toString(), aya.toString()),
-        ).use { c ->
-            if (c.moveToFirst()) return c.getString(0).trim()
-        }
-        return ""
-    }
-
-    suspend fun sessionMeta(startSura: Int, startAya: Int, endSura: Int): SessionMeta =
-        withContext(Dispatchers.IO) {
-            openQuranDb().use { db ->
-                val names = cachedSuraNames
-                    ?: loadSuraNames(db).also { cachedSuraNames = it }
-                SessionMeta(
-                    startSuraName = names[startSura].orEmpty(),
-                    endSuraName   = names[endSura].orEmpty(),
-                    juzNum        = getJuzForSura(db, startSura),
-                    firstAyaText  = getAyaText(db, startSura, startAya),
-                )
+    private suspend fun suraNames(key: String): Map<Int, String> {
+        cachedNames?.let { (r, n) -> if (r == key && n.isNotEmpty()) return n }
+        return withContext(Dispatchers.IO) {
+            mushafDao.surahs(key).associate { it.num to it.name }.also {
+                if (it.isNotEmpty()) cachedNames = key to it
             }
         }
+    }
 
     // ── Today / session flow wrappers ─────────────────────────────────────────
 
@@ -138,6 +76,20 @@ class KhatmahRepository(private val context: Context) {
     suspend fun markSessionRead(id: Long) = withContext(Dispatchers.IO) {
         khatmahDb.dao().markRead(id)
     }
+
+    suspend fun sessionMeta(startSura: Int, startAya: Int, endSura: Int): SessionMeta =
+        withContext(Dispatchers.IO) {
+            val key    = riwayaKey
+            val names  = suraNames(key)
+            val juzNum = mushafDao.divisionForVerse(key, DivType.JUZ, startSura, startAya)?.num ?: 1
+            val text   = mushafDao.verse(key, startSura, startAya)?.text.orEmpty()
+            SessionMeta(
+                startSuraName = names[startSura].orEmpty(),
+                endSuraName   = names[endSura].orEmpty(),
+                juzNum        = juzNum,
+                firstAyaText  = text,
+            )
+        }
 
     // ── Public calculations (pure, no IO) ─────────────────────────────────────
 
@@ -178,15 +130,16 @@ class KhatmahRepository(private val context: Context) {
     // ── Persist ───────────────────────────────────────────────────────────────
 
     /**
-     * Builds and persists a full Khatmah schedule.
+     * Builds and persists a full Khatmah schedule for the currently selected riwaya.
      * Runs entirely on [Dispatchers.IO]; returns a [KhatmahResult] with the new
      * row ID and UI-ready session snapshots for the success dialog.
      */
     suspend fun createKhatmah(startJuz: Int, dailyAjza: Int, dailyArba: Int): KhatmahResult =
         withContext(Dispatchers.IO) {
-            val (sessions, suraNames) = openQuranDb().use { qDb ->
-                buildSessions(qDb, startJuz, dailyAjza, dailyArba) to loadSuraNames(qDb)
-            }
+            val key      = riwayaKey
+            val names    = suraNames(key)
+            val sessions = buildSessions(key, startJuz, dailyAjza, dailyArba)
+
             val id = khatmahDb.dao().insertKhatmah(
                 KhatmahEntity(
                     startJuz  = startJuz,
@@ -200,9 +153,9 @@ class KhatmahRepository(private val context: Context) {
             val displays = sessions.map { s ->
                 SessionDisplay(
                     dayNumber     = s.dayNumber,
-                    startSuraName = suraNames[s.startSura] ?: s.startSura.toString(),
+                    startSuraName = names[s.startSura] ?: s.startSura.toString(),
                     startAya      = s.startAya,
-                    endSuraName   = suraNames[s.endSura] ?: s.endSura.toString(),
+                    endSuraName   = names[s.endSura] ?: s.endSura.toString(),
                     endAya        = s.endAya,
                     startPage     = s.startPage,
                     endPage       = s.endPage,
@@ -220,41 +173,127 @@ class KhatmahRepository(private val context: Context) {
     private fun snapToValid(rub: Int): Pair<Int, Int> =
         (rub / 8).coerceAtMost(10) to (rub % 8)
 
-    private fun buildSessions(
-        qDb:       SQLiteDatabase,
+    /**
+     * Builds session entities from division markers in [MushafDb].
+     *
+     * Warsh uses THUMN divisions (480 entries → finer granularity).
+     * Hafs  uses RUB  divisions (240 entries → rub' al-hizb).
+     *
+     * Daily segment count:
+     *   Warsh: dailyAjza × 16 + dailyArba × 2   (thumn units; 1 rub' = 2 thumn)
+     *   Hafs : dailyAjza ×  8 + dailyArba        (rub'  units)
+     */
+    private suspend fun buildSessions(
+        key:       String,
         startJuz:  Int,
         dailyAjza: Int,
         dailyArba: Int,
     ): List<KhatmahSessionEntity> {
-        val athman            = loadAthmanRows(qDb)
-        val (juzSura, juzAya) = getJuzStart(qDb, startJuz)
-        val startIdx          = athman.indexOfFirst {
-            it.startSura == juzSura && it.startAya == juzAya
+        val warsh      = key == Riwaya.WARSH.dbKey
+        val divType    = if (warsh) DivType.THUMN else DivType.RUB
+        val divStarts  = mushafDao.divisions(key, divType)       // sorted by num → ascending sura/aya
+        val juzStarts  = mushafDao.divisions(key, DivType.JUZ)
+        val verses     = mushafDao.verseIdentities(key)          // sorted by sura, aya
+        val pageStarts = mushafDao.allPageStarts(key)            // sorted by page_num
+
+        val juzStart = juzStarts.find { it.num == startJuz } ?: juzStarts.firstOrNull()
+        ?: return emptyList()
+
+        val segments = buildSegments(divStarts, verses, pageStarts)
+
+        val startIdx = segments.indexOfFirst { s ->
+            s.startSura > juzStart.sura ||
+                    (s.startSura == juzStart.sura && s.startAya >= juzStart.aya)
         }.coerceAtLeast(0)
 
-        // 1 Rub' = 2 athman rows; floor to at least 2 (1 Rub' minimum)
-        val dailyAthman = (dailyAjza * 16 + dailyArba * 2).coerceAtLeast(2)
-        val relevant    = athman.subList(startIdx, athman.size)
-        val sessions    = mutableListOf<KhatmahSessionEntity>()
-        var offset      = 0
-        var dayNum      = 1
+        // Units: 1 rub' = 2 thumn; daily reading expressed in base segment units.
+        val dailySegs = if (warsh) {
+            (dailyAjza * 16 + dailyArba * 2).coerceAtLeast(2)
+        } else {
+            (dailyAjza * 8 + dailyArba).coerceAtLeast(1)
+        }
+
+        val relevant = segments.subList(startIdx, segments.size)
+        val result   = mutableListOf<KhatmahSessionEntity>()
+        var offset   = 0
+        var dayNum   = 1
 
         while (offset < relevant.size) {
-            val chunkEnd = min(offset + dailyAthman - 1, relevant.size - 1)
-            val first    = relevant[offset]
-            val last     = relevant[chunkEnd]
-            sessions += KhatmahSessionEntity(
+            val end   = min(offset + dailySegs - 1, relevant.size - 1)
+            val first = relevant[offset]
+            val last  = relevant[end]
+            result += KhatmahSessionEntity(
                 khatmahId = 0L,
                 dayNumber = dayNum++,
                 startSura = first.startSura,
                 startAya  = first.startAya,
                 endSura   = last.endSura,
                 endAya    = last.endAya,
-                startPage = getStartPage(qDb, first.startSura, first.startAya),
+                startPage = pageForVerse(pageStarts, first.startSura, first.startAya),
                 endPage   = last.endPage,
             )
-            offset += dailyAthman
+            offset += dailySegs
         }
-        return sessions
+        return result
+    }
+
+    /**
+     * Converts flat division start markers into (start → end) [AthmanRow] pairs.
+     * End of segment i = verse immediately before start of segment i+1.
+     * End of last segment = last verse of the Quran.
+     */
+    private fun buildSegments(
+        starts:     List<DivisionEntity>,
+        verses:     List<MushafDao.VerseIdentity>,
+        pageStarts: List<PageStartEntity>,
+    ): List<AthmanRow> {
+        if (starts.isEmpty() || verses.isEmpty()) return emptyList()
+        return starts.mapIndexedNotNull { i, s ->
+            val endVerse = if (i < starts.lastIndex) {
+                val next = starts[i + 1]
+                verseBefore(verses, next.sura, next.aya)
+            } else {
+                verses.last()
+            } ?: return@mapIndexedNotNull null
+            AthmanRow(
+                startSura = s.sura,
+                startAya  = s.aya,
+                endSura   = endVerse.sura,
+                endAya    = endVerse.aya,
+                endPage   = pageForVerse(pageStarts, endVerse.sura, endVerse.aya),
+            )
+        }
+    }
+
+    /**
+     * Binary search — returns the last [MushafDao.VerseIdentity] strictly before (sura, aya).
+     * [verses] must be sorted by sura then aya.
+     */
+    private fun verseBefore(
+        verses: List<MushafDao.VerseIdentity>,
+        sura:   Int,
+        aya:    Int,
+    ): MushafDao.VerseIdentity? {
+        var lo = 0; var hi = verses.lastIndex; var best: MushafDao.VerseIdentity? = null
+        while (lo <= hi) {
+            val mid = (lo + hi) ushr 1
+            val v   = verses[mid]
+            if (v.sura < sura || (v.sura == sura && v.aya < aya)) { best = v; lo = mid + 1 }
+            else hi = mid - 1
+        }
+        return best
+    }
+
+    /**
+     * Returns the 1-based page number for (sura, aya) using pre-loaded [pageStarts]
+     * (sorted by page_num, which is monotonically increasing with sura/aya in any mushaf).
+     */
+    private fun pageForVerse(pageStarts: List<PageStartEntity>, sura: Int, aya: Int): Int {
+        var result = pageStarts.firstOrNull()?.pageNum ?: 1
+        for (ps in pageStarts) {
+            if (ps.sura < sura || (ps.sura == sura && ps.aya <= aya)) result = ps.pageNum
+            else break
+        }
+        return result
     }
 }
