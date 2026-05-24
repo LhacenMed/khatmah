@@ -3,21 +3,20 @@ package com.lhacenmed.khatmah.feature.quran.data
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Typeface
+import androidx.core.content.edit
+import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
 import com.lhacenmed.khatmah.feature.mushaf.data.db.PageEntity
 import com.lhacenmed.khatmah.feature.mushaf.data.db.VersePage
 import com.lhacenmed.khatmah.feature.mushaf.data.db.WordEntity
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
+import org.apache.commons.compress.archivers.sevenz.SevenZFile
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.concurrent.atomic.AtomicInteger
-import androidx.core.content.edit
-import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 
 // ── Download state ────────────────────────────────────────────────────────────
 
@@ -37,12 +36,13 @@ sealed class HafsQcf4DownloadState {
  * All assets are downloaded once — no internet connection required after that.
  *
  * Download strategy:
- *   Fonts (48 TTF files) — downloaded to [fontsDir]; loaded into a typeface LRU on demand.
- *   Page data (604 pages) — downloaded, parsed, and stored in [MushafDb] (mushaf_word table).
- *   Verse→page index     — derived from word data; stored in mushaf_verse_page table.
+ *   A single .7z bundle ([BUNDLE_URL]) containing:
+ *     fonts/ — 49 TTF files written to [fontsDir].
+ *     pages/ — 604 JSON files parsed and stored in [MushafDb] (mushaf_word table).
+ *   Verse→page index — derived from word data; stored in mushaf_verse_page table.
  *
  * Cache layout:
- *   [context.filesDir]/hafs-qcf4/fonts/  — 48 QCF4 TTF font files
+ *   [context.filesDir]/hafs-qcf4/fonts/  — 49 QCF4 TTF font files
  *   [MushafDb] (mushaf.db)               — page, word, and verse-page tables
  */
 class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4PageSource {
@@ -67,6 +67,30 @@ class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4Pag
         else HafsQcf4DownloadState.NotDownloaded
     )
     val downloadState = _downloadState.asStateFlow()
+
+    /**
+     * Opens a connection to [url], manually following cross-host redirects
+     * (Android's HttpURLConnection only auto-follows same-host redirects).
+     */
+    private fun openWithRedirects(url: String): HttpURLConnection {
+        var location = url
+        repeat(5) {
+            val conn = (URL(location).openConnection() as HttpURLConnection).apply {
+                instanceFollowRedirects = false
+                connectTimeout = 30_000
+                readTimeout    = 0
+            }
+            conn.connect()
+            val code = conn.responseCode
+            if (code in 300..399) {
+                val next = conn.getHeaderField("Location")
+                conn.disconnect()
+                if (next != null) { location = next; return@repeat }
+            }
+            return conn
+        }
+        error("Too many redirects for $url")
+    }
 
     // ── Public API ────────────────────────────────────────────────────────────
 
@@ -130,73 +154,100 @@ class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4Pag
     }
 
     /**
-     * Downloads all fonts (48 TTF) and all page JSONs (604 pages) in one shot.
-     * Fonts are stored to disk; pages are parsed and inserted into [MushafDb].
-     * Emits [HafsQcf4DownloadState] progress updates. Idempotent — skips existing assets.
+     * Downloads [BUNDLE_URL] (a single .7z containing fonts/ and pages/) to a temp file,
+     * then extracts in one streaming pass: TTF fonts are written to [fontsDir]; page JSONs
+     * are parsed and inserted into [MushafDb] inline. Progress is 0→1 based on bytes received.
+     * Idempotent — skips font files already on disk.
      */
     fun downloadAll(): Flow<HafsQcf4DownloadState> = flow {
         emit(HafsQcf4DownloadState.Connecting)
         _downloadState.value = HafsQcf4DownloadState.Connecting
 
         fontsDir.mkdirs()
+        val tmpBundle = File(ctx.cacheDir, "hafs_qcf4_bundle.7z")
+        tmpBundle.delete()
 
-        val fontTargets    = ALL_FONT_FILES.map { "$CDN_FONTS/$it" to File(fontsDir, it) }
-        val existingFonts  = fontTargets.count { (_, f) -> f.exists() }
-        // Non-suspend DB call — safe on IO thread (flowOn ensures IO context).
-        val existingNums   = dao.existingPageNums(RIWAYA).toHashSet()
-        val missingPages   = (1..PAGE_COUNT).filter { it !in existingNums }
-        val total          = ALL_FONT_FILES.size + PAGE_COUNT
-        val completed      = AtomicInteger(existingFonts + existingNums.size)
-
-        val initProgress = completed.get().toFloat() / total
-        emit(HafsQcf4DownloadState.Downloading(initProgress))
-        _downloadState.value = HafsQcf4DownloadState.Downloading(initProgress)
-
-        var error: HafsQcf4DownloadState.Error? = null
-        val sem = Semaphore(CONCURRENCY)
-
-        coroutineScope {
-            val fontJobs = fontTargets.map { (url, dest) ->
-                async(Dispatchers.IO) {
-                    if (dest.exists()) return@async
-                    sem.withPermit {
-                        runCatching { fetch(url, dest) }.onFailure {
-                            error = HafsQcf4DownloadState.Error("Failed ${dest.name}: ${it.message}")
-                        }
-                    }
-                    val p = completed.incrementAndGet().toFloat() / total
-                    _downloadState.value = HafsQcf4DownloadState.Downloading(p)
-                }
-            }
-
-            val pageJobs = missingPages.map { pageNum ->
-                async(Dispatchers.IO) {
-                    sem.withPermit {
-                        runCatching {
-                            val json = fetchString("$CDN_DATA/pages/%03d.json".format(pageNum))
-                            val page = JSONObject(json).toQcf4Page()
-                            dao.insertPageWithWords(
-                                PageEntity(RIWAYA, page.page, page.font),
-                                buildWordEntities(page),
+        // ── Phase 1: Stream bundle to disk with byte-level progress ───────────
+        try {
+            val conn = openWithRedirects(BUNDLE_URL)
+            val totalBytes = conn.contentLengthLong.takeIf { it > 0 }
+            var received   = 0L
+            try {
+                conn.inputStream.use { input ->
+                    tmpBundle.outputStream().use { out ->
+                        val buf = ByteArray(65_536)
+                        var n: Int
+                        while (input.read(buf).also { n = it } != -1) {
+                            out.write(buf, 0, n)
+                            received += n
+                            _downloadState.value = HafsQcf4DownloadState.Downloading(
+                                totalBytes?.let { (received.toFloat() / it).coerceIn(0f, 0.99f) } ?: 0f
                             )
-                        }.onFailure {
-                            error = HafsQcf4DownloadState.Error("Failed page $pageNum: ${it.message}")
                         }
                     }
-                    val p = completed.incrementAndGet().toFloat() / total
-                    _downloadState.value = HafsQcf4DownloadState.Downloading(p)
                 }
+            } finally {
+                conn.disconnect()
             }
-
-            (fontJobs + pageJobs).awaitAll()
+        } catch (e: Exception) {
+            tmpBundle.delete()
+            val err = HafsQcf4DownloadState.Error("Download failed: ${e.message}")
+            emit(err); _downloadState.value = err; return@flow
         }
 
-        error?.let { emit(it); _downloadState.value = it; return@flow }
+        emit(HafsQcf4DownloadState.Downloading(1f))
+        _downloadState.value = HafsQcf4DownloadState.Downloading(1f)
+
+        // ── Phase 2: Extract fonts to disk; parse and insert page JSONs ────────
+        // try/finally (not use{}) keeps us in the flow's coroutine scope so
+        // suspend calls like dao.insertPageWithWords() are valid inline.
+        var sz: SevenZFile? = null
+        try {
+            sz = SevenZFile(tmpBundle)
+            var entry = sz.nextEntry
+            while (entry != null) {
+                if (!entry.isDirectory) {
+                    val name = entry.name.replace('\\', '/')
+                    when {
+                        name.startsWith("fonts/") && name.endsWith(".ttf") -> {
+                            val dest = File(fontsDir, name.removePrefix("fonts/"))
+                            if (!dest.exists()) {
+                                val tmp = File(fontsDir, "${dest.name}.tmp")
+                                tmp.outputStream().use { out ->
+                                    val buf = ByteArray(8_192); var n: Int
+                                    while (sz.read(buf).also { n = it } != -1) out.write(buf, 0, n)
+                                }
+                                tmp.renameTo(dest)
+                            }
+                            // existing fonts: nextEntry() below advances past this entry
+                        }
+                        name.startsWith("pages/") && name.endsWith(".json") -> {
+                            val baos = ByteArrayOutputStream()
+                            val buf  = ByteArray(8_192); var n: Int
+                            while (sz.read(buf).also { n = it } != -1) baos.write(buf, 0, n)
+                            runCatching {
+                                val page = JSONObject(baos.toString("UTF-8")).toQcf4Page()
+                                dao.insertPageWithWords(
+                                    PageEntity(RIWAYA, page.page, page.font),
+                                    buildWordEntities(page),
+                                )
+                            }
+                        }
+                    }
+                }
+                entry = sz.nextEntry
+            }
+        } catch (e: Exception) {
+            val err = HafsQcf4DownloadState.Error("Extract failed: ${e.message}")
+            emit(err); _downloadState.value = err
+            return@flow
+        } finally {
+            runCatching { sz?.close() }
+            runCatching { tmpBundle.delete() }
+        }
 
         // Rebuild verse→page index from all words now in DB.
-        // Handles resumed downloads correctly by considering all pages, not just new ones.
         rebuildVersePages()
-
         prefs.edit { putBoolean(KEY_DB_READY, true) }
         emit(HafsQcf4DownloadState.Downloaded)
         _downloadState.value = HafsQcf4DownloadState.Downloaded
@@ -261,47 +312,17 @@ class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4Pag
         return entities
     }
 
-    /** Atomic binary file write: stream to .tmp then rename on success. */
-    private fun fetch(url: String, dest: File) {
-        val tmp  = File(dest.parent, "${dest.name}.tmp")
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 30_000
-            readTimeout    = 60_000
-            connect()
-        }
-        try {
-            conn.inputStream.use { it.copyTo(tmp.outputStream()) }
-        } finally {
-            conn.disconnect()
-        }
-        tmp.renameTo(dest)
-    }
-
-    /** Downloads a URL and returns the response body as a UTF-8 string. */
-    private fun fetchString(url: String): String {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 30_000
-            readTimeout    = 60_000
-            connect()
-        }
-        return try {
-            conn.inputStream.bufferedReader().readText()
-        } finally {
-            conn.disconnect()
-        }
-    }
-
     // ── Constants ─────────────────────────────────────────────────────────────
 
     companion object {
         const val PAGE_COUNT = 604
 
         private const val RIWAYA       = "hafs"
-        private const val CONCURRENCY  = 6
         private const val PREFS_NAME   = "hafs_qcf4_prefs"
         private const val KEY_DB_READY = "db_ready"
-        private const val CDN_FONTS = "https://cdn.jsdelivr.net/gh/LhacenMed/khatmah-hafs-qcf4@main/fonts"
-        private const val CDN_DATA  = "https://cdn.jsdelivr.net/gh/LhacenMed/khatmah-hafs-qcf4@main"
+        private const val CDN_DATA     = "https://cdn.jsdelivr.net/gh/LhacenMed/khatmah-hafs-qcf4@main"
+        private const val BUNDLE_URL =
+            "https://raw.githubusercontent.com/LhacenMed/khatmah-hafs-qcf4/main/hafs.7z"
 
         /** 47 numbered Hafs fonts + QCF4_QBSML + QCF2_QBSML (surah container) = 49 total. */
         val ALL_FONT_FILES: List<String> = buildList {

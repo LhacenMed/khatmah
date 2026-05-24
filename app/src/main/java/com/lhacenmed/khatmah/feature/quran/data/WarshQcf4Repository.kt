@@ -11,13 +11,12 @@ import com.lhacenmed.khatmah.feature.mushaf.data.db.VersePage
 import com.lhacenmed.khatmah.feature.mushaf.data.db.WordEntity
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
+import org.apache.commons.compress.archivers.sevenz.SevenZFile
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.concurrent.atomic.AtomicInteger
 
 // ── Download state ────────────────────────────────────────────────────────────
 
@@ -49,6 +48,30 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
         else WarshQcf4DownloadState.NotDownloaded
     )
     val downloadState = _downloadState.asStateFlow()
+
+    /**
+     * Opens a connection to [url], manually following cross-host redirects
+     * (Android's HttpURLConnection only auto-follows same-host redirects).
+     */
+    private fun openWithRedirects(url: String): HttpURLConnection {
+        var location = url
+        repeat(5) {
+            val conn = (URL(location).openConnection() as HttpURLConnection).apply {
+                instanceFollowRedirects = false
+                connectTimeout = 30_000
+                readTimeout    = 0
+            }
+            conn.connect()
+            val code = conn.responseCode
+            if (code in 300..399) {
+                val next = conn.getHeaderField("Location")
+                conn.disconnect()
+                if (next != null) { location = next; return@repeat }
+            }
+            return conn
+        }
+        error("Too many redirects for $url")
+    }
 
     // ── Public API ────────────────────────────────────────────────────────────
 
@@ -92,66 +115,100 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
         }
     }
 
+    /**
+     * Downloads [BUNDLE_URL] (a single .7z containing fonts/ and pages/) to a temp file,
+     * then extracts in one streaming pass: TTF fonts are written to [fontsDir]; page JSONs
+     * are parsed and inserted into [MushafDb] inline. Progress is 0→1 based on bytes received.
+     * Idempotent — skips font files already on disk.
+     */
     fun downloadAll(): Flow<WarshQcf4DownloadState> = flow {
         emit(WarshQcf4DownloadState.Connecting)
         _downloadState.value = WarshQcf4DownloadState.Connecting
 
         fontsDir.mkdirs()
+        val tmpBundle = File(ctx.cacheDir, "warsh_qcf4_bundle.7z")
+        tmpBundle.delete()
 
-        val fontTargets   = ALL_FONT_FILES.map { "$CDN_FONTS/$it" to File(fontsDir, it) }
-        val existingFonts = fontTargets.count { (_, f) -> f.exists() }
-        val existingNums  = dao.existingPageNums(RIWAYA).toHashSet()
-        val missingPages  = (1..PAGE_COUNT).filter { it !in existingNums }
-        val total         = ALL_FONT_FILES.size + PAGE_COUNT
-        val completed     = AtomicInteger(existingFonts + existingNums.size)
-
-        val initProgress = completed.get().toFloat() / total
-        emit(WarshQcf4DownloadState.Downloading(initProgress))
-        _downloadState.value = WarshQcf4DownloadState.Downloading(initProgress)
-
-        var error: WarshQcf4DownloadState.Error? = null
-        val sem = Semaphore(CONCURRENCY)
-
-        coroutineScope {
-            val fontJobs = fontTargets.map { (url, dest) ->
-                async(Dispatchers.IO) {
-                    if (dest.exists()) return@async
-                    sem.withPermit {
-                        runCatching { fetch(url, dest) }.onFailure {
-                            error = WarshQcf4DownloadState.Error("Failed ${dest.name}: ${it.message}")
-                        }
-                    }
-                    val p = completed.incrementAndGet().toFloat() / total
-                    _downloadState.value = WarshQcf4DownloadState.Downloading(p)
-                }
-            }
-
-            val pageJobs = missingPages.map { pageNum ->
-                async(Dispatchers.IO) {
-                    sem.withPermit {
-                        runCatching {
-                            val json = fetchString("$CDN_DATA/pages/%03d.json".format(pageNum))
-                            val page = JSONObject(json).toQcf4Page()
-                            dao.insertPageWithWords(
-                                PageEntity(RIWAYA, page.page, page.font),
-                                buildWordEntities(page),
+        // ── Phase 1: Stream bundle to disk with byte-level progress ───────────
+        try {
+            val conn = openWithRedirects(BUNDLE_URL)
+            val totalBytes = conn.contentLengthLong.takeIf { it > 0 }
+            var received   = 0L
+            try {
+                conn.inputStream.use { input ->
+                    tmpBundle.outputStream().use { out ->
+                        val buf = ByteArray(65_536)
+                        var n: Int
+                        while (input.read(buf).also { n = it } != -1) {
+                            out.write(buf, 0, n)
+                            received += n
+                            _downloadState.value = WarshQcf4DownloadState.Downloading(
+                                totalBytes?.let { (received.toFloat() / it).coerceIn(0f, 0.99f) } ?: 0f
                             )
-                        }.onFailure {
-                            error = WarshQcf4DownloadState.Error("Failed page $pageNum: ${it.message}")
                         }
                     }
-                    val p = completed.incrementAndGet().toFloat() / total
-                    _downloadState.value = WarshQcf4DownloadState.Downloading(p)
                 }
+            } finally {
+                conn.disconnect()
             }
-
-            (fontJobs + pageJobs).awaitAll()
+        } catch (e: Exception) {
+            tmpBundle.delete()
+            val err = WarshQcf4DownloadState.Error("Download failed: ${e.message}")
+            emit(err); _downloadState.value = err; return@flow
         }
 
-        error?.let { emit(it); _downloadState.value = it; return@flow }
+        emit(WarshQcf4DownloadState.Downloading(1f))
+        _downloadState.value = WarshQcf4DownloadState.Downloading(1f)
+
+        // ── Phase 2: Extract fonts to disk; parse and insert page JSONs ────────
+        // try/finally (not use{}) keeps us in the flow's coroutine scope so
+        // suspend calls like dao.insertPageWithWords() are valid inline.
+        var sz: SevenZFile? = null
+        try {
+            sz = SevenZFile(tmpBundle)
+            var entry = sz.nextEntry
+            while (entry != null) {
+                if (!entry.isDirectory) {
+                    val name = entry.name.replace('\\', '/')
+                    when {
+                        name.startsWith("fonts/") && name.endsWith(".ttf") -> {
+                            val dest = File(fontsDir, name.removePrefix("fonts/"))
+                            if (!dest.exists()) {
+                                val tmp = File(fontsDir, "${dest.name}.tmp")
+                                tmp.outputStream().use { out ->
+                                    val buf = ByteArray(8_192); var n: Int
+                                    while (sz.read(buf).also { n = it } != -1) out.write(buf, 0, n)
+                                }
+                                tmp.renameTo(dest)
+                            }
+                            // existing fonts: nextEntry() below advances past this entry
+                        }
+                        name.startsWith("pages/") && name.endsWith(".json") -> {
+                            val baos = ByteArrayOutputStream()
+                            val buf  = ByteArray(8_192); var n: Int
+                            while (sz.read(buf).also { n = it } != -1) baos.write(buf, 0, n)
+                            runCatching {
+                                val page = JSONObject(baos.toString("UTF-8")).toQcf4Page()
+                                dao.insertPageWithWords(
+                                    PageEntity(RIWAYA, page.page, page.font),
+                                    buildWordEntities(page),
+                                )
+                            }
+                        }
+                    }
+                }
+                entry = sz.nextEntry
+            }
+        } catch (e: Exception) {
+            val err = WarshQcf4DownloadState.Error("Extract failed: ${e.message}")
+            emit(err); _downloadState.value = err
+            return@flow
+        } finally {
+            runCatching { sz?.close() }
+            runCatching { tmpBundle.delete() }
+        }
 
         rebuildVersePages()
-
         prefs.edit { putBoolean(KEY_DB_READY, true) }
         emit(WarshQcf4DownloadState.Downloaded)
         _downloadState.value = WarshQcf4DownloadState.Downloaded
@@ -167,6 +224,10 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
+    /**
+     * Derives the aya→page index from all words in DB and inserts into mushaf_verse_page.
+     * Uses MIN(page_num) per aya so long ayas that span pages map to their first page.
+     */
     private suspend fun rebuildVersePages() {
         val rows     = dao.verseKeyRows(RIWAYA)
         val verseMap = HashMap<Long, Int>(6400)
@@ -187,6 +248,7 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
         if (pages.isNotEmpty()) dao.insertVersePages(pages)
     }
 
+    /** Maps a [Qcf4Page] to a flat list of [WordEntity] rows ready for DB insertion. */
     private fun buildWordEntities(page: Qcf4Page): List<WordEntity> {
         val entities = ArrayList<WordEntity>(page.lines.sumOf { it.words.size })
         page.lines.forEachIndexed { lineIdx, line ->
@@ -212,33 +274,17 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
         return entities
     }
 
-    private fun fetch(url: String, dest: File) {
-        val tmp  = File(dest.parent, "${dest.name}.tmp")
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 30_000; readTimeout = 60_000; connect()
-        }
-        try { conn.inputStream.use { it.copyTo(tmp.outputStream()) } } finally { conn.disconnect() }
-        tmp.renameTo(dest)
-    }
-
-    private fun fetchString(url: String): String {
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 30_000; readTimeout = 60_000; connect()
-        }
-        return try { conn.inputStream.bufferedReader().readText() } finally { conn.disconnect() }
-    }
-
     // ── Constants ─────────────────────────────────────────────────────────────
 
     companion object {
         const val PAGE_COUNT = 604
 
         private const val RIWAYA       = "warsh_qcf4"
-        private const val CONCURRENCY  = 6
         private const val PREFS_NAME   = "warsh_qcf4_prefs"
         private const val KEY_DB_READY = "db_ready"
         private const val CDN_DATA     = "https://cdn.jsdelivr.net/gh/LhacenMed/khatmah-warsh-qcf4@main"
-        private const val CDN_FONTS    = "https://cdn.jsdelivr.net/gh/LhacenMed/khatmah-warsh-qcf4@main/fonts"
+        private const val BUNDLE_URL =
+            "https://raw.githubusercontent.com/LhacenMed/khatmah-warsh-qcf4/main/warsh.7z"
 
         /** 50 numbered Warsh fonts + QCF4_QBSML + QCF2_QBSML (surah container) = 52 total. */
         val ALL_FONT_FILES: List<String> = buildList {

@@ -16,7 +16,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.ui.theme.WarshFamily
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 import com.lhacenmed.khatmah.feature.today.TodayViewModel
+import androidx.compose.runtime.collectAsState
+import com.lhacenmed.khatmah.core.ui.theme.HafsFamily
 
 /** Returns at most [maxWords] space-separated words from [text], appending "…" if truncated. */
 private fun truncateAya(text: String, maxWords: Int = 4): String {
@@ -30,8 +34,9 @@ internal fun SessionCard(
     onMarkRead: () -> Unit,
     onRead:     () -> Unit,
 ) {
-    val sess = state.session
-    val e    = sess.entity
+    val sess   = state.session
+    val e      = sess.entity
+    val riwaya = MushafPrefs.selected.collectAsState().value.riwaya
 
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -60,7 +65,10 @@ internal fun SessionCard(
                 Text(
                     text      = truncateAya(sess.firstAyaText),
                     style     = TextStyle(
-                        fontFamily    = WarshFamily,
+                        fontFamily    = when (riwaya) {
+                            Riwaya.WARSH -> WarshFamily
+                            Riwaya.HAFS  -> HafsFamily
+                        },
                         fontSize      = 26.sp,
                         lineHeight    = 42.sp,
                         textDirection = TextDirection.Rtl,
