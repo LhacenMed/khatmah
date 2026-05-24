@@ -21,11 +21,11 @@ import java.net.URL
 // ── Download state ────────────────────────────────────────────────────────────
 
 sealed class WarshQcf4DownloadState {
-    object NotDownloaded                        : WarshQcf4DownloadState()
-    object Connecting                           : WarshQcf4DownloadState()
-    data class Downloading(val progress: Float) : WarshQcf4DownloadState()
-    object Downloaded                           : WarshQcf4DownloadState()
-    data class Error(val message: String)       : WarshQcf4DownloadState()
+    object NotDownloaded                                                  : WarshQcf4DownloadState()
+    object Connecting                                                     : WarshQcf4DownloadState()
+    data class Downloading(val progress: Float?, val log: String = "")    : WarshQcf4DownloadState()
+    object Downloaded                                                     : WarshQcf4DownloadState()
+    data class Error(val message: String)                                 : WarshQcf4DownloadState()
 }
 
 // ── Repository ────────────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
 
         // ── Phase 1: Stream bundle to disk with byte-level progress ───────────
         try {
-            val conn = openWithRedirects(BUNDLE_URL)
+            val conn       = openWithRedirects(BUNDLE_URL)
             val totalBytes = conn.contentLengthLong.takeIf { it > 0 }
             var received   = 0L
             try {
@@ -143,7 +143,8 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
                             out.write(buf, 0, n)
                             received += n
                             _downloadState.value = WarshQcf4DownloadState.Downloading(
-                                totalBytes?.let { (received.toFloat() / it).coerceIn(0f, 0.99f) } ?: 0f
+                                progress = totalBytes?.let { (received.toFloat() / it).coerceIn(0f, 0.99f) },
+                                log      = "Downloading files..."
                             )
                         }
                     }
@@ -157,14 +158,13 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
             emit(err); _downloadState.value = err; return@flow
         }
 
-        emit(WarshQcf4DownloadState.Downloading(1f))
-        _downloadState.value = WarshQcf4DownloadState.Downloading(1f)
-
         // ── Phase 2: Extract fonts to disk; parse and insert page JSONs ────────
         // try/finally (not use{}) keeps us in the flow's coroutine scope so
         // suspend calls like dao.insertPageWithWords() are valid inline.
         var sz: SevenZFile? = null
+        var pagesDone = 0
         try {
+            _downloadState.value = WarshQcf4DownloadState.Downloading(null, "Extracting fonts...")
             sz = SevenZFile(tmpBundle)
             var entry = sz.nextEntry
             while (entry != null) {
@@ -194,6 +194,12 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
                                     buildWordEntities(page),
                                 )
                             }
+                            pagesDone++
+                            if (pagesDone % 60 == 0 || pagesDone == PAGE_COUNT) {
+                                _downloadState.value = WarshQcf4DownloadState.Downloading(
+                                    null, "Importing pages: $pagesDone / $PAGE_COUNT"
+                                )
+                            }
                         }
                     }
                 }
@@ -208,6 +214,8 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
             runCatching { tmpBundle.delete() }
         }
 
+        // Rebuild verse→page index from all words now in DB.
+        _downloadState.value = WarshQcf4DownloadState.Downloading(null, "Building verse index...")
         rebuildVersePages()
         prefs.edit { putBoolean(KEY_DB_READY, true) }
         emit(WarshQcf4DownloadState.Downloaded)

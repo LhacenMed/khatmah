@@ -92,7 +92,7 @@ class PrintSelectViewModel(app: Application) : AndroidViewModel(app) {
     private fun WarshQcf4DownloadState.toPrintState(): PrintDownloadState = when (this) {
         is WarshQcf4DownloadState.NotDownloaded -> PrintDownloadState.NotDownloaded
         is WarshQcf4DownloadState.Connecting    -> PrintDownloadState.Connecting
-        is WarshQcf4DownloadState.Downloading   -> PrintDownloadState.Downloading(progress)
+        is WarshQcf4DownloadState.Downloading   -> PrintDownloadState.Downloading(progress, log)
         is WarshQcf4DownloadState.Downloaded    -> PrintDownloadState.Downloaded
         is WarshQcf4DownloadState.Error         -> PrintDownloadState.Error(message)
     }
@@ -100,7 +100,7 @@ class PrintSelectViewModel(app: Application) : AndroidViewModel(app) {
     private fun HafsQcf4DownloadState.toPrintState(): PrintDownloadState = when (this) {
         is HafsQcf4DownloadState.NotDownloaded -> PrintDownloadState.NotDownloaded
         is HafsQcf4DownloadState.Connecting    -> PrintDownloadState.Connecting
-        is HafsQcf4DownloadState.Downloading   -> PrintDownloadState.Downloading(progress)
+        is HafsQcf4DownloadState.Downloading   -> PrintDownloadState.Downloading(progress, log)
         is HafsQcf4DownloadState.Downloaded    -> PrintDownloadState.Downloaded
         is HafsQcf4DownloadState.Error         -> PrintDownloadState.Error(message)
     }

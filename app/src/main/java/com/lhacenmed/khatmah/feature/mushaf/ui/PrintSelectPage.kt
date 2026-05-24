@@ -1,5 +1,10 @@
 package com.lhacenmed.khatmah.feature.mushaf.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -81,11 +86,11 @@ private fun PrintCard(
     modifier: Modifier = Modifier,
 ) {
     val isAvailable  = state is PrintDownloadState.NotRequired || state is PrintDownloadState.Downloaded
+    val isActive     = state is PrintDownloadState.Downloading || state == PrintDownloadState.Connecting
     val borderColor  = if (isSelected) MaterialTheme.colorScheme.primary
     else MaterialTheme.colorScheme.outlineVariant
     val borderWidth  = if (isSelected) 2.dp else 1.dp
-    val contentAlpha = if (isAvailable || state is PrintDownloadState.Connecting ||
-        state is PrintDownloadState.Downloading) 1f else 0.6f
+    val contentAlpha = if (isAvailable || isActive) 1f else 0.6f
 
     OutlinedCard(
         onClick  = { if (isAvailable) onSelect() },
@@ -131,9 +136,9 @@ private fun PrintCard(
                     PrintDownloadState.NotDownloaded,
                     is PrintDownloadState.Error -> {
                         OutlinedButton(
-                            onClick      = onDownload,
+                            onClick        = onDownload,
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                            modifier     = Modifier.height(32.dp),
+                            modifier       = Modifier.height(32.dp),
                         ) {
                             Icon(
                                 imageVector        = Icons.Outlined.CloudDownload,
@@ -154,12 +159,57 @@ private fun PrintCard(
                         )
                     }
                     is PrintDownloadState.Downloading -> {
-                        CircularProgressIndicator(
-                            progress    = { state.progress },
-                            modifier    = Modifier.size(24.dp),
-                            strokeWidth = 2.5.dp,
-                        )
+                        val pct = state.progress
+                        if (pct != null) {
+                            // Determinate: file download in progress — show percentage.
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(
+                                    progress    = { pct },
+                                    modifier    = Modifier.size(24.dp),
+                                    strokeWidth = 2.5.dp,
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text  = "${(pct * 100).toInt()}%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        } else {
+                            // Indeterminate: extraction / DB import / index rebuild.
+                            CircularProgressIndicator(
+                                modifier    = Modifier.size(24.dp),
+                                strokeWidth = 2.5.dp,
+                            )
+                        }
                     }
+                }
+            }
+
+            // ── Log box — slides down from under the card content ─────────────
+            AnimatedVisibility(
+                visible = isActive,
+                enter   = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                exit    = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+            ) {
+                val logText = when (val s = state) {
+                    PrintDownloadState.Connecting     -> "Connecting..."
+                    is PrintDownloadState.Downloading -> s.log.ifBlank { "Processing..." }
+                    else                              -> "Processing..."
+                }
+                Surface(
+                    color    = MaterialTheme.colorScheme.surfaceVariant,
+                    shape    = MaterialTheme.shapes.extraSmall,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp),
+                ) {
+                    Text(
+                        text     = logText,
+                        style    = MaterialTheme.typography.labelSmall,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                    )
                 }
             }
 
