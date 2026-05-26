@@ -16,10 +16,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.ui.theme.WarshFamily
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 import com.lhacenmed.khatmah.feature.today.TodayViewModel
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import com.lhacenmed.khatmah.core.ui.theme.HafsFamily
 
 /** Returns at most [maxWords] space-separated words from [text], appending "…" if truncated. */
@@ -36,7 +35,10 @@ internal fun SessionCard(
 ) {
     val sess   = state.session
     val e      = sess.entity
-    val riwaya = MushafPrefs.selected.collectAsState().value.riwaya
+    // Use the riwaya the khatmah was created with — not the currently selected one.
+    val riwaya = remember(state.khatmah.riwaya) {
+        if (state.khatmah.riwaya == "hafs") Riwaya.HAFS else Riwaya.WARSH
+    }
 
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {

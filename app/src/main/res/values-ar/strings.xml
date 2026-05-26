@@ -515,4 +515,7 @@
 
     <string name="print_hafs_text">نص حفص</string>
     <string name="print_hafs_text_desc">قراءة نصية بخط عثماني - رواية حفص</string>
+
+    <string name="today_riwaya_mismatch_title">رواية مختلفة</string>
+    <string name="today_riwaya_mismatch_msg">هذه الختمة أُنشئت بقراءة %1$s. اختر مصحفاً بنفس القراءة للمتابعة، أو أنشئ ختمة جديدة بالقراءة الحالية.</string>
 </resources>

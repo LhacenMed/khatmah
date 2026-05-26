@@ -146,6 +146,7 @@ class KhatmahRepository(private val context: Context) {
                     totalDays = sessions.size,
                     dailyAjza = dailyAjza,
                     dailyArba = dailyArba,
+                    riwaya    = key,
                 )
             )
             khatmahDb.dao().insertSessions(sessions.map { it.copy(khatmahId = id) })

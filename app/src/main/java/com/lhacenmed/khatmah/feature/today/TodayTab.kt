@@ -35,14 +35,26 @@ private fun TodayScreen(padding: PaddingValues) {
     val context = LocalContext.current
     val nav     = LocalNavController.current
     val vm: TodayViewModel = viewModel(factory = TodayViewModel.Factory(context))
-    val state       by vm.state.collectAsState()
-    val mushaf      by MushafPrefs.selected.collectAsState()
-    var showDlDialog by remember { mutableStateOf(false) }
+    val state  by vm.state.collectAsState()
+    val mushaf by MushafPrefs.selected.collectAsState()
+
+    var showDlDialog      by remember { mutableStateOf(false) }
+    // Non-null while the riwaya-mismatch dialog is visible; holds the triggering state.
+    var mismatchState by remember { mutableStateOf<TodayViewModel.UiState.Active?>(null) }
 
     if (showDlDialog) {
         MushafDownloadDialog(
             onSettings = { showDlDialog = false; nav.navigate(Route.MUSHAF_PRINTS) },
             onDismiss  = { showDlDialog = false },
+        )
+    }
+
+    mismatchState?.let { active ->
+        RiwayaMismatchDialog(
+            khatmahRiwayaKey = active.khatmah.riwaya,
+            onSettings       = { mismatchState = null; nav.navigate(Route.MUSHAF_PRINTS) },
+            onNewKhatmah     = { mismatchState = null; nav.navigate(Route.NEW_KHATMAH) },
+            onDismiss        = { mismatchState = null },
         )
     }
 
@@ -92,15 +104,20 @@ private fun TodayScreen(padding: PaddingValues) {
                     state      = s,
                     onMarkRead = { vm.markRead(s.session.entity.id) },
                     onRead     = {
-                        if (mushaf == MushafPrint.WarshText || mushaf == MushafPrint.HafsText) {
-                            showDlDialog = true
-                        } else {
-                            nav.navigate(
-                                Route.quranSessionReader(
-                                    s.session.entity.startPage,
-                                    s.session.entity.endPage,
+                        when {
+                            // Text-only prints have no page images to render.
+                            mushaf == MushafPrint.WarshText || mushaf == MushafPrint.HafsText ->
+                                showDlDialog = true
+                            // Selected print's riwaya doesn't match what this khatmah was built for.
+                            mushaf.riwaya.dbKey != s.khatmah.riwaya ->
+                                mismatchState = s
+                            else ->
+                                nav.navigate(
+                                    Route.quranSessionReader(
+                                        s.session.entity.startPage,
+                                        s.session.entity.endPage,
+                                    )
                                 )
-                            )
                         }
                     },
                 )
@@ -143,4 +160,42 @@ private fun MushafDownloadDialog(onSettings: () -> Unit, onDismiss: () -> Unit) 
             TextButton(onClick = onDismiss)  { Text(stringResource(R.string.today_cancel)) }
         },
     )
+}
+
+/**
+ * Shown when the user tries to read a session whose riwaya doesn't match
+ * the currently selected mushaf. Offers switching mushaf or starting a new khatmah.
+ */
+@Composable
+private fun RiwayaMismatchDialog(
+    khatmahRiwayaKey: String,
+    onSettings:       () -> Unit,
+    onNewKhatmah:     () -> Unit,
+    onDismiss:        () -> Unit,
+) {
+    val khatmahName = riwayaDisplayName(khatmahRiwayaKey)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.today_riwaya_mismatch_title)) },
+        text  = {
+            Text(stringResource(R.string.today_riwaya_mismatch_msg, khatmahName))
+        },
+        confirmButton = {
+            TextButton(onClick = onSettings) {
+                Text(stringResource(R.string.today_settings))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onNewKhatmah) {
+                Text(stringResource(R.string.today_new_khatmah))
+            }
+        },
+    )
+}
+
+/** Human-readable Arabic riwaya label for the mismatch dialog. */
+private fun riwayaDisplayName(key: String) = when (key) {
+    "hafs"  -> "حفص"
+    "warsh" -> "ورش"
+    else    -> key
 }
