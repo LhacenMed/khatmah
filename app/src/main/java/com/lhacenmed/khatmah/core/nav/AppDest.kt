@@ -31,6 +31,28 @@ private fun Any.autoRoute(): String =
 // ── AppTab ────────────────────────────────────────────────────────────────────
 
 /**
+ * A bottom navigation destination — tab bar metadata and composable screen content.
+ *
+ * Developer flow:
+ *  1. Create a NavTab val in ui/page/tabs/ using Route.* for route.
+ *  2. Append it to the tabs list in MainActivity.
+ *
+ * NavHost registration and bottom bar wiring derive from the list automatically.
+ * Routes must match Route.* constants to keep a single source of truth.
+ *
+ * @param route     Navigation route; use Route.* constants.
+ * @param iconRes   Drawable resource for the tab icon.
+ * @param labelRes  String resource for the tab label and system long-press tooltip.
+ * @param content   Screen composable; receives the Scaffold's inner PaddingValues.
+ */
+class NavTab(
+    val route: String,
+    @param:DrawableRes val iconRes: Int,
+    @param:StringRes val labelRes: Int,
+    val content: @Composable (PaddingValues) -> Unit,
+)
+
+/**
  * Self-contained bottom-navigation destination.
  *
  * Route is auto-derived from the object's class name unless overridden.
@@ -41,8 +63,8 @@ private fun Any.autoRoute(): String =
  *  2. Add to [AppRegistry.tabs] — done. No other file changes needed.
  */
 abstract class AppTab(
-    @DrawableRes val iconRes: Int,
-    @StringRes   val labelRes: Int,
+    @param:DrawableRes val iconRes: Int,
+    @param:StringRes   val labelRes: Int,
     val order: Int,
 ) {
     open val route: String get() = autoRoute()

@@ -1,5 +1,7 @@
 package com.lhacenmed.khatmah.core.nav
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarDetailPage
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.more.MoreTab
@@ -49,6 +51,7 @@ import com.lhacenmed.khatmah.feature.debug.FileBrowserPage
  * Onboarding pages are excluded intentionally — they form a linear flow with
  * special argument forwarding handled directly in [AppEntry].
  */
+@RequiresApi(Build.VERSION_CODES.O)
 object AppRegistry {
 
     /** Tab-bar destinations sorted by [AppTab.order]. */

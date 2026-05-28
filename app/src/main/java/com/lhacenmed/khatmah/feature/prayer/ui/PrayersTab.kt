@@ -28,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
-import com.lhacenmed.khatmah.core.nav.NavTab
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerRepository
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerTime
 import com.lhacenmed.khatmah.feature.prayer.data.toAmPm

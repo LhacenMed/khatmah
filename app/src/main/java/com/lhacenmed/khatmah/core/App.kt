@@ -47,7 +47,7 @@ class App : Application() {
         QadaaPrefs.init(this)
         MushafPrefs.init(this)
 
-        // ReminderPrefs must be initialised before AdhanPrefs (which reads from it).
+        // ReminderPrefs must be initialized before AdhanPrefs (which reads from it).
         ReminderPrefs.init(this)
         AdhanPrefs.init(this)
 
@@ -58,7 +58,7 @@ class App : Application() {
                 ReminderNotifier.ensureCustomAdhanChannel(this, cfg.sound.uri, cfg.sound.displayName)
         }
         ReminderScheduler.scheduleAll(this)
-        PrayerWidgetWorker.Companion.enqueue(this)
+        PrayerWidgetWorker.enqueue(this)
         // Register SVG decoder so FlagCDN SVGs render via AsyncImage.
         // Coil's default disk + memory cache handles flag caching automatically.
         Coil.setImageLoader {
