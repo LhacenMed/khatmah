@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckBox
@@ -27,15 +29,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.zIndex
 import androidx.core.view.ViewCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -266,15 +264,23 @@ fun AppEntry() {
 // ─── Main shell ───────────────────────────────────────────────────────────────
 
 /**
- * Tab host screen with Adhkar-aware top bar.
+ * Tab host screen with swipe-between-tabs support and Adhkar-aware top bar.
  *
  * [AdhkarViewModel] is activity-scoped so [AdhkarTab]'s grid and this top bar
  * share the exact same instance — selection state stays in sync automatically.
  *
+ * Swipe navigation:
+ *  • [HorizontalPager] drives the tab content with [beyondViewportPageCount] set to
+ *    keep all tabs composed, preserving scroll and ViewModel state identically to
+ *    the previous multi-Box approach.
+ *  • Pager settle → [onSelect] keeps parent state in sync.
+ *  • [selectedIndex] change → [pagerState.animateScrollToPage] handles nav-tap and
+ *    widget deep links.
+ *
  * Back-press priority:
  *  1. If Adhkar selection mode is active → exit selection mode.
  *  2. If on any non-primary tab → return to tab 0 (Today).
- *  3. Otherwise fall through to system back.
+ *  3. Otherwise, fall through to system back.
  */
 @Composable
 private fun MainScreen(
@@ -288,10 +294,33 @@ private fun MainScreen(
     val adhkarVm: AdhkarViewModel = viewModel(activity)
     val adhkarState by adhkarVm.uiState.collectAsState()
 
-    val currentTab     = tabs[selectedIndex]
+    // ── Pager ─────────────────────────────────────────────────────────────────
+    val pagerState   = rememberPagerState(
+        initialPage = selectedIndex,
+        pageCount   = { tabs.size },
+    )
+    val adhkarTabIdx = remember(tabs) { tabs.indexOfFirst { it.route == Route.ADHKAR } }
+
+    val currentTab     = tabs[pagerState.currentPage]
     val isAdhkarTab    = currentTab.route == Route.ADHKAR
     val isPrayersTab   = currentTab.route == Route.PRAYERS
     val inAdhkarSelect = isAdhkarTab && adhkarState.selectionMode
+
+    // Swipe settle → sync parent selected index.
+    // Also exits Adhkar selection mode when the user swipes away from that tab.
+    LaunchedEffect(pagerState.settledPage) {
+        if (pagerState.settledPage != adhkarTabIdx && adhkarState.selectionMode)
+            adhkarVm.exitSelectionMode()
+        if (pagerState.settledPage != selectedIndex)
+            onSelect(pagerState.settledPage)
+    }
+
+    // Nav tap / back press / widget deep link → jump instantly to the target page.
+    // Swipe animation is handled natively by HorizontalPager and is unaffected.
+    LaunchedEffect(selectedIndex) {
+        if (pagerState.currentPage != selectedIndex)
+            pagerState.scrollToPage(selectedIndex)
+    }
 
     BackHandler(enabled = selectedIndex != 0 || inAdhkarSelect) {
         when {
@@ -389,7 +418,8 @@ private fun MainScreen(
         bottomBar = {
             BottomNavBar(
                 screens      = tabs,
-                currentRoute = currentTab.route,
+                // Track pagerState.currentPage so the indicator updates live during a swipe.
+                currentRoute = tabs[pagerState.currentPage].route,
                 onNavigate   = { route ->
                     val idx = tabs.indexOfFirst { it.route == route }
                     if (idx >= 0) {
@@ -405,28 +435,20 @@ private fun MainScreen(
         },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
-            // All tabs stay composed — visibility, touch, and Z-order toggle on selection.
-            tabs.forEachIndexed { index, tab ->
-                val selected = index == selectedIndex
-                CompositionLocalProvider(LocalScrollToTop provides scrollToTopFlows[index]) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            // Selected tab sits on top — wins all touch dispatch.
-                            .zIndex(if (selected) 1f else 0f)
-                            .graphicsLayer { alpha = if (selected) 1f else 0f }
-                            // Safety net: hidden tabs consume residual pointer events.
-                            .then(
-                                if (!selected) Modifier.pointerInput(Unit) {
-                                    awaitPointerEventScope {
-                                        while (true) {
-                                            awaitPointerEvent(PointerEventPass.Initial)
-                                                .changes.forEach { it.consume() }
-                                        }
-                                    }
-                                } else Modifier
-                            ),
-                    ) { tab.content(innerPadding) }
+            // HorizontalPager replaces the previous multi-Box approach.
+            // beyondViewportPageCount = tabs.size - 1 keeps every tab composed at all times,
+            // preserving scroll positions and ViewModel state across tab switches — identical
+            // to the old behavior. userScrollEnabled is false during Adhkar selection mode
+            // to prevent accidental swipe-away from a multi-select session.
+            HorizontalPager(
+                state                   = pagerState,
+                modifier                = Modifier.fillMaxSize(),
+                beyondViewportPageCount = tabs.size - 1,
+                userScrollEnabled       = !inAdhkarSelect,
+                key                     = { tabs[it].route },
+            ) { page ->
+                CompositionLocalProvider(LocalScrollToTop provides scrollToTopFlows[page]) {
+                    tabs[page].content(innerPadding)
                 }
             }
 
