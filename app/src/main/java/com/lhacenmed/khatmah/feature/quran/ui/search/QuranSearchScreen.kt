@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.theme.HafsFamily
 import com.lhacenmed.khatmah.core.ui.theme.WarshFamily
@@ -89,13 +91,13 @@ class QuranSearchViewModel(app: Application) : AndroidViewModel(app) {
  * Full-screen Quran search page.
  *
  * Navigation contract:
- *   Opened by [QuranReaderScreen] via [Route.QURAN_SEARCH].
+ *   Opened by [QuranReaderScreen] via ["quran_search"].
  *   On result selection, writes [KEY_JUMP_SURA] + [KEY_JUMP_AYA] to the reader's
  *   SavedStateHandle before popping, so the reader scrolls to the correct page.
  *   Back with non-empty query → clears query. Back with empty query → pops.
  */
 @Composable
-fun QuranSearchPage() {
+fun QuranSearchScreen() {
     val vm:   QuranSearchViewModel = viewModel()
     val state by vm.state.collectAsState()
     val nav   = LocalNavController.current
@@ -265,4 +267,9 @@ private fun SearchResultRow(result: SearchResult, textFamily: FontFamily, onClic
             )
         },
     )
+}
+
+object QuranSearchPage : AppPage() {
+    override val route = "quran_search"
+    @Composable override fun Content(back: NavBackStackEntry) = QuranSearchScreen()
 }

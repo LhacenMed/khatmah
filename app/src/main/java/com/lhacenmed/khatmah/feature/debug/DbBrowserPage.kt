@@ -24,13 +24,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DbBrowserPage() {
+fun DbBrowserScreen() {
     val context     = LocalContext.current
     val nav         = LocalNavController.current
     val vm          = viewModel<DbBrowserViewModel>(factory = DbBrowserViewModel.Factory(context))
@@ -391,4 +393,9 @@ private fun DataCell(
             overflow   = TextOverflow.Ellipsis,
         )
     }
+}
+
+object DbBrowserPage : AppPage() {
+    override val route = "debug_db"
+    @Composable override fun Content(back: NavBackStackEntry) = DbBrowserScreen()
 }

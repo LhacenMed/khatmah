@@ -12,8 +12,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.nav.ShellRoutes
 
 /**
  * Onboarding step 1 — POST_NOTIFICATIONS runtime permission (API 33+).
@@ -28,8 +28,8 @@ fun NotificationPermissionPage() {
     val context = LocalContext.current
 
     // Navigate to the location step, removing this page from the back stack.
-    fun advance() = nav.navigate(Route.ONBOARDING_LOCATION) {
-        popUpTo(Route.ONBOARDING_NOTIFICATIONS) { inclusive = true }
+    fun advance() = nav.navigate(ShellRoutes.ONBOARDING_LOCATION) {
+        popUpTo(ShellRoutes.ONBOARDING_NOTIFICATIONS) { inclusive = true }
     }
 
     // Auto-advance when already granted or on pre-TIRAMISU devices.

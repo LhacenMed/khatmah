@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.IconButton
@@ -23,11 +25,10 @@ import com.lhacenmed.khatmah.feature.qadaa.data.PrayerDebt
 import com.lhacenmed.khatmah.feature.qadaa.ui.components.AddFastsSheet
 import com.lhacenmed.khatmah.feature.qadaa.ui.components.AddPrayersSheet
 import com.lhacenmed.khatmah.feature.qadaa.ui.components.MarkDoneSheet
-import com.lhacenmed.khatmah.core.nav.Route
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun QadaaPage() {
+fun QadaaScreen() {
     val nav = LocalNavController.current
     val vm: QadaaViewModel = viewModel()
     val state by vm.uiState.collectAsState()
@@ -52,7 +53,7 @@ fun QadaaPage() {
                 isTopLevel = false,
                 onBack     = { nav.popBackStack() },
                 actions    = {
-                    IconButton(onClick = { nav.navigate(Route.QADAA_HISTORY) }, tooltipText = "History") {
+                    IconButton(onClick = { nav.navigate("qadaa_history") }, tooltipText = "History") {
                         Icon(Icons.Outlined.History, contentDescription = "History")
                     }
                     IconButton(onClick = { showAddPrayers = true }, tooltipText = "Add missed prayers") {
@@ -92,7 +93,7 @@ fun QadaaPage() {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Prayers", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.weight(1f))
-                    TextButton(onClick = { nav.navigate(Route.QADAA_HISTORY) }) { Text("See all") }
+                    TextButton(onClick = { nav.navigate("qadaa_history") }) { Text("See all") }
                 }
             }
             item {
@@ -314,4 +315,9 @@ private fun FastDebtRow(fast: FastDebt, onMarkDone: () -> Unit) {
             ) { Text("Mark done") }
         }
     }
+}
+
+object QadaaPage : AppPage() {
+    override val route = "qadaa"
+    @Composable override fun Content(back: NavBackStackEntry) = QadaaScreen()
 }

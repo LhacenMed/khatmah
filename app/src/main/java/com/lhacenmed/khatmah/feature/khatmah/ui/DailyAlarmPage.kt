@@ -20,6 +20,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.feature.khatmah.ui.components.ReminderTimeItem
@@ -33,7 +35,7 @@ import com.lhacenmed.khatmah.shared.reminders.ReminderScheduler
  * Slot IDs follow the "khatmah:{index}" pattern seeded by [ReminderPrefs].
  */
 @Composable
-fun DailyAlarmPage() {
+fun DailyAlarmScreen() {
     val nav     = LocalNavController.current
     val context = LocalContext.current
 
@@ -84,4 +86,9 @@ fun DailyAlarmPage() {
             }
         }
     }
+}
+
+object DailyAlarmPage : AppPage() {
+    override val route = "daily_alarm"
+    @Composable override fun Content(back: NavBackStackEntry) = DailyAlarmScreen()
 }

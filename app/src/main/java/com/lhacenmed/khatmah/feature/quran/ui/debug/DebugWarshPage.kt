@@ -16,6 +16,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.PathParser
 import androidx.core.graphics.withTranslation
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.feature.quran.ui.reader.ParsedVector
 import com.lhacenmed.khatmah.feature.quran.ui.reader.VectorXmlParser
@@ -26,7 +28,7 @@ import java.io.File
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DebugWarshPage() {
+fun DebugWarshScreen() {
     val context = LocalContext.current
     val nav     = LocalNavController.current
 
@@ -112,4 +114,9 @@ fun VectorFileCanvas(vector: ParsedVector, modifier: Modifier = Modifier) {
             }
         }
     }
+}
+
+object DebugWarshPage : AppPage() {
+    override val route = "debug_warsh"
+    @Composable override fun Content(back: NavBackStackEntry) = DebugWarshScreen()
 }

@@ -74,6 +74,10 @@ import coil.compose.AsyncImage
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.feature.adhkar.data.AdhkarCategory
 import com.lhacenmed.khatmah.feature.adhkar.data.BuiltInDefaults
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.feature.adhkar.data.Dhikr
 import com.lhacenmed.khatmah.feature.adhkar.data.IconSource
@@ -98,7 +102,7 @@ import java.util.UUID
  * data on first composition — no LaunchedEffect patching is required.
  */
 @Composable
-fun AdhkarEditorPage(categoryId: String?) {
+fun AdhkarEditorScreen(categoryId: String?) {
     val activity = LocalActivity.current as ComponentActivity
     val vm: AdhkarViewModel = viewModel(activity)
     val state by vm.uiState.collectAsState()
@@ -473,5 +477,16 @@ private fun AdhkarEditorContent(
 
             Spacer(Modifier.height(16.dp))
         }
+    }
+}
+
+object AdhkarEditorPage : AppPage() {
+    override val route = "adhkar_editor?categoryId={categoryId}"
+    override val arguments = listOf(
+        navArgument("categoryId") { type = NavType.StringType; nullable = true }
+    )
+    fun routeFor(categoryId: String? = null) = "adhkar_editor?categoryId=${categoryId.orEmpty()}"
+    @Composable override fun Content(back: NavBackStackEntry) {
+        AdhkarEditorScreen(back.arguments?.getString("categoryId"))
     }
 }

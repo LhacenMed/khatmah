@@ -17,8 +17,8 @@ import com.lhacenmed.khatmah.core.motion.materialSharedAxisX
 import com.lhacenmed.khatmah.core.motion.materialSharedAxisZ
 import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranSessionReaderPage
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
 import com.lhacenmed.khatmah.feature.today.components.*
 
@@ -46,7 +46,7 @@ private fun TodayScreen(padding: PaddingValues) {
 
     if (showDlDialog) {
         MushafDownloadDialog(
-            onSettings = { showDlDialog = false; nav.navigate(Route.MUSHAF_PRINTS) },
+            onSettings = { showDlDialog = false; nav.navigate("mushaf_prints") },
             onDismiss  = { showDlDialog = false },
         )
     }
@@ -54,8 +54,8 @@ private fun TodayScreen(padding: PaddingValues) {
     mismatchState?.let { active ->
         RiwayaMismatchDialog(
             khatmahRiwayaKey = active.khatmah.riwaya,
-            onSettings       = { mismatchState = null; nav.navigate(Route.MUSHAF_PRINTS) },
-            onNewKhatmah     = { mismatchState = null; nav.navigate(Route.NEW_KHATMAH) },
+            onSettings       = { mismatchState = null; nav.navigate("mushaf_prints") },
+            onNewKhatmah     = { mismatchState = null; nav.navigate("new_khatmah") },
             onDismiss        = { mismatchState = null },
         )
     }
@@ -97,10 +97,10 @@ private fun TodayScreen(padding: PaddingValues) {
         ) { s ->
             when (s) {
                 is TodayViewModel.UiState.Loading   -> SkeletonCard()
-                is TodayViewModel.UiState.NoKhatmah -> NoKhatmahCard { nav.navigate(Route.NEW_KHATMAH) }
+                is TodayViewModel.UiState.NoKhatmah -> NoKhatmahCard { nav.navigate("new_khatmah") }
                 is TodayViewModel.UiState.AllRead   -> AllReadCard(
                     onDua        = { /* TODO: navigate to dua */ },
-                    onNewKhatmah = { nav.navigate(Route.NEW_KHATMAH) },
+                    onNewKhatmah = { nav.navigate("new_khatmah") },
                 )
                 is TodayViewModel.UiState.Active    -> SessionCard(
                     state      = s,
@@ -115,7 +115,7 @@ private fun TodayScreen(padding: PaddingValues) {
                                 mismatchState = s
                             else ->
                                 nav.navigate(
-                                    Route.quranSessionReader(
+                                    QuranSessionReaderPage.routeFor(
                                         s.session.entity.startPage,
                                         s.session.entity.endPage,
                                     )

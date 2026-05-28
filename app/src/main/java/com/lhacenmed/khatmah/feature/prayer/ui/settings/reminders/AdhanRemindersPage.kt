@@ -17,8 +17,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.AdhanSoundSelectionPage
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
@@ -28,7 +30,7 @@ import com.lhacenmed.khatmah.feature.prayer.notification.AdhanSound
 import com.lhacenmed.khatmah.shared.util.AdhanSoundFiles
 
 @Composable
-fun AdhanRemindersPage() {
+fun AdhanRemindersScreen() {
     val nav    = LocalNavController.current
     val configs by AdhanPrefs.flow.collectAsState()
 
@@ -65,7 +67,7 @@ fun AdhanRemindersPage() {
 
                 PreferenceItem(
                     title = stringResource(nameRes),
-                    onClick = { nav.navigate(Route.adhanSoundSelection(index)) },
+                    onClick = { nav.navigate(AdhanSoundSelectionPage.routeFor(index)) },
                     leadingIcon = {
                         val icon = when {
                             !isOn -> Icons.Outlined.NotificationsOff
@@ -112,4 +114,9 @@ private fun soundSubtitle(sound: AdhanSound): String = when (sound) {
     is AdhanSound.Device -> stringResource(R.string.adhan_sound_device)
     is AdhanSound.Asset  -> AdhanSoundFiles.getDisplayName(sound.filename)
     is AdhanSound.Custom -> sound.displayName
+}
+
+object AdhanRemindersPage : AppPage() {
+    override val route = "adhan_reminders"
+    @Composable override fun Content(back: NavBackStackEntry) = AdhanRemindersScreen()
 }

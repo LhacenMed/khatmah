@@ -17,6 +17,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -26,8 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.nav.NavPage
-import com.lhacenmed.khatmah.core.nav.Route
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.ui.components.IconButton
 import com.lhacenmed.khatmah.core.ui.components.LargeTopAppBar
 import com.lhacenmed.khatmah.core.ui.components.SingleChoiceItem
@@ -47,7 +48,9 @@ private val LANGUAGES = listOf(
  * Append LanguagePage to the pages list in AppEntry to register it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
-val LanguagePage = NavPage(route = Route.LANGUAGE) {
+object LanguagePage : AppPage() {
+    override val route = "language"
+    @Composable override fun Content(back: NavBackStackEntry) {
     val nav = LocalNavController.current
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
@@ -100,11 +103,12 @@ val LanguagePage = NavPage(route = Route.LANGUAGE) {
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
             }
             HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
-            TextButton(onClick = { nav.navigate(Route.ABOUT) }) {
+            TextButton(onClick = { nav.navigate("about") }) {
                 Text(stringResource(R.string.about_page))
             }
         }
     }
+}
 }
 
 /**

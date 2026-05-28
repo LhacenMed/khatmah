@@ -25,7 +25,6 @@ import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.core.nav.AppTab
-import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.feature.adhkar.ui.components.AdhkarCard
 
 private const val SMOOTH_SCROLL_THRESHOLD = 4
@@ -99,7 +98,7 @@ private fun AdhkarScreen(padding: PaddingValues) {
                 selected      = category.id in state.selectedIds,
                 onClick       = {
                     if (state.selectionMode) vm.toggleSelection(category.id)
-                    else nav.navigate(Route.adhkarDetail(category.id))
+                    else nav.navigate(AdhkarDetailPage.routeFor(category.id))
                 },
                 onLongClick   = { vm.enterSelectionMode(category.id) },
             )

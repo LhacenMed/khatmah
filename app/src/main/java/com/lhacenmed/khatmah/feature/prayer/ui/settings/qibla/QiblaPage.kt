@@ -39,6 +39,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lhacenmed.khatmah.R
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import kotlin.math.*
@@ -96,7 +98,7 @@ private fun Double.toDms(): String {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QiblaPage() {
+fun QiblaScreen() {
     val context  = LocalContext.current
     val nav      = LocalNavController.current
     val location = remember { OnboardingPrefs.location(context) }
@@ -756,4 +758,9 @@ private fun CompassDial(
         }
         nc.drawPath(combinedPath, starPaint)
     }
+}
+
+object QiblaPage : AppPage() {
+    override val route = "qibla"
+    @Composable override fun Content(back: NavBackStackEntry) = QiblaScreen()
 }

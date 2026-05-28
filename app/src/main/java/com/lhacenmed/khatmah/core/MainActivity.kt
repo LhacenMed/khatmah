@@ -15,7 +15,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.lhacenmed.khatmah.core.nav.AppEntry
-import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.ui.theme.Theme
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.widget.PrayerWidget
@@ -88,13 +87,13 @@ class MainActivity : AppCompatActivity() {
      */
     private fun handleLaunchIntent(intent: Intent?) {
         when (intent?.action) {
-            WidgetAction.OPEN_PRAYERS        -> WidgetNavRequest.request(Route.PRAYERS)
+            WidgetAction.OPEN_PRAYERS        -> WidgetNavRequest.request("prayers")
             "com.lhacenmed.khatmah.REMINDER" -> {
                 // Route strings from ReminderNotifier.defaultDeepLink match Route constants directly.
                 val route = when (val raw = intent.getStringExtra("route")) {
-                    "prayers" -> Route.PRAYERS
-                    "adhkar"  -> Route.ADHKAR
-                    "today"   -> Route.TODAY
+                    "prayers" -> "prayers"
+                    "adhkar"  -> "adhkar"
+                    "today"   -> "today"
                     else      -> raw   // pass through deep-link routes (e.g. "adhkar_detail/morning")
                 }
                 route?.let { WidgetNavRequest.request(it) }

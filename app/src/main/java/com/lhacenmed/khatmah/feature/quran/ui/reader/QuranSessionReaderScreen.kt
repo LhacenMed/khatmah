@@ -31,6 +31,10 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.OptionSelectBottomSheet
 import com.lhacenmed.khatmah.core.ui.components.SheetOption
@@ -345,5 +349,19 @@ private fun SessionMushhafPage(pageNum: Int, isDark: Boolean, modifier: Modifier
         )
     } else {
         Box(modifier, Alignment.Center) { CircularProgressIndicator() }
+    }
+}
+
+object QuranSessionReaderPage : AppPage() {
+    override val route = "quran_session_reader?startPage={startPage}&endPage={endPage}"
+    override val arguments = listOf(
+        navArgument("startPage") { type = NavType.IntType },
+        navArgument("endPage")   { type = NavType.IntType },
+    )
+    fun routeFor(startPage: Int, endPage: Int) = "quran_session_reader?startPage=$startPage&endPage=$endPage"
+    @Composable override fun Content(back: NavBackStackEntry) {
+        val startPage = back.arguments?.getInt("startPage") ?: 1
+        val endPage   = back.arguments?.getInt("endPage") ?: 1
+        QuranSessionReaderScreen(startPage, endPage)
     }
 }

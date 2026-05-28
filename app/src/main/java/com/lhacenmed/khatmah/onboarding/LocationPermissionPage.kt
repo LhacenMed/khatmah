@@ -17,8 +17,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.nav.ShellRoutes
 import com.lhacenmed.khatmah.shared.location.LocationHelper
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import kotlinx.coroutines.launch
@@ -33,8 +33,8 @@ fun LocationPermissionPage() {
 
     var state by remember { mutableStateOf(LocState.Idle) }
 
-    fun toMain()          = nav.navigate(Route.MAIN) { popUpTo(0) { inclusive = true } }
-    fun toCountrySelect() = nav.navigate(Route.ONBOARDING_COUNTRY_SELECT)
+    fun toMain()          = nav.navigate(ShellRoutes.MAIN) { popUpTo(0) { inclusive = true } }
+    fun toCountrySelect() = nav.navigate(ShellRoutes.ONBOARDING_COUNTRY_SELECT)
 
     fun locateAndSave() {
         if (!LocationHelper.isEnabled(context)) {

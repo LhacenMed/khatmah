@@ -72,7 +72,6 @@ import androidx.navigation.NavBackStackEntry
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
@@ -537,8 +536,8 @@ private fun ActionButton(
 // ── Navigation destination ────────────────────────────────────────────────────
 
 object PrintSelectPage : AppPage() {
-    // Route.MUSHAF_PRINTS = "mushaf_prints" — doesn't match auto-derived "print_select".
-    override val route = Route.MUSHAF_PRINTS
+    // "mushaf_prints" = "mushaf_prints" — doesn't match auto-derived "print_select".
+    override val route = "mushaf_prints"
 
     @Composable
     override fun Content(back: NavBackStackEntry) = PrintSelectScreen()

@@ -14,6 +14,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.feature.prayer.data.ManualCorrections
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
@@ -21,7 +23,7 @@ import com.lhacenmed.khatmah.feature.prayer.ui.components.PrayerTimesPreviewBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ManualCorrectionsContent() {
+fun ManualCorrectionsScreen() {
     val nav      = LocalNavController.current
     val context  = LocalContext.current
     val settings by PrayerSettings.flow.collectAsState()
@@ -166,4 +168,9 @@ private fun CorrectionRow(
         thickness = 0.5.dp,
         color     = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
     )
+}
+
+object ManualCorrectionsPage : AppPage() {
+    override val route = "prayer_manual_corrections"
+    @Composable override fun Content(back: NavBackStackEntry) = ManualCorrectionsScreen()
 }

@@ -45,31 +45,7 @@ import com.lhacenmed.khatmah.core.motion.animatedComposable
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.BottomNavBar
 import com.lhacenmed.khatmah.core.ui.components.IconButton
-import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarEditorPage
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarViewModel
-import com.lhacenmed.khatmah.feature.debug.DbBrowserPage
-import com.lhacenmed.khatmah.feature.debug.FileBrowserPage
-import com.lhacenmed.khatmah.feature.khatmah.ui.DailyAlarmPage
-import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahPage
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsContent
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.CalcMethodContent
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.DstContent
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.HigherLatContent
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.JuristicContent
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.ManualCorrectionsContent
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.qibla.QiblaPage
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.AdhanRemindersPage
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.AdhanSoundSelectionPage
-import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaHistoryPage
-import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaPage
-import com.lhacenmed.khatmah.feature.quran.ui.debug.DebugWarshPage
-import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranReaderScreen
-import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranSessionReaderScreen
-import com.lhacenmed.khatmah.feature.quran.ui.search.QuranSearchPage
-import com.lhacenmed.khatmah.feature.settings.DarkThemePage
-import com.lhacenmed.khatmah.feature.settings.LanguagePage
-import com.lhacenmed.khatmah.feature.settings.ThemeSettingsPage
-import com.lhacenmed.khatmah.feature.trips.ui.TripRequestsPage
 import com.lhacenmed.khatmah.onboarding.CitySelectPage
 import com.lhacenmed.khatmah.onboarding.CountrySelectPage
 import com.lhacenmed.khatmah.onboarding.LanguageOnboardingPage
@@ -77,7 +53,24 @@ import com.lhacenmed.khatmah.onboarding.LocationPermissionPage
 import com.lhacenmed.khatmah.onboarding.NotificationPermissionPage
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import com.lhacenmed.khatmah.widget.WidgetNavRequest
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.qibla.QiblaPage
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsPage
+import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarEditorPage
+import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
+import com.lhacenmed.khatmah.feature.prayer.ui.PrayersTab
 import kotlinx.coroutines.flow.MutableSharedFlow
+
+object ShellRoutes {
+    const val MAIN = "main"
+    const val ONBOARDING_LANGUAGE       = "onboarding_language"
+    const val ONBOARDING_NOTIFICATIONS  = "onboarding_notifications"
+    const val ONBOARDING_LOCATION       = "onboarding_location"
+    const val ONBOARDING_COUNTRY_SELECT = "onboarding_country_select?fromSettings={fromSettings}"
+    const val ONBOARDING_CITY_SELECT    = "onboarding_city_select?country={country}&iso2={iso2}&fromSettings={fromSettings}"
+
+    fun citySelect(country: String, iso2: String, fromSettings: Boolean = false) =
+        "onboarding_city_select?country=${android.net.Uri.encode(country)}&iso2=${android.net.Uri.encode(iso2)}&fromSettings=$fromSettings"
+}
 
 // ─── Root composable ──────────────────────────────────────────────────────────
 
@@ -87,15 +80,11 @@ fun AppEntry() {
     val context = LocalContext.current
 
     val start = remember {
-        if (OnboardingPrefs.isComplete(context)) Route.MAIN else Route.ONBOARDING_LANGUAGE
+        if (OnboardingPrefs.isComplete(context)) ShellRoutes.MAIN else ShellRoutes.ONBOARDING_LANGUAGE
     }
 
     // Tabs driven by AppRegistry — add a new AppTab object + one registry line to extend.
     val tabs = AppRegistry.tabs.map { it.toNavTab() }
-
-    // Legacy NavPage destinations not yet migrated to AppPage.
-    // Remove an entry here once its file gains an AppPage object and is added to AppRegistry.pages.
-    val legacyPages = listOf(ThemeSettingsPage, DarkThemePage, LanguagePage)
 
     val navController = rememberNavController()
 
@@ -116,7 +105,7 @@ fun AppEntry() {
             selectedTabIndex = idx
         } else {
             if (route.startsWith("adhkar_detail/")) {
-                selectedTabIndex = tabs.indexOfFirst { it.route == Route.ADHKAR }.coerceAtLeast(0)
+                selectedTabIndex = tabs.indexOfFirst { it.route == "adhkar" }.coerceAtLeast(0)
             }
             navController.navigate(route)
         }
@@ -130,17 +119,17 @@ fun AppEntry() {
             modifier         = Modifier.fillMaxSize(),
         ) {
             // ── Onboarding ────────────────────────────────────────────────────
-            animatedComposable(Route.ONBOARDING_LANGUAGE)      { LanguageOnboardingPage()     }
-            animatedComposable(Route.ONBOARDING_NOTIFICATIONS) { NotificationPermissionPage() }
-            animatedComposable(Route.ONBOARDING_LOCATION)      { LocationPermissionPage()     }
+            animatedComposable(ShellRoutes.ONBOARDING_LANGUAGE)      { LanguageOnboardingPage()     }
+            animatedComposable(ShellRoutes.ONBOARDING_NOTIFICATIONS) { NotificationPermissionPage() }
+            animatedComposable(ShellRoutes.ONBOARDING_LOCATION)      { LocationPermissionPage()     }
             animatedComposable(
-                route     = Route.ONBOARDING_COUNTRY_SELECT,
+                route     = ShellRoutes.ONBOARDING_COUNTRY_SELECT,
                 arguments = listOf(
                     navArgument("fromSettings") { type = NavType.BoolType; defaultValue = false },
                 ),
             ) { CountrySelectPage() }
             animatedComposable(
-                route     = Route.ONBOARDING_CITY_SELECT,
+                route     = ShellRoutes.ONBOARDING_CITY_SELECT,
                 arguments = listOf(
                     navArgument("country")      { type = NavType.StringType; defaultValue = "" },
                     navArgument("iso2")         { type = NavType.StringType; defaultValue = "" },
@@ -155,83 +144,13 @@ fun AppEntry() {
             }
 
             // ── App shell ─────────────────────────────────────────────────────
-            animatedComposable(Route.MAIN) {
+            animatedComposable(ShellRoutes.MAIN) {
                 MainScreen(
                     tabs          = tabs,
                     selectedIndex = selectedTabIndex,
                     onSelect      = { selectedTabIndex = it },
                 )
             }
-
-            // ── Legacy settings pages (migrate to AppPage + AppRegistry progressively) ──
-            legacyPages.forEach { page -> animatedComposable(page.route) { page.content() } }
-
-            // ── Prayer settings sub-pages ─────────────────────────────────────
-            animatedComposable(Route.PRAYER_SETTINGS)           { PrayerSettingsContent()    }
-            animatedComposable(Route.PRAYER_CALC_METHOD)        { CalcMethodContent()        }
-            animatedComposable(Route.PRAYER_JURISTIC)           { JuristicContent()          }
-            animatedComposable(Route.PRAYER_DST)                { DstContent()               }
-            animatedComposable(Route.PRAYER_MANUAL_CORRECTIONS) { ManualCorrectionsContent() }
-            animatedComposable(Route.PRAYER_HIGHER_LAT)         { HigherLatContent()         }
-            animatedComposable(Route.ADHAN_REMINDERS)           { AdhanRemindersPage()       }
-            animatedComposable(
-                route     = Route.ADHAN_SOUND_SELECTION,
-                arguments = listOf(navArgument("prayerId") { type = NavType.IntType }),
-            ) { backStack ->
-                AdhanSoundSelectionPage(prayerId = backStack.arguments?.getInt("prayerId") ?: 0)
-            }
-
-            // ── Quran ─────────────────────────────────────────────────────────
-            animatedComposable(
-                route     = Route.QURAN_READER,
-                arguments = listOf(
-                    navArgument("suraNum") { type = NavType.IntType; defaultValue = 0 },
-                    navArgument("ayaNum")  { type = NavType.IntType; defaultValue = 0 },
-                ),
-            ) { QuranReaderScreen() }
-            animatedComposable(Route.QURAN_SEARCH) { QuranSearchPage() }
-            animatedComposable(Route.DEBUG_WARSH)  { DebugWarshPage()  }
-
-            // ── Qibla ─────────────────────────────────────────────────────────
-            animatedComposable(Route.QIBLA) { QiblaPage() }
-
-            // ── Adhkar editor ─────────────────────────────────────────────────
-            animatedComposable(
-                route     = Route.ADHKAR_EDITOR,
-                arguments = listOf(
-                    navArgument("categoryId") { type = NavType.StringType; defaultValue = "" },
-                ),
-            ) { backStack ->
-                AdhkarEditorPage(
-                    categoryId = backStack.arguments?.getString("categoryId")
-                        .orEmpty().ifEmpty { null },
-                )
-            }
-
-            // ── Khatmah ───────────────────────────────────────────────────────
-            animatedComposable(Route.NEW_KHATMAH) { NewKhatmahPage() }
-            animatedComposable(Route.DAILY_ALARM) { DailyAlarmPage() }
-            animatedComposable(
-                route     = Route.QURAN_SESSION_READER,
-                arguments = listOf(
-                    navArgument("startPage") { type = NavType.IntType },
-                    navArgument("endPage")   { type = NavType.IntType },
-                ),
-            ) { back ->
-                QuranSessionReaderScreen(
-                    startPage = back.arguments?.getInt("startPage") ?: 1,
-                    endPage   = back.arguments?.getInt("endPage")   ?: 1,
-                )
-            }
-
-            // ── Debug ─────────────────────────────────────────────────────────
-            animatedComposable(Route.DEBUG_DB)      { DbBrowserPage()   }
-            animatedComposable(Route.FILES_BROWSER) { FileBrowserPage() }
-
-            // ── Trips / Qadaa ─────────────────────────────────────────────────
-            animatedComposable(Route.TRIP_REQUESTS) { TripRequestsPage()  }
-            animatedComposable(Route.QADAA)         { QadaaPage()         }
-            animatedComposable(Route.QADAA_HISTORY) { QadaaHistoryPage()  }
 
             // ── AppRegistry pages (auto-driven) ───────────────────────────────
             // To add a new page: create AppPage object → add to AppRegistry.pages.
@@ -264,11 +183,11 @@ private fun MainScreen(
         initialPage = selectedIndex,
         pageCount   = { tabs.size },
     )
-    val adhkarTabIdx = remember(tabs) { tabs.indexOfFirst { it.route == Route.ADHKAR } }
+    val adhkarTabIdx = remember(tabs) { tabs.indexOfFirst { it.route == AdhkarTab.route } }
 
     val currentTab     = tabs[pagerState.currentPage]
-    val isAdhkarTab    = currentTab.route == Route.ADHKAR
-    val isPrayersTab   = currentTab.route == Route.PRAYERS
+    val isAdhkarTab    = currentTab.route == AdhkarTab.route
+    val isPrayersTab   = currentTab.route == PrayersTab.route
     val inAdhkarSelect = isAdhkarTab && adhkarState.selectionMode
 
     LaunchedEffect(pagerState.settledPage) {
@@ -339,7 +258,7 @@ private fun MainScreen(
                             }
                         } else {
                             IconButton(
-                                onClick     = { nav.navigate(Route.adhkarEditor()) },
+                                onClick     = { nav.navigate(AdhkarEditorPage.routeFor(null)) },
                                 tooltipText = stringResource(R.string.add_adhkar),
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_adhkar))
@@ -347,7 +266,7 @@ private fun MainScreen(
                         }
                     } else if (isPrayersTab) {
                         IconButton(
-                            onClick     = { nav.navigate(Route.QIBLA) },
+                            onClick     = { nav.navigate(QiblaPage.route) },
                             tooltipText = stringResource(R.string.prayers_qibla),
                         ) {
                             Icon(
@@ -357,7 +276,7 @@ private fun MainScreen(
                             )
                         }
                         IconButton(
-                            onClick     = { nav.navigate(Route.PRAYER_SETTINGS) },
+                            onClick     = { nav.navigate(PrayerSettingsPage.route) },
                             tooltipText = stringResource(R.string.prayers_settings),
                         ) {
                             Icon(

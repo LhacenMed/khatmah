@@ -43,7 +43,6 @@ import androidx.navigation.navArgument
 import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.feature.adhkar.data.Dhikr
-import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.feature.adhkar.ui.components.CompletionBody
 import com.lhacenmed.khatmah.feature.adhkar.ui.components.DhikrBody
 import com.lhacenmed.khatmah.feature.adhkar.ui.components.DhikrBottomBar
@@ -242,7 +241,7 @@ fun AdhkarDetailScreen(categoryId: String) {
             DhikrTopBar(
                 title    = categoryName,
                 onBack   = { nav.popBackStack() },
-                onEdit   = { nav.navigate(Route.adhkarEditor(categoryId)) },
+                onEdit   = { nav.navigate(AdhkarEditorPage.routeFor(categoryId)) },
                 onResize = { fontSize = fontSize.next() },
             )
         },
@@ -428,13 +427,12 @@ fun AdhkarDetailScreen(categoryId: String) {
 // ── Navigation destination ────────────────────────────────────────────────────
 
 object AdhkarDetailPage : AppPage() {
-    override val route     = Route.ADHKAR_DETAIL
+    override val route     = "adhkar_detail/{categoryId}"
     override val arguments = listOf(
         navArgument("categoryId") { type = NavType.StringType },
     )
 
-    /** Type-safe alternative to Route.adhkarDetail(id) at call sites. */
-    fun routeFor(categoryId: String) = Route.adhkarDetail(categoryId)
+    fun routeFor(categoryId: String) = "adhkar_detail/$categoryId"
 
     @Composable
     override fun Content(back: NavBackStackEntry) {

@@ -18,9 +18,9 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.core.nav.ShellRoutes
 import com.lhacenmed.khatmah.shared.location.CountriesApi
 import com.lhacenmed.khatmah.shared.location.LocationCache
-import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import kotlinx.coroutines.launch
 
@@ -111,7 +111,7 @@ fun CountrySelectPage() {
                             // Pass iso2 so CitySelectPage can store the country code
                             onClick = {
                                 val fromSettings = nav.currentBackStackEntry?.arguments?.getBoolean("fromSettings") ?: false
-                                nav.navigate(Route.citySelect(country.name, country.iso2, fromSettings))
+                                nav.navigate(ShellRoutes.citySelect(country.name, country.iso2, fromSettings))
                             },
                         )
                         HorizontalDivider()

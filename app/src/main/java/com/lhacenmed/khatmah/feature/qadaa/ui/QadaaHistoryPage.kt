@@ -15,6 +15,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.feature.qadaa.data.*
@@ -66,7 +68,7 @@ private class QadaaHistoryViewModel(app: Application) : AndroidViewModel(app) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun QadaaHistoryPage() {
+fun QadaaHistoryScreen() {
     val nav = LocalNavController.current
     val vm: QadaaHistoryViewModel = viewModel()
     val state by vm.uiState.collectAsState()
@@ -220,4 +222,9 @@ private fun SummaryStatCard(value: String, label: String, color: Color, modifier
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+}
+
+object QadaaHistoryPage : AppPage() {
+    override val route = "qadaa_history"
+    @Composable override fun Content(back: NavBackStackEntry) = QadaaHistoryScreen()
 }

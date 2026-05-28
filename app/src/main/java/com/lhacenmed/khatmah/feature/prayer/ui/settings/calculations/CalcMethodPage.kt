@@ -13,6 +13,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.feature.prayer.data.CalcMethod
 import com.lhacenmed.khatmah.feature.prayer.data.IshaMode
@@ -21,7 +23,7 @@ import com.lhacenmed.khatmah.feature.prayer.ui.components.PrayerTimesPreviewBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CalcMethodContent() {
+fun CalcMethodScreen() {
     val nav      = LocalNavController.current
     val context  = LocalContext.current
     val settings by PrayerSettings.flow.collectAsState()
@@ -89,4 +91,9 @@ private fun ishaSubtitle(method: CalcMethod): String {
         is IshaMode.FixedMinutes -> stringResource(R.string.calc_method_isha_mins, m.minutes)
     }
     return stringResource(R.string.calc_method_subtitle, method.fajrAngle, ishaStr)
+}
+
+object CalcMethodPage : AppPage() {
+    override val route = "prayer_calc_method"
+    @Composable override fun Content(back: NavBackStackEntry) = CalcMethodScreen()
 }

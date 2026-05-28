@@ -34,8 +34,8 @@ import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 // ── Navigation destination ────────────────────────────────────────────────────
 
 /**
- * Route auto-derived: "about" — matches Route.ABOUT.
- * Call sites continue to use nav.navigate(Route.ABOUT) unchanged.
+ * Route auto-derived: "about" — matches "about".
+ * Call sites continue to use nav.navigate("about") unchanged.
  */
 object AboutPage : AppPage() {
     @Composable override fun Content(back: NavBackStackEntry) = AboutScreen()

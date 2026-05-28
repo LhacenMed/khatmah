@@ -45,7 +45,6 @@ import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.core.nav.NavTab
-import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.ui.components.OptionSelectBottomSheet
 import com.lhacenmed.khatmah.core.ui.components.SheetOption
 import com.lhacenmed.khatmah.core.ui.components.showTimePicker
@@ -153,21 +152,21 @@ private fun MoreScreen(padding: PaddingValues) {
         // ── Settings ──────────────────────────────────────────────────────────
         subtitle(R.string.more_settings)
         prefItem(R.string.more_daily_alarm,       Icons.Outlined.NotificationsActive,
-            onClick = { nav.navigate(Route.DAILY_ALARM) })
+            onClick = { nav.navigate("daily_alarm") })
         prefItem(R.string.more_start_new_khatmah, Icons.Outlined.Add,
-            onClick = { nav.navigate(Route.NEW_KHATMAH) })
+            onClick = { nav.navigate("new_khatmah") })
         prefItem(
             titleRes = R.string.more_qadaa,
             icon     = Icons.Outlined.Autorenew,
-            onClick  = { nav.navigate(Route.QADAA) },
+            onClick  = { nav.navigate("qadaa") },
         )
 
         // ── Prayer Times ──────────────────────────────────────────────────────
         subtitle(R.string.more_prayer_times)
         prefItem(R.string.more_prayer_times_settings, R.drawable.ic_mosque,
-            onClick = { nav.navigate(Route.PRAYER_SETTINGS) })
+            onClick = { nav.navigate("prayer_settings") })
         prefItem(R.string.more_qibla_direction, R.drawable.ic_kaaba,
-            onClick = { nav.navigate(Route.QIBLA) })
+            onClick = { nav.navigate("qibla") })
 
         // ── Adhkar Alarms ─────────────────────────────────────────────────────
         subtitle(R.string.more_adhkar_alarms)
@@ -210,12 +209,12 @@ private fun MoreScreen(padding: PaddingValues) {
         // ── Khatmah App ───────────────────────────────────────────────────────
         subtitle(R.string.more_khatmah_app)
         prefItem(R.string.theme_settings, Icons.Outlined.Palette,
-            onClick = { nav.navigate(Route.THEME_SETTINGS) })
+            onClick = { nav.navigate("theme_settings") })
         prefItem(
             titleRes     = R.string.more_mushaf_print,
             icon         = Icons.Outlined.AutoStories,
             trailingIcon = { TrailingLabelText(stringResource(selectedPrint.nameRes)) },
-            onClick      = { nav.navigate(Route.MUSHAF_PRINTS) },
+            onClick      = { nav.navigate("mushaf_prints") },
         )
         prefItem(
             titleRes     = R.string.more_language,
@@ -238,11 +237,11 @@ private fun MoreScreen(padding: PaddingValues) {
         // ── Debug ─────────────────────────────────────────────────────────────
         subtitle(R.string.more_debug)
         prefItem(R.string.more_debug_db, Icons.Outlined.BugReport,
-            onClick = { nav.navigate(Route.DEBUG_DB) })
+            onClick = { nav.navigate("debug_db") })
         prefItem(R.string.more_trip_requests, Icons.Outlined.DirectionsBus,
-            onClick = { nav.navigate(Route.TRIP_REQUESTS) })
+            onClick = { nav.navigate("trip_requests") })
         prefItem(R.string.more_files_browser, Icons.Outlined.FolderOpen,
-            onClick = { nav.navigate(Route.FILES_BROWSER) })
+            onClick = { nav.navigate("files_browser") })
     }
 
     if (showLanguageSheet.value) {

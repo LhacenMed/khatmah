@@ -25,6 +25,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
@@ -43,7 +47,7 @@ private val PRE_ALERT_OPTIONS = listOf(0, 5, 10, 15, 20, 25, 30)
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun AdhanSoundSelectionPage(prayerId: Int) {
+fun AdhanSoundSelectionScreen(prayerId: Int) {
     val nav     = LocalNavController.current
     val context = LocalContext.current
     val configs by AdhanPrefs.flow.collectAsState()
@@ -427,4 +431,12 @@ private fun PreAlertDialog(
 private fun preAlertLabel(minutes: Int): String = when (minutes) {
     0    -> stringResource(R.string.adhan_alert_before_off)
     else -> stringResource(R.string.adhan_alert_before_minutes, minutes)
+}
+
+object AdhanSoundSelectionPage : AppPage() {
+    override val route = "adhan_sound_selection/{prayerId}"
+    override val arguments = listOf(navArgument("prayerId") { type = NavType.IntType })
+    fun routeFor(prayerId: Int) = "adhan_sound_selection/$prayerId"
+    @RequiresApi(Build.VERSION_CODES.O)
+    @Composable override fun Content(back: NavBackStackEntry) = AdhanSoundSelectionScreen(back.arguments?.getInt("prayerId") ?: 0)
 }

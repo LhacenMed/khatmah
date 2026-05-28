@@ -44,8 +44,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.nav.NavPage
-import com.lhacenmed.khatmah.core.nav.Route
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.ui.components.IconButton
 import com.lhacenmed.khatmah.core.ui.components.LargeTopAppBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
@@ -61,7 +61,9 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
  */
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
-val ThemeSettingsPage = NavPage(route = Route.THEME_SETTINGS) {
+object ThemeSettingsPage : AppPage() {
+    override val route = "theme_settings"
+    @Composable override fun Content(back: NavBackStackEntry) {
     val nav            = LocalNavController.current
     val context        = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
@@ -112,7 +114,7 @@ val ThemeSettingsPage = NavPage(route = Route.THEME_SETTINGS) {
                         else                                       -> R.string.theme_dark
                     }
                 ),
-                onClick = { nav.navigate(Route.DARK_THEME) },
+                onClick = { nav.navigate("dark_theme") },
                 trailingIcon = {
                     Icon(
                         imageVector        = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -150,6 +152,7 @@ val ThemeSettingsPage = NavPage(route = Route.THEME_SETTINGS) {
             }
         }
     }
+}
 }
 
 @Composable

@@ -26,6 +26,8 @@ import android.widget.ImageButton
 import androidx.activity.compose.BackHandler
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.createRippleDrawable
@@ -43,7 +45,7 @@ private val TOP_BAR_MENU_ITEMS = listOf(
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun FileBrowserPage() {
+fun FileBrowserScreen() {
     val ctx = LocalContext.current
     val nav = LocalNavController.current
     val vm  = viewModel<FileBrowserViewModel>(factory = FileBrowserViewModel.Factory(ctx))
@@ -308,4 +310,9 @@ private fun FileBrowserRenameDialog(
         confirmButton    = { TextButton(onClick = onRename) { Text("Rename") } },
         dismissButton    = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
+}
+
+object FileBrowserPage : AppPage() {
+    override val route = "files_browser"
+    @Composable override fun Content(back: NavBackStackEntry) = FileBrowserScreen()
 }
