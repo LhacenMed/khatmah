@@ -49,9 +49,10 @@ class TodayViewModel(private val repo: KhatmahRepository) : ViewModel() {
                             UiState.AllRead(totalDays = khatmah.totalDays)
                         } else {
                             val meta = repo.sessionMeta(
-                                session.startSura,
-                                session.startAya,
-                                session.endSura,
+                                startSura   = session.startSura,
+                                startAya    = session.startAya,
+                                endSura     = session.endSura,
+                                riwayaKey   = khatmah.riwaya,
                             )
                             UiState.Active(
                                 session = SessionUi(

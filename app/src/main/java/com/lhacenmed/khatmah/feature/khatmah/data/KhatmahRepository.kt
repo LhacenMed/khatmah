@@ -77,12 +77,11 @@ class KhatmahRepository(private val context: Context) {
         khatmahDb.dao().markRead(id)
     }
 
-    suspend fun sessionMeta(startSura: Int, startAya: Int, endSura: Int): SessionMeta =
+    suspend fun sessionMeta(startSura: Int, startAya: Int, endSura: Int, riwayaKey: String): SessionMeta =
         withContext(Dispatchers.IO) {
-            val key    = riwayaKey
-            val names  = suraNames(key)
-            val juzNum = mushafDao.divisionForVerse(key, DivType.JUZ, startSura, startAya)?.num ?: 1
-            val text   = mushafDao.verse(key, startSura, startAya)?.text.orEmpty()
+            val names  = suraNames(riwayaKey)
+            val juzNum = mushafDao.divisionForVerse(riwayaKey, DivType.JUZ, startSura, startAya)?.num ?: 1
+            val text   = mushafDao.verse(riwayaKey, startSura, startAya)?.text.orEmpty()
             SessionMeta(
                 startSuraName = names[startSura].orEmpty(),
                 endSuraName   = names[endSura].orEmpty(),
