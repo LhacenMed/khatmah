@@ -493,4 +493,8 @@
 
     <string name="today_riwaya_mismatch_title">رواية مختلفة</string>
     <string name="today_riwaya_mismatch_msg">هذه الختمة أُنشئت بقراءة %1$s. اختر مصحفاً بنفس القراءة للمتابعة، أو أنشئ ختمة جديدة بالقراءة الحالية.</string>
+
+    <string name="print_cancel_download_title">Cancel Download</string>
+    <string name="print_cancel_download_msg">Stop the ongoing download?</string>
+    <string name="print_stop">Stop</string>
 </resources>

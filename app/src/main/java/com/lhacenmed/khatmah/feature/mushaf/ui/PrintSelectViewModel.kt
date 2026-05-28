@@ -12,6 +12,7 @@ import com.lhacenmed.khatmah.feature.quran.data.WarshImageRepository
 import com.lhacenmed.khatmah.feature.quran.data.WarshQcf4DownloadState
 import com.lhacenmed.khatmah.feature.quran.data.WarshQcf4Repository
 import com.lhacenmed.khatmah.feature.quran.data.WarshXmlRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -21,6 +22,9 @@ class PrintSelectViewModel(app: Application) : AndroidViewModel(app) {
     private val warshXmlRepo  = WarshXmlRepository.get(app)
     private val warshQcf4Repo = WarshQcf4Repository.get(app)
     private val hafsQcf4Repo  = HafsQcf4Repository.get(app)
+
+    /** Active download job per print id — cancelled on user request. */
+    private val activeDownloads = mutableMapOf<String, Job>()
 
     val selected: StateFlow<MushafPrint> = MushafPrefs.selected
 
@@ -54,7 +58,8 @@ class PrintSelectViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun download(print: MushafPrint) {
-        viewModelScope.launch {
+        if (activeDownloads[print.id]?.isActive == true) return
+        activeDownloads[print.id] = viewModelScope.launch {
             when (print) {
                 MushafPrint.WarshImages -> warshImgRepo.downloadAll().collect()
                 MushafPrint.WarshSvg    -> warshXmlRepo.downloadAll().collect()
@@ -63,6 +68,18 @@ class PrintSelectViewModel(app: Application) : AndroidViewModel(app) {
                 MushafPrint.WarshText,
                 MushafPrint.HafsText    -> Unit
             }
+        }
+    }
+
+    fun cancelDownload(print: MushafPrint) {
+        activeDownloads.remove(print.id)?.cancel()
+        when (print) {
+            MushafPrint.WarshImages -> warshImgRepo.resetState()
+            MushafPrint.WarshSvg    -> warshXmlRepo.resetState()
+            MushafPrint.WarshQcf4   -> warshQcf4Repo.resetState()
+            MushafPrint.HafsQcf4    -> hafsQcf4Repo.resetState()
+            MushafPrint.WarshText,
+            MushafPrint.HafsText    -> Unit
         }
     }
 

@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,8 +36,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -45,10 +49,12 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -85,7 +91,10 @@ private fun PrintDownloadState.toBtnKey(isSelected: Boolean): BtnKey = when {
     (this is PrintDownloadState.NotRequired || this is PrintDownloadState.Downloaded) && !isSelected -> BtnKey.SELECT
     this is PrintDownloadState.NotDownloaded || this is PrintDownloadState.Error                      -> BtnKey.DOWNLOAD
     this == PrintDownloadState.Connecting                                                              -> BtnKey.INACTIVE
-    this is PrintDownloadState.Downloading                                                             -> BtnKey.PROGRESS
+    this is PrintDownloadState.Downloading -> {
+        // If progress is null (processing) or 100%, show the spinner (INACTIVE).
+        if (progress == null || progress >= 1f) BtnKey.INACTIVE else BtnKey.PROGRESS
+    }
     else                                                                                              -> BtnKey.DOWNLOAD
 }
 
@@ -131,6 +140,7 @@ fun PrintSelectPage() {
                         isSelected = print == selected,
                         onSelect   = { vm.select(print) },
                         onDownload = { vm.download(print) },
+                        onCancel   = { vm.cancelDownload(print) },
                         modifier   = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )
                 }
@@ -153,11 +163,14 @@ private fun PrintCardWithLog(
     isSelected: Boolean,
     onSelect:   () -> Unit,
     onDownload: () -> Unit,
+    onCancel:   () -> Unit,
     modifier:   Modifier = Modifier,
 ) {
     val isInProgress = state is PrintDownloadState.Downloading || state == PrintDownloadState.Connecting
 
-    var shelfHeightPx by remember { mutableIntStateOf(0) }
+    var shelfHeightPx    by remember { mutableIntStateOf(0) }
+    var showCancelDialog by remember { mutableStateOf(false) }
+
     val fraction by animateFloatAsState(
         targetValue   = if (isInProgress) 1f else 0f,
         animationSpec = spring(
@@ -177,6 +190,7 @@ private fun PrintCardWithLog(
             isSelected = isSelected,
             onSelect   = onSelect,
             onDownload = onDownload,
+            onCancel   = { showCancelDialog = true },
             // Card sits visually above the shelf.
             modifier   = Modifier.zIndex(1f),
         )
@@ -204,6 +218,24 @@ private fun PrintCardWithLog(
                     .graphicsLayer { translationY = shelfHeightPx * (fraction - 1f) },
             )
         }
+    }
+
+    if (showCancelDialog) {
+        AlertDialog(
+            onDismissRequest = { showCancelDialog = false },
+            title   = { Text(stringResource(R.string.print_cancel_download_title)) },
+            text    = { Text(stringResource(R.string.print_cancel_download_msg)) },
+            confirmButton = {
+                TextButton(onClick = { showCancelDialog = false; onCancel() }) {
+                    Text(stringResource(R.string.print_stop))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelDialog = false }) {
+                    Text(stringResource(R.string.dialog_cancel))
+                }
+            },
+        )
     }
 }
 
@@ -243,6 +275,7 @@ private fun PrintCard(
     isSelected: Boolean,
     onSelect:   () -> Unit,
     onDownload: () -> Unit,
+    onCancel:   () -> Unit,
     modifier:   Modifier = Modifier,
 ) {
     val isAvailable  = state is PrintDownloadState.NotRequired || state is PrintDownloadState.Downloaded
@@ -262,7 +295,16 @@ private fun PrintCard(
         border    = BorderStroke(borderWidth, borderColor),
         elevation = CardDefaults.outlinedCardElevation(defaultElevation = 2.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .animateContentSize(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness    = Spring.StiffnessMediumLow,
+                    )
+                )
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // ── Text ──────────────────────────────────────────────────────
                 Column(modifier = Modifier.weight(1f)) {
@@ -308,6 +350,7 @@ private fun PrintCard(
                     isSelected = isSelected,
                     onSelect   = onSelect,
                     onDownload = onDownload,
+                    onCancel   = onCancel,
                 )
             }
 
@@ -333,13 +376,17 @@ private fun PrintCard(
             if (downloadProgress != null) {
                 LinearProgressIndicator(
                     progress   = { downloadProgress },
-                    modifier   = Modifier.fillMaxWidth().height(3.dp),
+                    modifier   = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp),
                     color      = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 )
             } else {
                 LinearProgressIndicator(
-                    modifier   = Modifier.fillMaxWidth().height(3.dp),
+                    modifier   = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp),
                     color      = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 )
@@ -355,10 +402,20 @@ private fun PrintCard(
  * in from top + fades in on enter, and slides down + fades out on exit.
  * The button border and shape remain stable — [AnimatedContent] is placed
  * *inside* the button so only the content transitions, not the container.
- * Width adapts smoothly via [SizeTransform] as content changes.
+ *
+ * Two transition modes, chosen per state pair:
+ *  • Non-DOWNLOAD pairs: button is at min-width in both states — [sizeTransform] is
+ *    null so the AnimatedContent box never shifts width during the slide, keeping
+ *    each item's center fixed → pure vertical motion, zero diagonal drift.
+ *  • DOWNLOAD pairs: button width changes significantly — [SizeTransform] animates
+ *    it smoothly, but the slide is replaced with a cross-fade so there is no
+ *    vertical component to compound with the horizontal size change.
  *
  * Keyed by [BtnKey] (state type), so progress-percentage recompositions
  * update the inner [Text] without re-firing the transition.
+ *
+ * [BtnKey.INACTIVE] and [BtnKey.PROGRESS] are clickable and call [onCancel],
+ * which surfaces a confirmation dialog one level up.
  */
 @Composable
 private fun ActionButton(
@@ -366,6 +423,7 @@ private fun ActionButton(
     isSelected: Boolean,
     onSelect:   () -> Unit,
     onDownload: () -> Unit,
+    onCancel:   () -> Unit,
     modifier:   Modifier = Modifier,
 ) {
     val key          = state.toBtnKey(isSelected)
@@ -373,40 +431,63 @@ private fun ActionButton(
     val outlineVar   = MaterialTheme.colorScheme.outlineVariant
     val onSurfaceVar = MaterialTheme.colorScheme.onSurfaceVariant
 
-    val isClickable  = key == BtnKey.SELECT || key == BtnKey.DOWNLOAD
-    val borderColor  = if (key == BtnKey.SELECTED) primary else outlineVar
-    val disabledTint = when (key) {
-        BtnKey.SELECTED           -> primary
-        BtnKey.INACTIVE,
-        BtnKey.PROGRESS           -> onSurfaceVar
-        else                      -> MaterialTheme.colorScheme.onSurface
+    // INACTIVE and PROGRESS are now enabled so the user can tap to cancel.
+    val isClickable = key == BtnKey.SELECT || key == BtnKey.DOWNLOAD
+            || key == BtnKey.INACTIVE || key == BtnKey.PROGRESS
+
+    val borderColor = if (key == BtnKey.SELECTED) primary else outlineVar
+
+    // Content color for the enabled state; disabled color covers SELECTED's checkmark.
+    val contentColor = when (key) {
+        BtnKey.INACTIVE, BtnKey.PROGRESS -> onSurfaceVar
+        else                             -> primary
     }
 
     OutlinedButton(
         onClick        = when (key) {
-            BtnKey.SELECT   -> onSelect
-            BtnKey.DOWNLOAD -> onDownload
-            else            -> ({})
+            BtnKey.SELECT             -> onSelect
+            BtnKey.DOWNLOAD           -> onDownload
+            BtnKey.INACTIVE,
+            BtnKey.PROGRESS           -> onCancel
+            else                      -> ({})
         },
         enabled        = isClickable,
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
         modifier       = modifier.height(32.dp),
         border         = BorderStroke(1.dp, borderColor),
         colors         = ButtonDefaults.outlinedButtonColors(
+            contentColor           = contentColor,
             disabledContainerColor = Color.Transparent,
-            disabledContentColor   = disabledTint,
+            // SELECTED (disabled) keeps the checkmark in primary; others use onSurface.
+            disabledContentColor   = if (key == BtnKey.SELECTED) primary
+            else MaterialTheme.colorScheme.onSurface,
         ),
     ) {
-        // AnimatedContent is *inside* the button — only the content slides/fades,
+        // AnimatedContent is *inside* the button — only the content transitions,
         // the button container (border, shape) stays completely stable.
         AnimatedContent(
-            targetState  = key,
-            transitionSpec = {
-                ContentTransform(
-                    targetContentEnter = slideInVertically(tween(200)) { -it } + fadeIn(tween(200)),
-                    initialContentExit = slideOutVertically(tween(160)) { it } + fadeOut(tween(160)),
-                    sizeTransform      = SizeTransform(clip = true),
-                )
+            targetState      = key,
+            contentAlignment = Alignment.Center,
+            transitionSpec   = {
+                // DOWNLOAD pairs change the button width — animate it via SizeTransform
+                // and cross-fade (no slide) so there is no diagonal from combining
+                // a vertical slide with a shifting horizontal center.
+                // All other pairs are at the same min-width — slide purely in Y with
+                // no size animation so the box center never moves during the transition.
+                val isDlTransition = (initialState == BtnKey.DOWNLOAD) != (targetState == BtnKey.DOWNLOAD)
+                if (isDlTransition) {
+                    ContentTransform(
+                        targetContentEnter = fadeIn(tween(200)),
+                        initialContentExit = fadeOut(tween(160)),
+                        sizeTransform      = SizeTransform(clip = true),
+                    )
+                } else {
+                    ContentTransform(
+                        targetContentEnter = slideInVertically(tween(200)) { -it } + fadeIn(tween(200)),
+                        initialContentExit = slideOutVertically(tween(160)) { it } + fadeOut(tween(160)),
+                        sizeTransform      = null,
+                    )
+                }
             },
             label = "btnContent",
         ) { target ->
@@ -432,15 +513,16 @@ private fun ActionButton(
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
-                BtnKey.INACTIVE -> Text(
-                    text  = "•••",
-                    style = MaterialTheme.typography.labelSmall,
+                BtnKey.INACTIVE -> CircularProgressIndicator(
+                    modifier    = Modifier.size(14.dp),
+                    strokeWidth = 1.5.dp,
+                    color       = onSurfaceVar,
                 )
                 BtnKey.PROGRESS -> {
                     // Reads live progress from outer state — recomposes without re-animating.
-                    val pct = (state as? PrintDownloadState.Downloading)?.progress
+                    val pct = (state as? PrintDownloadState.Downloading)?.progress ?: 0f
                     Text(
-                        text  = if (pct != null) "${(pct * 100).toInt()}%" else "•••",
+                        text  = "${(pct * 100).toInt()}%",
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }

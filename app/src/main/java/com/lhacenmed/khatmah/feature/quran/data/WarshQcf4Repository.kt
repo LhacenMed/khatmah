@@ -89,6 +89,11 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
         }
     }
 
+    /** Resets download state to [NotDownloaded] without touching disk or DB. */
+    fun resetState() {
+        _downloadState.value = WarshQcf4DownloadState.NotDownloaded
+    }
+
     override suspend fun pageData(pageNum: Int): Qcf4Page = withContext(Dispatchers.IO) {
         require(pageNum in 1..PAGE_COUNT)
         val font  = dao.pageFont(RIWAYA, pageNum) ?: ""
@@ -116,16 +121,22 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
     }
 
     /**
-     * Downloads [BUNDLE_URL] (a single .7z containing fonts/ and pages/) to a temp file,
-     * then extracts in one streaming pass: TTF fonts are written to [fontsDir]; page JSONs
-     * are parsed and inserted into [MushafDb] inline. Progress is 0→1 based on bytes received.
-     * Idempotent — skips font files already on disk.
+     * Downloads [BUNDLE_URL] fresh every time (no resume). Clears any previous
+     * partial data before starting so the DB and font files are always consistent.
      */
     fun downloadAll(): Flow<WarshQcf4DownloadState> = flow {
         emit(WarshQcf4DownloadState.Connecting)
         _downloadState.value = WarshQcf4DownloadState.Connecting
 
+        // Fresh start — discard any previous partial data before writing new.
+        prefs.edit { putBoolean(KEY_DB_READY, false) }
+        synchronized(typefaceCache) { typefaceCache.clear() }
+        fontsDir.deleteRecursively()
         fontsDir.mkdirs()
+        dao.clearPages(RIWAYA)
+        dao.clearWords(RIWAYA)
+        dao.clearVersePages(RIWAYA)
+
         val tmpBundle = File(ctx.cacheDir, "warsh_qcf4_bundle.7z")
         tmpBundle.delete()
 
@@ -140,6 +151,7 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
                         val buf = ByteArray(65_536)
                         var n: Int
                         while (input.read(buf).also { n = it } != -1) {
+                            yield()
                             out.write(buf, 0, n)
                             received += n
                             _downloadState.value = WarshQcf4DownloadState.Downloading(
@@ -159,8 +171,6 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
         }
 
         // ── Phase 2: Extract fonts to disk; parse and insert page JSONs ────────
-        // try/finally (not use{}) keeps us in the flow's coroutine scope so
-        // suspend calls like dao.insertPageWithWords() are valid inline.
         var sz: SevenZFile? = null
         var pagesDone = 0
         try {
@@ -168,25 +178,29 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
             sz = SevenZFile(tmpBundle)
             var entry = sz.nextEntry
             while (entry != null) {
+                yield()
                 if (!entry.isDirectory) {
                     val name = entry.name.replace('\\', '/')
                     when {
                         name.startsWith("fonts/") && name.endsWith(".ttf") -> {
                             val dest = File(fontsDir, name.removePrefix("fonts/"))
-                            if (!dest.exists()) {
-                                val tmp = File(fontsDir, "${dest.name}.tmp")
-                                tmp.outputStream().use { out ->
-                                    val buf = ByteArray(8_192); var n: Int
-                                    while (sz.read(buf).also { n = it } != -1) out.write(buf, 0, n)
+                            val tmp  = File(fontsDir, "${dest.name}.tmp")
+                            tmp.outputStream().use { out ->
+                                val buf = ByteArray(8_192); var n: Int
+                                while (sz.read(buf).also { n = it } != -1) {
+                                    yield()
+                                    out.write(buf, 0, n)
                                 }
-                                tmp.renameTo(dest)
                             }
-                            // existing fonts: nextEntry() below advances past this entry
+                            tmp.renameTo(dest)
                         }
                         name.startsWith("pages/") && name.endsWith(".json") -> {
                             val baos = ByteArrayOutputStream()
                             val buf  = ByteArray(8_192); var n: Int
-                            while (sz.read(buf).also { n = it } != -1) baos.write(buf, 0, n)
+                            while (sz.read(buf).also { n = it } != -1) {
+                                yield()
+                                baos.write(buf, 0, n)
+                            }
                             runCatching {
                                 val page = JSONObject(baos.toString("UTF-8")).toQcf4Page()
                                 dao.insertPageWithWords(
@@ -196,9 +210,11 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
                             }
                             pagesDone++
                             if (pagesDone % 60 == 0 || pagesDone == PAGE_COUNT) {
-                                _downloadState.value = WarshQcf4DownloadState.Downloading(
-                                    null, "Importing pages: $pagesDone / $PAGE_COUNT"
-                                )
+                                if (currentCoroutineContext().isActive) {
+                                    _downloadState.value = WarshQcf4DownloadState.Downloading(
+                                        null, "Importing pages: $pagesDone / $PAGE_COUNT"
+                                    )
+                                }
                             }
                         }
                     }
@@ -206,6 +222,7 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
                 entry = sz.nextEntry
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             val err = WarshQcf4DownloadState.Error("Extract failed: ${e.message}")
             emit(err); _downloadState.value = err
             return@flow

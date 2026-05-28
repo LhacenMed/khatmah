@@ -4,6 +4,7 @@ import android.content.Context
 import com.lhacenmed.khatmah.feature.quran.ui.reader.ParsedVector
 import com.lhacenmed.khatmah.feature.quran.ui.reader.VectorXmlParser
 import com.lhacenmed.khatmah.shared.drive.DriveAuth
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -13,12 +14,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 import org.brotli.dec.BrotliInputStream
 import org.json.JSONArray
 import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -146,6 +151,12 @@ class WarshXmlRepository(private val context: Context) {
         }
     }
 
+    /** Resets download state to [NotDownloaded] without touching disk or the page cache. */
+    fun resetState() {
+        synchronized(pageCache) { pageCache.clear() }
+        _downloadState.value = WarshDownloadState.NotDownloaded
+    }
+
     /**
      * Returns [WarshPageData] for [pageNum] (1-based, 1–[PAGE_COUNT]).
      * Requires files to be on disk; results are cached in memory after first parse.
@@ -189,7 +200,6 @@ class WarshXmlRepository(private val context: Context) {
      *
      * Emits [WarshDownloadState] updates via the flow AND updates [_downloadState]
      * directly so observers of [downloadState] see live progress.
-     * Idempotent: skips files that already exist on disk.
      */
     fun downloadAll(): Flow<WarshDownloadState> = flow {
         emit(WarshDownloadState.Connecting)
@@ -201,14 +211,11 @@ class WarshXmlRepository(private val context: Context) {
             emit(err); _downloadState.value = err; return@flow
         }
 
-        // ── Drive index ───────────────────────────────────────────────────────
-        val index = runCatching { resolveIndex(token) }.getOrElse {
+        // ── Drive index (always fetch fresh) ──────────────────────────────────
+        val index = runCatching { fetchIndex(token) }.getOrElse {
             val err = WarshDownloadState.Error("Index failed: ${it.message}")
             emit(err); _downloadState.value = err; return@flow
         }
-
-        xmlDir.mkdirs()
-        jsonDir.mkdirs()
 
         val totalFiles = index.xmlBr.size + index.json.size
         if (totalFiles == 0) {
@@ -216,11 +223,16 @@ class WarshXmlRepository(private val context: Context) {
             emit(err); _downloadState.value = err; return@flow
         }
 
-        // Pre-count already-cached files so progress never resets on resume.
-        val preExisting = index.xmlBr.keys.count { File(xmlDir,  "$it.xml").exists()  } +
-                index.json.keys.count  { File(jsonDir, "$it.json").exists() }
-        val completed   = AtomicInteger(preExisting)
+        // Fresh start — clear previous data and persist the new index.
+        xmlDir.deleteRecursively()
+        jsonDir.deleteRecursively()
+        synchronized(pageCache) { pageCache.clear() }
+        xmlDir.mkdirs()
+        jsonDir.mkdirs()
+        root.mkdirs()
+        File(root, "index.json").also { saveIndex(it, index) }
 
+        val completed = AtomicInteger(0)
         fun progress() = (completed.get().toFloat() / totalFiles).coerceIn(0f, 1f)
 
         val initState = WarshDownloadState.Downloading(progress())
@@ -234,40 +246,46 @@ class WarshXmlRepository(private val context: Context) {
             val xmlJobs = index.xmlBr.map { (stem, fileId) ->
                 async(Dispatchers.IO) {
                     val dest = File(xmlDir, "$stem.xml")
-                    if (dest.exists()) return@async
-
-                    semaphore.withPermit {
-                        runCatching { downloadAndDecompress(fileId, token, dest) }
-                            .onFailure {
-                                encounteredError = WarshDownloadState.Error(
-                                    "XML failed ($stem): ${it.message}"
-                                )
-                            }
+                    try {
+                        semaphore.withPermit {
+                            yield()
+                            downloadAndDecompress(fileId, token, dest)
+                        }
+                        if (isActive) {
+                            completed.incrementAndGet()
+                            _downloadState.value = WarshDownloadState.Downloading(progress())
+                        }
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        if (isActive) {
+                            encounteredError = WarshDownloadState.Error(
+                                "XML failed ($stem): ${e.message}"
+                            )
+                        }
                     }
-
-                    _downloadState.value = WarshDownloadState.Downloading(
-                        progress().also { completed.incrementAndGet() }
-                    )
                 }
             }
 
             val jsonJobs = index.json.map { (stem, fileId) ->
                 async(Dispatchers.IO) {
                     val dest = File(jsonDir, "$stem.json")
-                    if (dest.exists()) return@async
-
-                    semaphore.withPermit {
-                        runCatching { downloadSmall(fileId, token, dest) }
-                            .onFailure {
-                                encounteredError = WarshDownloadState.Error(
-                                    "JSON failed ($stem): ${it.message}"
-                                )
-                            }
+                    try {
+                        semaphore.withPermit {
+                            yield()
+                            downloadSmall(fileId, token, dest)
+                        }
+                        if (isActive) {
+                            completed.incrementAndGet()
+                            _downloadState.value = WarshDownloadState.Downloading(progress())
+                        }
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        if (isActive) {
+                            encounteredError = WarshDownloadState.Error(
+                                "JSON failed ($stem): ${e.message}"
+                            )
+                        }
                     }
-
-                    _downloadState.value = WarshDownloadState.Downloading(
-                        progress().also { completed.incrementAndGet() }
-                    )
                 }
             }
 
@@ -276,6 +294,7 @@ class WarshXmlRepository(private val context: Context) {
             (xmlJobs + jsonJobs).awaitAll()
         }
 
+        yield()
         encounteredError?.let {
             emit(it); _downloadState.value = it; return@flow
         }
@@ -370,29 +389,54 @@ class WarshXmlRepository(private val context: Context) {
      * path on success. This ensures a partial or failed download never leaves a
      * corrupt .xml file that would pass the [isFullyDownloaded] check.
      */
-    private fun downloadAndDecompress(fileId: String, token: String, dest: File) {
+    private suspend fun downloadAndDecompress(fileId: String, token: String, dest: File) {
         val tmp  = File(dest.parent, "${dest.name}.tmp")
         val conn = openConn(fileId, token)
         try {
             BrotliInputStream(conn.inputStream).use { brotli ->
-                tmp.outputStream().use { out -> brotli.copyTo(out) }
+                tmp.outputStream().use { out -> 
+                    brotli.copyToInterruptible(out)
+                }
             }
+            yield()
+            tmp.renameTo(dest)
+        } catch (e: Exception) {
+            tmp.delete()
+            throw e
         } finally {
             conn.disconnect()
         }
-        tmp.renameTo(dest)
     }
 
     /** Downloads a small file directly (no decompression). Atomic write via .tmp. */
-    private fun downloadSmall(fileId: String, token: String, dest: File) {
+    private suspend fun downloadSmall(fileId: String, token: String, dest: File) {
         val tmp  = File(dest.parent, "${dest.name}.tmp")
         val conn = openConn(fileId, token)
         try {
-            conn.inputStream.use { it.copyTo(tmp.outputStream()) }
+            conn.inputStream.use { input ->
+                tmp.outputStream().use { out -> 
+                    input.copyToInterruptible(out)
+                }
+            }
+            yield()
+            tmp.renameTo(dest)
+        } catch (e: Exception) {
+            tmp.delete()
+            throw e
         } finally {
             conn.disconnect()
         }
-        tmp.renameTo(dest)
+    }
+
+    /** Custom copyTo that respects coroutine cancellation. */
+    private suspend fun InputStream.copyToInterruptible(out: OutputStream) {
+        val buffer = ByteArray(8192)
+        var bytes = read(buffer)
+        while (bytes >= 0) {
+            yield()
+            out.write(buffer, 0, bytes)
+            bytes = read(buffer)
+        }
     }
 
     private fun openConn(fileId: String, token: String): HttpURLConnection =

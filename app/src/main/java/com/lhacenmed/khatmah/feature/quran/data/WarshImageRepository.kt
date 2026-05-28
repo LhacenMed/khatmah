@@ -2,18 +2,24 @@ package com.lhacenmed.khatmah.feature.quran.data
 
 import android.content.Context
 import com.lhacenmed.khatmah.shared.drive.DriveAuth
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.yield
 import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -60,13 +66,18 @@ class WarshImageRepository(private val context: Context) {
         return (1..PAGE_COUNT).all { pageFile(it).exists() }
     }
 
+    /** Resets download state to [NotDownloaded] without touching disk. */
+    fun resetState() {
+        _downloadState.value = WarshImageDownloadState.NotDownloaded
+    }
+
     /** Returns the on-disk path for [pageNum] (1-based). */
     fun pageFile(pageNum: Int): File = File(dir, "%03d.jpg".format(pageNum))
 
     /**
-     * Downloads all 604 pages from Google Drive in parallel.
+     * Downloads all 604 pages from Google Drive fresh every time (no resume).
+     * Clears the cache directory before starting so no stale files remain.
      * Emits [WarshImageDownloadState] updates and mirrors them to [downloadState].
-     * Idempotent: skips files already on disk.
      */
     fun downloadAll(): Flow<WarshImageDownloadState> = flow {
         emit(WarshImageDownloadState.Connecting)
@@ -87,11 +98,12 @@ class WarshImageRepository(private val context: Context) {
             emit(err); _downloadState.value = err; return@flow
         }
 
+        // Fresh start — clear any previous files before writing new ones.
+        dir.deleteRecursively()
         dir.mkdirs()
 
-        val total       = fileMap.size
-        val preExisting = fileMap.keys.count { File(dir, it).exists() }
-        val completed   = AtomicInteger(preExisting)
+        val total     = fileMap.size
+        val completed = AtomicInteger(0)
 
         fun progress() = (completed.get().toFloat() / total).coerceIn(0f, 1f)
 
@@ -105,21 +117,28 @@ class WarshImageRepository(private val context: Context) {
             fileMap.map { (name, fileId) ->
                 async(Dispatchers.IO) {
                     val dest = File(dir, name)
-                    if (dest.exists()) return@async
-                    semaphore.withPermit {
-                        runCatching { download(fileId, token, dest) }
-                            .onFailure {
-                                encounteredError = WarshImageDownloadState.Error(
-                                    "Failed ($name): ${it.message}"
-                                )
-                            }
+                    try {
+                        semaphore.withPermit {
+                            yield()
+                            download(fileId, token, dest)
+                        }
+                        if (isActive) {
+                            completed.incrementAndGet()
+                            _downloadState.value = WarshImageDownloadState.Downloading(progress())
+                        }
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        if (isActive) {
+                            encounteredError = WarshImageDownloadState.Error(
+                                "Failed ($name): ${e.message}"
+                            )
+                        }
                     }
-                    completed.incrementAndGet()
-                    _downloadState.value = WarshImageDownloadState.Downloading(progress())
                 }
             }.awaitAll()
         }
 
+        yield()
         encounteredError?.let {
             emit(it); _downloadState.value = it; return@flow
         }
@@ -155,15 +174,34 @@ class WarshImageRepository(private val context: Context) {
     }
 
     /** Downloads [fileId] directly (no decompression). Atomic write via .tmp rename. */
-    private fun download(fileId: String, token: String, dest: File) {
+    private suspend fun download(fileId: String, token: String, dest: File) {
         val tmp  = File(dest.parent, "${dest.name}.tmp")
         val conn = openConn(fileId, token)
         try {
-            conn.inputStream.use { it.copyTo(tmp.outputStream()) }
+            conn.inputStream.use { input ->
+                tmp.outputStream().use { output ->
+                    input.copyToInterruptible(output)
+                }
+            }
+            yield() // Final check before committing the file
+            tmp.renameTo(dest)
+        } catch (e: Exception) {
+            tmp.delete()
+            throw e
         } finally {
             conn.disconnect()
         }
-        tmp.renameTo(dest)
+    }
+
+    /** Custom copyTo that respects coroutine cancellation. */
+    private suspend fun InputStream.copyToInterruptible(out: OutputStream) {
+        val buffer = ByteArray(8192)
+        var bytes = read(buffer)
+        while (bytes >= 0) {
+            yield()
+            out.write(buffer, 0, bytes)
+            bytes = read(buffer)
+        }
     }
 
     private fun openConn(fileId: String, token: String): HttpURLConnection =

@@ -117,6 +117,11 @@ class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4Pag
         }
     }
 
+    /** Resets download state to [NotDownloaded] without touching disk or DB. */
+    fun resetState() {
+        _downloadState.value = HafsQcf4DownloadState.NotDownloaded
+    }
+
     /**
      * Returns [Qcf4Page] for [pageNum] (1-based) from the local database.
      * Throws [IllegalStateException] if the page has not been downloaded yet.
@@ -154,16 +159,22 @@ class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4Pag
     }
 
     /**
-     * Downloads [BUNDLE_URL] (a single .7z containing fonts/ and pages/) to a temp file,
-     * then extracts in one streaming pass: TTF fonts are written to [fontsDir]; page JSONs
-     * are parsed and inserted into [MushafDb] inline. Progress is 0→1 based on bytes received.
-     * Idempotent — skips font files already on disk.
+     * Downloads [BUNDLE_URL] fresh every time (no resume). Clears any previous
+     * partial data before starting so the DB and font files are always consistent.
      */
     fun downloadAll(): Flow<HafsQcf4DownloadState> = flow {
         emit(HafsQcf4DownloadState.Connecting)
         _downloadState.value = HafsQcf4DownloadState.Connecting
 
+        // Fresh start — discard any previous partial data before writing new.
+        prefs.edit { putBoolean(KEY_DB_READY, false) }
+        synchronized(typefaceCache) { typefaceCache.clear() }
+        fontsDir.deleteRecursively()
         fontsDir.mkdirs()
+        dao.clearPages(RIWAYA)
+        dao.clearWords(RIWAYA)
+        dao.clearVersePages(RIWAYA)
+
         val tmpBundle = File(ctx.cacheDir, "hafs_qcf4_bundle.7z")
         tmpBundle.delete()
 
@@ -178,6 +189,7 @@ class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4Pag
                         val buf = ByteArray(65_536)
                         var n: Int
                         while (input.read(buf).also { n = it } != -1) {
+                            yield()
                             out.write(buf, 0, n)
                             received += n
                             _downloadState.value = HafsQcf4DownloadState.Downloading(
@@ -206,25 +218,29 @@ class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4Pag
             sz = SevenZFile(tmpBundle)
             var entry = sz.nextEntry
             while (entry != null) {
+                yield()
                 if (!entry.isDirectory) {
                     val name = entry.name.replace('\\', '/')
                     when {
                         name.startsWith("fonts/") && name.endsWith(".ttf") -> {
                             val dest = File(fontsDir, name.removePrefix("fonts/"))
-                            if (!dest.exists()) {
-                                val tmp = File(fontsDir, "${dest.name}.tmp")
-                                tmp.outputStream().use { out ->
-                                    val buf = ByteArray(8_192); var n: Int
-                                    while (sz.read(buf).also { n = it } != -1) out.write(buf, 0, n)
+                            val tmp  = File(fontsDir, "${dest.name}.tmp")
+                            tmp.outputStream().use { out ->
+                                val buf = ByteArray(8_192); var n: Int
+                                while (sz.read(buf).also { n = it } != -1) {
+                                    yield()
+                                    out.write(buf, 0, n)
                                 }
-                                tmp.renameTo(dest)
                             }
-                            // existing fonts: nextEntry() below advances past this entry
+                            tmp.renameTo(dest)
                         }
                         name.startsWith("pages/") && name.endsWith(".json") -> {
                             val baos = ByteArrayOutputStream()
                             val buf  = ByteArray(8_192); var n: Int
-                            while (sz.read(buf).also { n = it } != -1) baos.write(buf, 0, n)
+                            while (sz.read(buf).also { n = it } != -1) {
+                                yield()
+                                baos.write(buf, 0, n)
+                            }
                             runCatching {
                                 val page = JSONObject(baos.toString("UTF-8")).toQcf4Page()
                                 dao.insertPageWithWords(
@@ -234,9 +250,11 @@ class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4Pag
                             }
                             pagesDone++
                             if (pagesDone % 60 == 0 || pagesDone == PAGE_COUNT) {
-                                _downloadState.value = HafsQcf4DownloadState.Downloading(
-                                    null, "Importing pages: $pagesDone / $PAGE_COUNT"
-                                )
+                                if (currentCoroutineContext().isActive) {
+                                    _downloadState.value = HafsQcf4DownloadState.Downloading(
+                                        null, "Importing pages: $pagesDone / $PAGE_COUNT"
+                                    )
+                                }
                             }
                         }
                     }
@@ -244,6 +262,7 @@ class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4Pag
                 entry = sz.nextEntry
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             val err = HafsQcf4DownloadState.Error("Extract failed: ${e.message}")
             emit(err); _downloadState.value = err
             return@flow
