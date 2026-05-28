@@ -37,6 +37,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.feature.adhkar.data.Dhikr
 import com.lhacenmed.khatmah.core.nav.Route
@@ -76,7 +80,7 @@ import kotlinx.coroutines.launch
  *    arrive during a user-initiated swipe.
  */
 @Composable
-fun AdhkarDetailPage(categoryId: String) {
+fun AdhkarDetailScreen(categoryId: String) {
     val nav      = LocalNavController.current
     val context  = LocalContext.current
     val activity = LocalActivity.current as ComponentActivity
@@ -418,5 +422,24 @@ fun AdhkarDetailPage(categoryId: String) {
                 )
             }
         }
+    }
+}
+
+// ── Navigation destination ────────────────────────────────────────────────────
+
+object AdhkarDetailPage : AppPage() {
+    override val route     = Route.ADHKAR_DETAIL
+    override val arguments = listOf(
+        navArgument("categoryId") { type = NavType.StringType },
+    )
+
+    /** Type-safe alternative to Route.adhkarDetail(id) at call sites. */
+    fun routeFor(categoryId: String) = Route.adhkarDetail(categoryId)
+
+    @Composable
+    override fun Content(back: NavBackStackEntry) {
+        AdhkarDetailScreen(
+            categoryId = back.arguments?.getString("categoryId").orEmpty(),
+        )
     }
 }

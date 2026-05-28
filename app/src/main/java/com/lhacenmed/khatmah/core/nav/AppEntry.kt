@@ -45,16 +45,12 @@ import com.lhacenmed.khatmah.core.motion.animatedComposable
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.BottomNavBar
 import com.lhacenmed.khatmah.core.ui.components.IconButton
-import com.lhacenmed.khatmah.feature.settings.AboutPage
-import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarDetailPage
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarEditorPage
-import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarViewModel
-import com.lhacenmed.khatmah.feature.more.MoreTab
-import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahPage
+import com.lhacenmed.khatmah.feature.debug.DbBrowserPage
+import com.lhacenmed.khatmah.feature.debug.FileBrowserPage
 import com.lhacenmed.khatmah.feature.khatmah.ui.DailyAlarmPage
-import com.lhacenmed.khatmah.feature.prayer.ui.PrayersTab
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.AdhanRemindersPage
+import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahPage
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsContent
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.CalcMethodContent
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.DstContent
@@ -62,21 +58,17 @@ import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.HigherLatCo
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.JuristicContent
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.ManualCorrectionsContent
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.qibla.QiblaPage
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.AdhanRemindersPage
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.AdhanSoundSelectionPage
-import com.lhacenmed.khatmah.feature.quran.ui.IndexTab
+import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaHistoryPage
+import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaPage
 import com.lhacenmed.khatmah.feature.quran.ui.debug.DebugWarshPage
 import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranReaderScreen
-import com.lhacenmed.khatmah.feature.quran.ui.search.QuranSearchPage
 import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranSessionReaderScreen
+import com.lhacenmed.khatmah.feature.quran.ui.search.QuranSearchPage
 import com.lhacenmed.khatmah.feature.settings.DarkThemePage
 import com.lhacenmed.khatmah.feature.settings.LanguagePage
 import com.lhacenmed.khatmah.feature.settings.ThemeSettingsPage
-import com.lhacenmed.khatmah.feature.today.TodayTab
-import com.lhacenmed.khatmah.feature.debug.DbBrowserPage
-import com.lhacenmed.khatmah.feature.debug.FileBrowserPage
-import com.lhacenmed.khatmah.feature.mushaf.ui.PrintSelectPage
-import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaHistoryPage
-import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaPage
 import com.lhacenmed.khatmah.feature.trips.ui.TripRequestsPage
 import com.lhacenmed.khatmah.onboarding.CitySelectPage
 import com.lhacenmed.khatmah.onboarding.CountrySelectPage
@@ -98,8 +90,12 @@ fun AppEntry() {
         if (OnboardingPrefs.isComplete(context)) Route.MAIN else Route.ONBOARDING_LANGUAGE
     }
 
-    val tabs  = listOf(TodayTab, AdhkarTab, PrayersTab, IndexTab, MoreTab)
-    val pages = listOf(ThemeSettingsPage, DarkThemePage, LanguagePage, AboutPage)
+    // Tabs driven by AppRegistry — add a new AppTab object + one registry line to extend.
+    val tabs = AppRegistry.tabs.map { it.toNavTab() }
+
+    // Legacy NavPage destinations not yet migrated to AppPage.
+    // Remove an entry here once its file gains an AppPage object and is added to AppRegistry.pages.
+    val legacyPages = listOf(ThemeSettingsPage, DarkThemePage, LanguagePage)
 
     val navController = rememberNavController()
 
@@ -119,7 +115,6 @@ fun AppEntry() {
         if (idx >= 0) {
             selectedTabIndex = idx
         } else {
-            // Deep link to a non-tab screen — ensure the right parent tab is visible behind it.
             if (route.startsWith("adhkar_detail/")) {
                 selectedTabIndex = tabs.indexOfFirst { it.route == Route.ADHKAR }.coerceAtLeast(0)
             }
@@ -168,8 +163,8 @@ fun AppEntry() {
                 )
             }
 
-            // ── General settings sub-pages ────────────────────────────────────
-            pages.forEach { page -> animatedComposable(page.route) { page.content() } }
+            // ── Legacy settings pages (migrate to AppPage + AppRegistry progressively) ──
+            legacyPages.forEach { page -> animatedComposable(page.route) { page.content() } }
 
             // ── Prayer settings sub-pages ─────────────────────────────────────
             animatedComposable(Route.PRAYER_SETTINGS)           { PrayerSettingsContent()    }
@@ -178,15 +173,12 @@ fun AppEntry() {
             animatedComposable(Route.PRAYER_DST)                { DstContent()               }
             animatedComposable(Route.PRAYER_MANUAL_CORRECTIONS) { ManualCorrectionsContent() }
             animatedComposable(Route.PRAYER_HIGHER_LAT)         { HigherLatContent()         }
-            animatedComposable(Route.ADHAN_REMINDERS)           { AdhanRemindersPage() }
+            animatedComposable(Route.ADHAN_REMINDERS)           { AdhanRemindersPage()       }
             animatedComposable(
                 route     = Route.ADHAN_SOUND_SELECTION,
-                arguments = listOf(
-                    navArgument("prayerId") { type = NavType.IntType },
-                ),
+                arguments = listOf(navArgument("prayerId") { type = NavType.IntType }),
             ) { backStack ->
-                val prayerId = backStack.arguments?.getInt("prayerId") ?: 0
-                AdhanSoundSelectionPage(prayerId = prayerId)
+                AdhanSoundSelectionPage(prayerId = backStack.arguments?.getInt("prayerId") ?: 0)
             }
 
             // ── Quran ─────────────────────────────────────────────────────────
@@ -198,13 +190,12 @@ fun AppEntry() {
                 ),
             ) { QuranReaderScreen() }
             animatedComposable(Route.QURAN_SEARCH) { QuranSearchPage() }
-            animatedComposable(Route.DEBUG_WARSH) { DebugWarshPage() }
+            animatedComposable(Route.DEBUG_WARSH)  { DebugWarshPage()  }
 
-            // ── Qibla ─────────────────────────────────────────────────────────────────────
+            // ── Qibla ─────────────────────────────────────────────────────────
             animatedComposable(Route.QIBLA) { QiblaPage() }
 
-            // ── Adhkar editor (create + edit) ─────────────────────────────────
-            // categoryId empty → create mode; non-empty → edit mode.
+            // ── Adhkar editor ─────────────────────────────────────────────────
             animatedComposable(
                 route     = Route.ADHKAR_EDITOR,
                 arguments = listOf(
@@ -217,22 +208,9 @@ fun AppEntry() {
                 )
             }
 
-            // ── Adhkar detail ─────────────────────────────────────────────────
-            animatedComposable(
-                route     = Route.ADHKAR_DETAIL,
-                arguments = listOf(
-                    navArgument("categoryId") { type = NavType.StringType },
-                ),
-            ) { backStack ->
-                AdhkarDetailPage(
-                    categoryId = backStack.arguments?.getString("categoryId").orEmpty(),
-                )
-            }
-
-            // ── Khatmah ───────────────────────────────────────────────────────────────────
-            animatedComposable(Route.NEW_KHATMAH)   { NewKhatmahPage()   }
-            animatedComposable(Route.DAILY_ALARM)   { DailyAlarmPage()   }
-
+            // ── Khatmah ───────────────────────────────────────────────────────
+            animatedComposable(Route.NEW_KHATMAH) { NewKhatmahPage() }
+            animatedComposable(Route.DAILY_ALARM) { DailyAlarmPage() }
             animatedComposable(
                 route     = Route.QURAN_SESSION_READER,
                 arguments = listOf(
@@ -246,42 +224,29 @@ fun AppEntry() {
                 )
             }
 
-            animatedComposable(Route.DEBUG_DB)      { DbBrowserPage()  }
-            animatedComposable(Route.FILES_BROWSER) { FileBrowserPage()  }
+            // ── Debug ─────────────────────────────────────────────────────────
+            animatedComposable(Route.DEBUG_DB)      { DbBrowserPage()   }
+            animatedComposable(Route.FILES_BROWSER) { FileBrowserPage() }
 
-            animatedComposable(Route.MUSHAF_PRINTS) { PrintSelectPage() }
+            // ── Trips / Qadaa ─────────────────────────────────────────────────
+            animatedComposable(Route.TRIP_REQUESTS) { TripRequestsPage()  }
+            animatedComposable(Route.QADAA)         { QadaaPage()         }
+            animatedComposable(Route.QADAA_HISTORY) { QadaaHistoryPage()  }
 
-            // ── Trip requests ──────────────────────────────────────────────────────────
-            animatedComposable(Route.TRIP_REQUESTS) { TripRequestsPage() }
-
-            // ── Qadaa ─────────────────────────────────────────────────────────────────────
-            animatedComposable(Route.QADAA)         { QadaaPage()        }
-            animatedComposable(Route.QADAA_HISTORY) { QadaaHistoryPage() }
+            // ── AppRegistry pages (auto-driven) ───────────────────────────────
+            // To add a new page: create AppPage object → add to AppRegistry.pages.
+            // Remove the corresponding manual block above when migrating an existing page.
+            AppRegistry.pages.forEach { page ->
+                animatedComposable(route = page.route, arguments = page.arguments) { back ->
+                    page.Content(back)
+                }
+            }
         }
     }
 }
 
 // ─── Main shell ───────────────────────────────────────────────────────────────
 
-/**
- * Tab host screen with swipe-between-tabs support and Adhkar-aware top bar.
- *
- * [AdhkarViewModel] is activity-scoped so [AdhkarTab]'s grid and this top bar
- * share the exact same instance — selection state stays in sync automatically.
- *
- * Swipe navigation:
- *  • [HorizontalPager] drives the tab content with [beyondViewportPageCount] set to
- *    keep all tabs composed, preserving scroll and ViewModel state identically to
- *    the previous multi-Box approach.
- *  • Pager settle → [onSelect] keeps parent state in sync.
- *  • [selectedIndex] change → [pagerState.animateScrollToPage] handles nav-tap and
- *    widget deep links.
- *
- * Back-press priority:
- *  1. If Adhkar selection mode is active → exit selection mode.
- *  2. If on any non-primary tab → return to tab 0 (Today).
- *  3. Otherwise, fall through to system back.
- */
 @Composable
 private fun MainScreen(
     tabs: List<NavTab>,
@@ -306,8 +271,6 @@ private fun MainScreen(
     val isPrayersTab   = currentTab.route == Route.PRAYERS
     val inAdhkarSelect = isAdhkarTab && adhkarState.selectionMode
 
-    // Swipe settle → sync parent selected index.
-    // Also exits Adhkar selection mode when the user swipes away from that tab.
     LaunchedEffect(pagerState.settledPage) {
         if (pagerState.settledPage != adhkarTabIdx && adhkarState.selectionMode)
             adhkarVm.exitSelectionMode()
@@ -315,8 +278,6 @@ private fun MainScreen(
             onSelect(pagerState.settledPage)
     }
 
-    // Nav tap / back press / widget deep link → jump instantly to the target page.
-    // Swipe animation is handled natively by HorizontalPager and is unaffected.
     LaunchedEffect(selectedIndex) {
         if (pagerState.currentPage != selectedIndex)
             pagerState.scrollToPage(selectedIndex)
@@ -332,19 +293,16 @@ private fun MainScreen(
     val scrollToTopFlows = remember { Array(tabs.size) { MutableSharedFlow<Unit>(extraBufferCapacity = 1) } }
     val anchorViews      = remember { arrayOfNulls<View>(tabs.size) }
 
-    // City name shown as subtitle when the Prayers tab is active.
     val prayersCityName = remember(isPrayersTab) {
         if (isPrayersTab) OnboardingPrefs.location(context)?.cityName.orEmpty() else ""
     }
 
-    // Top bar title: show selection count when in selection mode
     val topBarTitle = when {
         inAdhkarSelect -> stringResource(R.string.n_selected, adhkarState.selectedIds.size)
         isPrayersTab   -> stringResource(R.string.prayers_screen_title)
         else           -> stringResource(currentTab.labelRes)
     }
 
-    // Top bar container color highlights contextual (selection) mode
     val topBarColor = when {
         inAdhkarSelect -> MaterialTheme.colorScheme.primaryContainer
         else           -> MaterialTheme.colorScheme.surfaceContainer
@@ -361,7 +319,6 @@ private fun MainScreen(
                 actions        = {
                     if (isAdhkarTab) {
                         if (inAdhkarSelect) {
-                            // Select-all toggle
                             IconButton(
                                 onClick     = adhkarVm::toggleSelectAll,
                                 tooltipText = stringResource(R.string.select_all),
@@ -374,7 +331,6 @@ private fun MainScreen(
                                     contentDescription = stringResource(R.string.select_all),
                                 )
                             }
-                            // Delete selected
                             TextButton(onClick = adhkarVm::deleteSelected) {
                                 Text(
                                     stringResource(R.string.delete),
@@ -382,7 +338,6 @@ private fun MainScreen(
                                 )
                             }
                         } else {
-                            // Add new adhkar category
                             IconButton(
                                 onClick     = { nav.navigate(Route.adhkarEditor()) },
                                 tooltipText = stringResource(R.string.add_adhkar),
@@ -401,7 +356,6 @@ private fun MainScreen(
                                 modifier           = Modifier.size(26.dp),
                             )
                         }
-                        // Prayer settings
                         IconButton(
                             onClick     = { nav.navigate(Route.PRAYER_SETTINGS) },
                             tooltipText = stringResource(R.string.prayers_settings),
@@ -418,7 +372,6 @@ private fun MainScreen(
         bottomBar = {
             BottomNavBar(
                 screens      = tabs,
-                // Track pagerState.currentPage so the indicator updates live during a swipe.
                 currentRoute = tabs[pagerState.currentPage].route,
                 onNavigate   = { route ->
                     val idx = tabs.indexOfFirst { it.route == route }
@@ -435,11 +388,6 @@ private fun MainScreen(
         },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
-            // HorizontalPager replaces the previous multi-Box approach.
-            // beyondViewportPageCount = tabs.size - 1 keeps every tab composed at all times,
-            // preserving scroll positions and ViewModel state across tab switches — identical
-            // to the old behavior. userScrollEnabled is false during Adhkar selection mode
-            // to prevent accidental swipe-away from a multi-select session.
             HorizontalPager(
                 state                   = pagerState,
                 modifier                = Modifier.fillMaxSize(),
@@ -452,8 +400,6 @@ private fun MainScreen(
                 }
             }
 
-            // ── Tooltip anchor strip ──────────────────────────────────────────
-            // Invisible 1 dp row just above the nav bar — one slot per tab.
             TooltipAnchorRow(
                 screens  = tabs,
                 onReady  = { index, view -> anchorViews[index] = view },
@@ -468,15 +414,6 @@ private fun MainScreen(
 
 // ─── Tooltip anchor strip ─────────────────────────────────────────────────────
 
-/**
- * An invisible 1 dp row of Views — one per tab — positioned just above the nav bar.
- * Each view carries tooltip text; NavButton forwards long-press MotionEvents here so
- * the system tooltip fires above the bar. INVISIBLE so the strip never intercepts real
- * touches from the user.
- *
- * The factory block runs each time this composable enters composition, refreshing the
- * anchorViews array with current (window-attached) View references.
- */
 @Composable
 private fun TooltipAnchorRow(
     screens: List<NavTab>,
@@ -489,13 +426,12 @@ private fun TooltipAnchorRow(
                 modifier = Modifier.weight(1f).height(1.dp),
                 factory  = { ctx ->
                     View(ctx).apply {
-                        visibility = View.INVISIBLE  // never intercepts real touches
+                        visibility = View.INVISIBLE
                         ViewCompat.setTooltipText(this, ctx.getString(screen.labelRes))
                         onReady(index, this)
                     }
                 },
                 update = { view ->
-                    // Keep label in sync if the screens list ever changes.
                     ViewCompat.setTooltipText(view, view.context.getString(screen.labelRes))
                 },
             )

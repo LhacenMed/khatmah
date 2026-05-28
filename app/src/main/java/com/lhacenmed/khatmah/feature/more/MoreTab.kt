@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.core.nav.NavTab
@@ -57,11 +58,13 @@ import com.lhacenmed.khatmah.shared.util.LocaleManager
 // Items within this distance from the top animate directly; farther ones jump-then-animate.
 private const val SMOOTH_SCROLL_THRESHOLD = 4
 
-val MoreTab = NavTab(
-    route    = Route.MORE,
+object MoreTab : AppTab(
     iconRes  = R.drawable.ic_profile,
     labelRes = R.string.more,
-) { padding -> MoreScreen(padding) }
+    order    = 4,
+) {
+    @Composable override fun Content(padding: PaddingValues) = MoreScreen(padding)
+}
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 

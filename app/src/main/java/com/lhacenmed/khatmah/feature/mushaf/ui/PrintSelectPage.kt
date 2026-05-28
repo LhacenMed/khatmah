@@ -68,8 +68,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
@@ -101,7 +104,7 @@ private fun PrintDownloadState.toBtnKey(isSelected: Boolean): BtnKey = when {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 @Composable
-fun PrintSelectPage() {
+fun PrintSelectScreen() {
     val vm: PrintSelectViewModel = viewModel()
     val selected by vm.selected.collectAsState()
     val states   by vm.downloadStates.collectAsState()
@@ -529,4 +532,14 @@ private fun ActionButton(
             }
         }
     }
+}
+
+// ── Navigation destination ────────────────────────────────────────────────────
+
+object PrintSelectPage : AppPage() {
+    // Route.MUSHAF_PRINTS = "mushaf_prints" — doesn't match auto-derived "print_select".
+    override val route = Route.MUSHAF_PRINTS
+
+    @Composable
+    override fun Content(back: NavBackStackEntry) = PrintSelectScreen()
 }

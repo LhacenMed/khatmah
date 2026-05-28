@@ -15,18 +15,20 @@ import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.motion.initialOffset
 import com.lhacenmed.khatmah.core.motion.materialSharedAxisX
 import com.lhacenmed.khatmah.core.motion.materialSharedAxisZ
+import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.nav.NavTab
 import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
 import com.lhacenmed.khatmah.feature.today.components.*
 
-val TodayTab = NavTab(
-    route    = Route.TODAY,
+object TodayTab : AppTab(
     iconRes  = R.drawable.ic_book,
     labelRes = R.string.today,
-) { padding -> TodayScreen(padding) }
+    order    = 0,
+) {
+    @Composable override fun Content(padding: PaddingValues) = TodayScreen(padding)
+}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 

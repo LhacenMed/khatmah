@@ -22,22 +22,30 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import androidx.navigation.NavBackStackEntry
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.nav.NavPage
-import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.ui.components.IconButton
 import com.lhacenmed.khatmah.core.ui.components.LargeTopAppBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 
+// ── Navigation destination ────────────────────────────────────────────────────
+
 /**
- * About sub-page.
- * Owns its Scaffold + LargeTopAppBar; animates as a complete screen alongside the main shell.
- * Append AboutPage to the pages list in AppEntry to register it.
+ * Route auto-derived: "about" — matches Route.ABOUT.
+ * Call sites continue to use nav.navigate(Route.ABOUT) unchanged.
  */
+object AboutPage : AppPage() {
+    @Composable override fun Content(back: NavBackStackEntry) = AboutScreen()
+}
+
+// ── Screen ────────────────────────────────────────────────────────────────────
+
 @OptIn(ExperimentalMaterial3Api::class)
-val AboutPage = NavPage(route = Route.ABOUT) {
+@Composable
+private fun AboutScreen() {
     val nav = LocalNavController.current
     val context = LocalContext.current
     val scrollBehavior =
@@ -49,7 +57,6 @@ val AboutPage = NavPage(route = Route.ABOUT) {
             .versionName ?: "—"
     }
 
-    // Tooltip anchor tracks the bar's actual height: 20 dp when fully expanded.
     val tooltipAnchorBottom = lerp(20.dp, 55.dp, scrollBehavior.state.collapsedFraction)
 
     Scaffold(
@@ -78,31 +85,27 @@ val AboutPage = NavPage(route = Route.ABOUT) {
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            item {
-                PreferenceSubtitle(text = stringResource(R.string.about_app))
-            }
+            item { PreferenceSubtitle(text = stringResource(R.string.about_app)) }
             item {
                 PreferenceItem(
-                    title = stringResource(R.string.version),
+                    title       = stringResource(R.string.version),
                     description = versionName,
-                    icon = Icons.Outlined.Info,
+                    icon        = Icons.Outlined.Info,
                 )
             }
-            item {
-                PreferenceSubtitle(text = stringResource(R.string.about_links))
-            }
+            item { PreferenceSubtitle(text = stringResource(R.string.about_links)) }
             item {
                 PreferenceItem(
-                    title = stringResource(R.string.about_translate),
+                    title       = stringResource(R.string.about_translate),
                     description = stringResource(R.string.about_translate_desc),
-                    icon = Icons.Outlined.Translate,
+                    icon        = Icons.Outlined.Translate,
                 )
             }
             item {
                 PreferenceItem(
-                    title = stringResource(R.string.about_source_code),
+                    title       = stringResource(R.string.about_source_code),
                     description = stringResource(R.string.about_source_code_desc),
-                    icon = Icons.Outlined.Code,
+                    icon        = Icons.Outlined.Code,
                 )
             }
         }

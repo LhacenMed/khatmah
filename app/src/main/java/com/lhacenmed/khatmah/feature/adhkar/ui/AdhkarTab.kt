@@ -24,7 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
-import com.lhacenmed.khatmah.core.nav.NavTab
+import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.feature.adhkar.ui.components.AdhkarCard
 
@@ -32,11 +32,13 @@ private const val SMOOTH_SCROLL_THRESHOLD = 4
 
 // ── Tab registration ──────────────────────────────────────────────────────────
 
-val AdhkarTab = NavTab(
-    route = Route.ADHKAR,
+object AdhkarTab : AppTab(
     iconRes = R.drawable.ic_adhkar,
     labelRes = R.string.adhkar,
-) { padding -> AdhkarScreen(padding) }
+    order = 1,
+) {
+    @Composable override fun Content(padding: PaddingValues) = AdhkarScreen(padding)
+}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 

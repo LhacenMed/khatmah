@@ -41,17 +41,20 @@ import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.quran.data.QuranRepository
 import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
 import androidx.compose.runtime.collectAsState
+import com.lhacenmed.khatmah.core.nav.AppTab
 
 // Items within this distance from the top animate directly; farther ones jump-then-animate.
 private const val SMOOTH_SCROLL_THRESHOLD = 4
 
 // ── Tab registration ──────────────────────────────────────────────────────────
 
-val IndexTab = NavTab(
-    route    = Route.INDEX,
+object IndexTab : AppTab(
     iconRes  = R.drawable.ic_list,
     labelRes = R.string.index,
-) { padding -> IndexScreen(padding) }
+    order    = 3,
+) {
+    @Composable override fun Content(padding: PaddingValues) = IndexScreen(padding)
+}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
