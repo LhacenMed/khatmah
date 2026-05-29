@@ -17,7 +17,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.runtime.Composable
@@ -49,6 +48,7 @@ import com.lhacenmed.khatmah.feature.mushaf.data.db.PageStartEntity
 import com.lhacenmed.khatmah.feature.quran.data.QuranRepository
 import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
 import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranReaderPage
+import com.lhacenmed.khatmah.shared.util.RecentSurahsPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -161,11 +161,13 @@ private fun FullIndexScreen() {
                 modifier = Modifier.weight(1f).fillMaxWidth(),
             ) { page ->
                 when (page) {
-                    0    -> SurahsContent(surahs, surahPageMap) {
-                        nav.navigate(QuranReaderPage.routeFor(suraNum = it))
+                    0 -> SurahsContent(surahs, surahPageMap) { suraNum ->
+                        RecentSurahsPrefs.record(context, suraNum)
+                        nav.navigate(QuranReaderPage.routeFor(suraNum = suraNum))
                     }
-                    else -> AjzaContent(juzList) {
-                        nav.navigate(QuranReaderPage.routeFor(suraNum = it))
+                    else -> AjzaContent(juzList) { suraNum ->
+                        RecentSurahsPrefs.record(context, suraNum)
+                        nav.navigate(QuranReaderPage.routeFor(suraNum = suraNum))
                     }
                 }
             }

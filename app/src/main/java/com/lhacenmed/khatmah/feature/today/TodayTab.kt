@@ -54,6 +54,7 @@ import com.lhacenmed.khatmah.feature.today.components.QuickIndexSection
 import com.lhacenmed.khatmah.feature.today.components.SessionCard
 import com.lhacenmed.khatmah.feature.today.components.SkeletonCard
 import com.lhacenmed.khatmah.feature.today.components.SkeletonStats
+import com.lhacenmed.khatmah.shared.util.RecentSurahsPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -83,17 +84,19 @@ private fun TodayScreen(padding: PaddingValues) {
 
     // ── Quick index data ──────────────────────────────────────────────────────
     val quranRepo    = remember { QuranRepository(context) }
+    var allSurahs    by remember { mutableStateOf<List<SurahInfo>>(emptyList()) }
     var quickSurahs  by remember { mutableStateOf<List<SurahInfo>>(emptyList()) }
     var surahPageMap by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
 
     LaunchedEffect(mushaf.riwaya.dbKey) {
         val riwayaKey = mushaf.riwaya.dbKey
         val all = withContext(Dispatchers.IO) { quranRepo.surahList(riwayaKey) }
-        quickSurahs = all.take(QUICK_SURAH_COUNT)
-        surahPageMap = withContext(Dispatchers.IO) {
-            val pageStarts = MushafDb.get(context).dao().allPageStarts(riwayaKey)
-            all.associate { s -> s.num to surahStartPage(pageStarts, s.num) }
+        allSurahs = all
+        val pageStarts = withContext(Dispatchers.IO) {
+            MushafDb.get(context).dao().allPageStarts(riwayaKey)
         }
+        surahPageMap = all.associate { s -> s.num to surahStartPage(pageStarts, s.num) }
+        quickSurahs  = resolveQuickSurahs(all, RecentSurahsPrefs.get(context))
     }
 
     // ── Dialogs ───────────────────────────────────────────────────────────────
@@ -186,7 +189,11 @@ private fun TodayScreen(padding: PaddingValues) {
                         surahs            = quickSurahs,
                         pageFor           = { surahPageMap[it] ?: 1 },
                         onContinueReading = { nav.navigate(QuranReaderPage.routeFor()) },
-                        onSurahClick      = { suraNum -> nav.navigate(QuranReaderPage.routeFor(suraNum = suraNum)) },
+                        onSurahClick = { suraNum ->
+                            RecentSurahsPrefs.record(context, suraNum)
+                            quickSurahs = resolveQuickSurahs(allSurahs, RecentSurahsPrefs.get(context))
+                            nav.navigate(QuranReaderPage.routeFor(suraNum = suraNum))
+                        },
                         onFullIndex       = { nav.navigate(FullIndexPage.route) },
                     )
                 }
@@ -291,4 +298,19 @@ private fun surahStartPage(pageStarts: List<PageStartEntity>, suraNum: Int): Int
         else break
     }
     return result
+}
+
+/**
+ * Builds the Quick Index list: recently accessed surahs first, then fills
+ * remaining slots from the beginning of the Quran (Al-Fatiha, Al-Baqara…),
+ * skipping duplicates. Always returns exactly [QUICK_SURAH_COUNT] items
+ * (or fewer if [all] has less data).
+ */
+private fun resolveQuickSurahs(all: List<SurahInfo>, recent: List<Int>): List<SurahInfo> {
+    if (all.isEmpty()) return emptyList()
+    val byNum    = all.associateBy { it.num }
+    val recentItems = recent.mapNotNull { byNum[it] }
+    val recentNums  = recentItems.map { it.num }.toSet()
+    val fillItems   = all.filter { it.num !in recentNums }
+    return (recentItems + fillItems).take(QUICK_SURAH_COUNT)
 }
