@@ -1,5 +1,6 @@
 package com.lhacenmed.khatmah.feature.today.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -40,7 +41,11 @@ internal fun SessionCard(
         if (state.khatmah.riwaya == "hafs") Riwaya.HAFS else Riwaya.WARSH
     }
 
-    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
+        colors   = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.7f)),
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
             // Header row
@@ -82,7 +87,7 @@ internal fun SessionCard(
             }
 
             Spacer(Modifier.height(20.dp))
-            HorizontalDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
             Spacer(Modifier.height(12.dp))
 
             // Start / end rows
@@ -132,7 +137,11 @@ internal fun SessionCard(
  */
 @Composable
 internal fun SkeletonCard() {
-    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
+        colors   = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.7f)),
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
             // Header row

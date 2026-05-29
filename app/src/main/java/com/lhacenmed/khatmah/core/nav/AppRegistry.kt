@@ -36,6 +36,7 @@ import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaHistoryPage
 import com.lhacenmed.khatmah.feature.trips.ui.TripRequestsPage
 import com.lhacenmed.khatmah.feature.debug.DbBrowserPage
 import com.lhacenmed.khatmah.feature.debug.FileBrowserPage
+import com.lhacenmed.khatmah.feature.today.FullIndexPage
 
 /**
  * Single source of truth for all navigation destinations.
@@ -106,6 +107,7 @@ object AppRegistry {
         NewKhatmahPage,
         DailyAlarmPage,
         QuranSessionReaderPage,
+        FullIndexPage,
 
         // ── Utilities & Debug ─────────────────────────────────────────────────
         QadaaPage,

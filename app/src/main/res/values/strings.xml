@@ -497,4 +497,12 @@
     <string name="print_cancel_download_title">Cancel Download</string>
     <string name="print_cancel_download_msg">Stop the ongoing download?</string>
     <string name="print_stop">Stop</string>
+
+    <string name="today_quick_index">Quick Index</string>
+    <string name="today_full_index">Full Index</string>
+    <string name="today_continue_reading">Continue Reading</string>
+    <string name="full_index_title">Index</string>
+    <string name="full_index_tab_surahs">Surahs</string>
+    <string name="full_index_tab_ajza">Juz</string>
+    <string name="full_index_juz">Juz %d</string>
 </resources>

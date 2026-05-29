@@ -1,5 +1,6 @@
 package com.lhacenmed.khatmah.feature.today.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -60,7 +61,11 @@ private fun CardShell(
     overlayText: String,
     buttons:     @Composable () -> Unit,
 ) {
-    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
+        colors   = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.7f)),
+    ) {
         Box {
             Column(modifier = Modifier.padding(16.dp)) {
                 // Invisible header — holds labelLarge height

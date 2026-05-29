@@ -522,4 +522,15 @@
     <string name="print_cancel_download_title">إلغاء التنزيل</string>
     <string name="print_cancel_download_msg">هل تريد إيقاف التنزيل الجاري؟</string>
     <string name="print_stop">إيقاف</string>
+
+    <!-- Quick index — TodayTab -->
+    <string name="today_quick_index">الفهرس السريع</string>
+    <string name="today_full_index">الفهرس كاملاً</string>
+    <string name="today_continue_reading">متابعة القراءة</string>
+
+    <!-- Full index page -->
+    <string name="full_index_title">الفهرس</string>
+    <string name="full_index_tab_surahs">السور</string>
+    <string name="full_index_tab_ajza">الأجزاء</string>
+    <string name="full_index_juz">الجزء %d</string>
 </resources>
