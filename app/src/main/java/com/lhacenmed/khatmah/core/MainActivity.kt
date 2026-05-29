@@ -10,13 +10,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.lhacenmed.khatmah.core.nav.AppEntry
 import com.lhacenmed.khatmah.core.ui.theme.Theme
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
+import com.lhacenmed.khatmah.feature.today.TodayViewModel
+import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import com.lhacenmed.khatmah.widget.PrayerWidget
 import com.lhacenmed.khatmah.widget.WidgetAction
 import com.lhacenmed.khatmah.widget.WidgetNavRequest
@@ -27,9 +31,33 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Must be called before super.onCreate() so the system sets up the
+        // splash window before any content is drawn.
+        val splashScreen = installSplashScreen()
+
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
+
+        // Hoist TodayViewModel to Activity scope here — the earliest possible
+        // moment after super.onCreate(). Its Room flow chain starts immediately,
+        // so data is in flight before setContent ever runs.
+        val todayVm = ViewModelProvider(
+            this,
+            TodayViewModel.Factory(applicationContext),
+        )[TodayViewModel::class.java]
+
+        // Only hold for data when onboarding is complete; during onboarding the
+        // flow itself provides visual continuity and TodayTab is never composed.
+        val holdForData = OnboardingPrefs.isComplete(this)
+
+        // Keep the splash visible until TodayTab's SideEffect confirms Compose has
+        // committed a real-data frame. This is the critical difference from checking
+        // the StateFlow directly: splashReady is only set AFTER Compose has finished
+        // composing with non-Loading state, so the splash never exits to a shimmer.
+        splashScreen.setKeepOnScreenCondition {
+            holdForData && !todayVm.splashReady
+        }
 
         // Handle a widget tap or reminder tap that cold-started the app.
         handleLaunchIntent(intent)

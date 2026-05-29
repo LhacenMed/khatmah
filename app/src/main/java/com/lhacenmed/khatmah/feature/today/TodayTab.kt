@@ -1,13 +1,17 @@
 package com.lhacenmed.khatmah.feature.today
 
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
+import androidx.compose.runtime.SideEffect
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -34,11 +38,11 @@ object TodayTab : AppTab(
 
 @Composable
 private fun TodayScreen(padding: PaddingValues) {
-    val context = LocalContext.current
-    val nav     = LocalNavController.current
-    val vm: TodayViewModel = viewModel(factory = TodayViewModel.Factory(context))
-    val state  by vm.state.collectAsState()
-    val mushaf by MushafPrefs.selected.collectAsState()
+    val nav      = LocalNavController.current
+    val activity = LocalActivity.current as ComponentActivity
+    val vm: TodayViewModel = viewModel(activity)
+    val state    by vm.state.collectAsState()
+    val mushaf   by MushafPrefs.selected.collectAsState()
 
     var showDlDialog      by remember { mutableStateOf(false) }
     // Non-null while the riwaya-mismatch dialog is visible; holds the triggering state.
@@ -81,7 +85,8 @@ private fun TodayScreen(padding: PaddingValues) {
                 when {
                     initialState is TodayViewModel.UiState.Loading ||
                             targetState  is TodayViewModel.UiState.Loading ->
-                        fadeIn(tween(300)) togetherWith fadeOut(tween(300))
+                        // Splash covers the initial load — instant swap, no shimmer bleed-through.
+                        EnterTransition.None togetherWith ExitTransition.None
 
                     initialState is TodayViewModel.UiState.Active &&
                             targetState  is TodayViewModel.UiState.Active ->
@@ -131,17 +136,31 @@ private fun TodayScreen(padding: PaddingValues) {
             targetState  = state,
             contentKey   = { s -> s::class },
             transitionSpec = {
-                fadeIn(tween(300)) togetherWith fadeOut(tween(300))
+                when {
+                    initialState is TodayViewModel.UiState.Loading ||
+                            targetState  is TodayViewModel.UiState.Loading ->
+                        // Splash covers initial load — no skeleton bleed-through.
+                        EnterTransition.None togetherWith ExitTransition.None
+                    else ->
+                        fadeIn(tween(300)) togetherWith fadeOut(tween(300))
+                }
             },
             label = "stats_strip",
         ) { s ->
             when (s) {
-                is TodayViewModel.UiState.Active  ->
+                is TodayViewModel.UiState.Active  -> {
+                    SideEffect { vm.markSplashReady() }
                     KhatmahStats(readCount = s.readCount, totalCount = s.khatmah.totalDays)
-                is TodayViewModel.UiState.AllRead ->
+                }
+                is TodayViewModel.UiState.AllRead -> {
+                    SideEffect { vm.markSplashReady() }
                     KhatmahStats(readCount = s.totalDays, totalCount = s.totalDays)
+                }
                 is TodayViewModel.UiState.Loading -> SkeletonStats()
-                else                              -> Unit
+                else                              -> {
+                    // NoKhatmah — no stats strip; still release the splash.
+                    SideEffect { vm.markSplashReady() }
+                }
             }
         }
     }
