@@ -4,9 +4,6 @@ import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalOverscrollConfiguration
-import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,7 +30,6 @@ import com.lhacenmed.khatmah.feature.qadaa.ui.components.AddFastsSheet
 import com.lhacenmed.khatmah.feature.qadaa.ui.components.AddPrayersSheet
 import com.lhacenmed.khatmah.feature.qadaa.ui.components.MarkDoneSheet
 
-@OptIn(ExperimentalFoundationApi::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun QadaaScreen(outerPadding: PaddingValues = PaddingValues()) {
@@ -112,17 +108,15 @@ fun QadaaScreen(outerPadding: PaddingValues = PaddingValues()) {
             }
         }
         item {
-            CompositionLocalProvider(LocalOverscrollFactory provides null) {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding        = PaddingValues(horizontal = 0.dp),
-                ) {
-                    items(state.prayers, key = { it.prayer.name }) { debt ->
-                        PrayerDebtCard(
-                            debt      = debt,
-                            onMarkOne = { vm.markPrayersDone(mapOf(debt.prayer to 1)) },
-                        )
-                    }
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding        = PaddingValues(horizontal = 0.dp),
+            ) {
+                items(state.prayers, key = { it.prayer.name }) { debt ->
+                    PrayerDebtCard(
+                        debt      = debt,
+                        onMarkOne = { vm.markPrayersDone(mapOf(debt.prayer to 1)) },
+                    )
                 }
             }
         }
