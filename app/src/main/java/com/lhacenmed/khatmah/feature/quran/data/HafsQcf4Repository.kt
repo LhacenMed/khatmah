@@ -9,6 +9,8 @@ import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
 import com.lhacenmed.khatmah.feature.mushaf.data.db.PageEntity
 import com.lhacenmed.khatmah.feature.mushaf.data.db.VersePage
 import com.lhacenmed.khatmah.feature.mushaf.data.db.WordEntity
+import com.lhacenmed.khatmah.shared.util.SpeedTracker
+import com.lhacenmed.khatmah.shared.util.formatDownloadLog
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.apache.commons.compress.archivers.sevenz.SevenZFile
@@ -179,6 +181,7 @@ class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4Pag
         tmpBundle.delete()
 
         // ── Phase 1: Stream bundle to disk with byte-level progress ───────────
+        val speedTracker = SpeedTracker()
         try {
             val conn       = openWithRedirects(BUNDLE_URL)
             val totalBytes = conn.contentLengthLong.takeIf { it > 0 }
@@ -192,9 +195,10 @@ class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4Pag
                             yield()
                             out.write(buf, 0, n)
                             received += n
+                            speedTracker.add(n.toLong())
                             _downloadState.value = HafsQcf4DownloadState.Downloading(
                                 progress = totalBytes?.let { (received.toFloat() / it).coerceIn(0f, 0.99f) },
-                                log      = "Downloading files..."
+                                log      = formatDownloadLog(speedTracker.bytesPerSec(), received, totalBytes)
                             )
                         }
                     }

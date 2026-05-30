@@ -2,6 +2,8 @@ package com.lhacenmed.khatmah.feature.quran.data
 
 import android.content.Context
 import com.lhacenmed.khatmah.shared.drive.DriveAuth
+import com.lhacenmed.khatmah.shared.util.SpeedTracker
+import com.lhacenmed.khatmah.shared.util.formatDownloadLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -24,15 +26,16 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 // ── Download state ────────────────────────────────────────────────────────────
 
 sealed class WarshImageDownloadState {
-    object NotDownloaded                              : WarshImageDownloadState()
-    object Connecting                                 : WarshImageDownloadState()
-    data class Downloading(val progress: Float)       : WarshImageDownloadState()
-    object Downloaded                                 : WarshImageDownloadState()
-    data class Error(val message: String)             : WarshImageDownloadState()
+    object NotDownloaded                                               : WarshImageDownloadState()
+    object Connecting                                                  : WarshImageDownloadState()
+    data class Downloading(val progress: Float, val log: String = "") : WarshImageDownloadState()
+    object Downloaded                                                  : WarshImageDownloadState()
+    data class Error(val message: String)                              : WarshImageDownloadState()
 }
 
 // ── Repository ────────────────────────────────────────────────────────────────
@@ -107,6 +110,10 @@ class WarshImageRepository(private val context: Context) {
 
         fun progress() = (completed.get().toFloat() / total).coerceIn(0f, 1f)
 
+        val speedTracker  = SpeedTracker()
+        val receivedBytes = AtomicLong(0L)
+        val lastStateMs   = AtomicLong(0L)
+
         val initState = WarshImageDownloadState.Downloading(progress())
         emit(initState); _downloadState.value = initState
 
@@ -120,11 +127,25 @@ class WarshImageRepository(private val context: Context) {
                     try {
                         semaphore.withPermit {
                             yield()
-                            download(fileId, token, dest)
+                            download(fileId, token, dest) { n ->
+                                speedTracker.add(n)
+                                val recv = receivedBytes.addAndGet(n)
+                                val now  = System.currentTimeMillis()
+                                val prev = lastStateMs.get()
+                                if (now - prev >= 200L && lastStateMs.compareAndSet(prev, now) && isActive) {
+                                    _downloadState.value = WarshImageDownloadState.Downloading(
+                                        progress = progress(),
+                                        log      = formatDownloadLog(speedTracker.bytesPerSec(), recv),
+                                    )
+                                }
+                            }
                         }
                         if (isActive) {
                             completed.incrementAndGet()
-                            _downloadState.value = WarshImageDownloadState.Downloading(progress())
+                            _downloadState.value = WarshImageDownloadState.Downloading(
+                                progress = progress(),
+                                log      = formatDownloadLog(speedTracker.bytesPerSec(), receivedBytes.get()),
+                            )
                         }
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
@@ -174,13 +195,13 @@ class WarshImageRepository(private val context: Context) {
     }
 
     /** Downloads [fileId] directly (no decompression). Atomic write via .tmp rename. */
-    private suspend fun download(fileId: String, token: String, dest: File) {
+    private suspend fun download(fileId: String, token: String, dest: File, onBytes: (Long) -> Unit) {
         val tmp  = File(dest.parent, "${dest.name}.tmp")
         val conn = openConn(fileId, token)
         try {
             conn.inputStream.use { input ->
                 tmp.outputStream().use { output ->
-                    input.copyToInterruptible(output)
+                    input.copyToInterruptible(output, onBytes)
                 }
             }
             yield() // Final check before committing the file
@@ -193,13 +214,14 @@ class WarshImageRepository(private val context: Context) {
         }
     }
 
-    /** Custom copyTo that respects coroutine cancellation. */
-    private suspend fun InputStream.copyToInterruptible(out: OutputStream) {
+    /** Custom copyTo that respects coroutine cancellation and reports byte counts. */
+    private suspend fun InputStream.copyToInterruptible(out: OutputStream, onBytes: (Long) -> Unit = {}) {
         val buffer = ByteArray(8192)
         var bytes = read(buffer)
         while (bytes >= 0) {
             yield()
             out.write(buffer, 0, bytes)
+            onBytes(bytes.toLong())
             bytes = read(buffer)
         }
     }
@@ -234,7 +256,7 @@ class WarshImageRepository(private val context: Context) {
     // ── Constants ─────────────────────────────────────────────────────────────
 
     companion object {
-        const val PAGE_COUNT      = 604
+        const val PAGE_COUNT          = 604
         private const val CONCURRENCY = 8
         private const val FOLDER_ID   = "10-FYiWO1UgCfprKeh2WRqcimklHW37X5"
 

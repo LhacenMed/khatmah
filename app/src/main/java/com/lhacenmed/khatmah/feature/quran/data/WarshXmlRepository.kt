@@ -4,6 +4,9 @@ import android.content.Context
 import com.lhacenmed.khatmah.feature.quran.ui.reader.ParsedVector
 import com.lhacenmed.khatmah.feature.quran.ui.reader.VectorXmlParser
 import com.lhacenmed.khatmah.shared.drive.DriveAuth
+import com.lhacenmed.khatmah.shared.util.SpeedTracker
+import com.lhacenmed.khatmah.shared.util.formatDownloadLog
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -68,7 +71,7 @@ sealed class WarshDownloadState {
     /**
      * Actively downloading. [progress] is 0f–1f (files completed / total files).
      */
-    data class Downloading(val progress: Float) : WarshDownloadState()
+    data class Downloading(val progress: Float, val log: String = "") : WarshDownloadState()
     /** All XML + JSON files cached on disk — ready to use. */
     object Downloaded    : WarshDownloadState()
     data class Error(val message: String) : WarshDownloadState()
@@ -235,6 +238,23 @@ class WarshXmlRepository(private val context: Context) {
         val completed = AtomicInteger(0)
         fun progress() = (completed.get().toFloat() / totalFiles).coerceIn(0f, 1f)
 
+        val speedTracker  = SpeedTracker()
+        val receivedBytes = AtomicLong(0L)
+        val lastStateMs   = AtomicLong(0L)
+
+        val onBytes: (Long) -> Unit = { n ->
+            speedTracker.add(n)
+            val recv = receivedBytes.addAndGet(n)
+            val now  = System.currentTimeMillis()
+            val prev = lastStateMs.get()
+            if (now - prev >= 200L && lastStateMs.compareAndSet(prev, now)) {
+                _downloadState.value = WarshDownloadState.Downloading(
+                    progress = progress(),
+                    log      = formatDownloadLog(speedTracker.bytesPerSec(), recv),
+                )
+            }
+        }
+
         val initState = WarshDownloadState.Downloading(progress())
         emit(initState); _downloadState.value = initState
 
@@ -249,11 +269,14 @@ class WarshXmlRepository(private val context: Context) {
                     try {
                         semaphore.withPermit {
                             yield()
-                            downloadAndDecompress(fileId, token, dest)
+                            downloadAndDecompress(fileId, token, dest, onBytes)
                         }
                         if (isActive) {
                             completed.incrementAndGet()
-                            _downloadState.value = WarshDownloadState.Downloading(progress())
+                            _downloadState.value = WarshDownloadState.Downloading(
+                                progress = progress(),
+                                log      = formatDownloadLog(speedTracker.bytesPerSec(), receivedBytes.get()),
+                            )
                         }
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
@@ -272,11 +295,14 @@ class WarshXmlRepository(private val context: Context) {
                     try {
                         semaphore.withPermit {
                             yield()
-                            downloadSmall(fileId, token, dest)
+                            downloadSmall(fileId, token, dest, onBytes)
                         }
                         if (isActive) {
                             completed.incrementAndGet()
-                            _downloadState.value = WarshDownloadState.Downloading(progress())
+                            _downloadState.value = WarshDownloadState.Downloading(
+                                progress = progress(),
+                                log      = formatDownloadLog(speedTracker.bytesPerSec(), receivedBytes.get()),
+                            )
                         }
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
@@ -389,13 +415,13 @@ class WarshXmlRepository(private val context: Context) {
      * path on success. This ensures a partial or failed download never leaves a
      * corrupt .xml file that would pass the [isFullyDownloaded] check.
      */
-    private suspend fun downloadAndDecompress(fileId: String, token: String, dest: File) {
+    private suspend fun downloadAndDecompress(fileId: String, token: String, dest: File, onBytes: (Long) -> Unit) {
         val tmp  = File(dest.parent, "${dest.name}.tmp")
         val conn = openConn(fileId, token)
         try {
             BrotliInputStream(conn.inputStream).use { brotli ->
-                tmp.outputStream().use { out -> 
-                    brotli.copyToInterruptible(out)
+                tmp.outputStream().use { out ->
+                    brotli.copyToInterruptible(out, onBytes)
                 }
             }
             yield()
@@ -409,13 +435,13 @@ class WarshXmlRepository(private val context: Context) {
     }
 
     /** Downloads a small file directly (no decompression). Atomic write via .tmp. */
-    private suspend fun downloadSmall(fileId: String, token: String, dest: File) {
+    private suspend fun downloadSmall(fileId: String, token: String, dest: File, onBytes: (Long) -> Unit) {
         val tmp  = File(dest.parent, "${dest.name}.tmp")
         val conn = openConn(fileId, token)
         try {
             conn.inputStream.use { input ->
-                tmp.outputStream().use { out -> 
-                    input.copyToInterruptible(out)
+                tmp.outputStream().use { out ->
+                    input.copyToInterruptible(out, onBytes)
                 }
             }
             yield()
@@ -428,13 +454,14 @@ class WarshXmlRepository(private val context: Context) {
         }
     }
 
-    /** Custom copyTo that respects coroutine cancellation. */
-    private suspend fun InputStream.copyToInterruptible(out: OutputStream) {
+    /** Custom copyTo that respects coroutine cancellation and reports byte counts. */
+    private suspend fun InputStream.copyToInterruptible(out: OutputStream, onBytes: (Long) -> Unit = {}) {
         val buffer = ByteArray(8192)
         var bytes = read(buffer)
         while (bytes >= 0) {
             yield()
             out.write(buffer, 0, bytes)
+            onBytes(bytes.toLong())
             bytes = read(buffer)
         }
     }
