@@ -524,8 +524,8 @@
     <string name="print_stop">إيقاف</string>
 
     <!-- Quick index — TodayTab -->
-    <string name="today_quick_index">الفهرس السريع</string>
-    <string name="today_full_index">الفهرس كاملاً</string>
+    <string name="today_quick_index">الوصول السريع</string>
+    <string name="today_full_index">الفهرس</string>
     <string name="today_continue_reading">متابعة القراءة</string>
 
     <!-- Full index page -->

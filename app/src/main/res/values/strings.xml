@@ -498,8 +498,8 @@
     <string name="print_cancel_download_msg">Stop the ongoing download?</string>
     <string name="print_stop">Stop</string>
 
-    <string name="today_quick_index">Quick Index</string>
-    <string name="today_full_index">Full Index</string>
+    <string name="today_quick_index">Quick Access</string>
+    <string name="today_full_index">Index</string>
     <string name="today_continue_reading">Continue Reading</string>
     <string name="full_index_title">Index</string>
     <string name="full_index_tab_surahs">Surahs</string>
