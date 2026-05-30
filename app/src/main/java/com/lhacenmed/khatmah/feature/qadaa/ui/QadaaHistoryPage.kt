@@ -3,6 +3,7 @@ package com.lhacenmed.khatmah.feature.qadaa.ui
 import android.app.Application
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,12 +11,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
@@ -28,9 +31,13 @@ import java.time.format.DateTimeFormatter
 
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 
-enum class LogFilter { ALL, PRAYERS, FASTS }
+enum class LogFilter(@StringRes val labelRes: Int) {
+    ALL(R.string.qadaa_filter_all),
+    PRAYERS(R.string.qadaa_filter_prayers),
+    FASTS(R.string.qadaa_filter_fasts),
+}
 
-private data class HistoryUiState(
+data class HistoryUiState(
     val grouped: Map<LocalDate, List<QadaaLogItem>> = emptyMap(),
     val filter: LogFilter = LogFilter.ALL,
     val totalPrayersMadeUp: Int = 0,
@@ -40,11 +47,15 @@ private data class HistoryUiState(
 )
 
 @RequiresApi(Build.VERSION_CODES.O)
-private class QadaaHistoryViewModel(app: Application) : AndroidViewModel(app) {
+internal class QadaaHistoryViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = QadaaRepository(app)
     private val _filter = MutableStateFlow(LogFilter.ALL)
 
-    val uiState: StateFlow<HistoryUiState> = combine(repo.logs(), _filter) { logs, filter ->
+    val uiState: StateFlow<HistoryUiState> = combine(
+        repo.logs(),
+        _filter,
+        repo.streaks(QadaaPrefs.dailyGoal),
+    ) { logs, filter, streaks ->
         val filtered = when (filter) {
             LogFilter.ALL     -> logs
             LogFilter.PRAYERS -> logs.filter { it.type == "PRAYER" }
@@ -55,6 +66,8 @@ private class QadaaHistoryViewModel(app: Application) : AndroidViewModel(app) {
             filter             = filter,
             totalPrayersMadeUp = logs.filter { it.type == "PRAYER" }.sumOf { it.count },
             totalFastsMadeUp   = logs.filter { it.type == "FAST" }.sumOf { it.count },
+            currentStreak      = streaks.first,
+            longestStreak      = streaks.second,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
 
@@ -69,7 +82,7 @@ private class QadaaHistoryViewModel(app: Application) : AndroidViewModel(app) {
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun QadaaHistoryScreen() {
-    val nav = LocalNavController.current
+    val nav   = LocalNavController.current
     val vm: QadaaHistoryViewModel = viewModel()
     val state by vm.uiState.collectAsState()
     val dateFmt = remember { DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy") }
@@ -78,16 +91,16 @@ fun QadaaHistoryScreen() {
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "History",
+                title      = stringResource(R.string.qadaa_history),
                 isTopLevel = false,
-                onBack = { nav.popBackStack() },
+                onBack     = { nav.popBackStack() },
             )
         },
     ) { padding ->
         LazyColumn(
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 24.dp),
+            contentPadding      = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier            = Modifier.fillMaxSize().padding(padding),
         ) {
             // Filter chips
             item {
@@ -96,7 +109,7 @@ fun QadaaHistoryScreen() {
                         FilterChip(
                             selected = state.filter == f,
                             onClick  = { vm.setFilter(f) },
-                            label    = { Text(f.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                            label    = { Text(stringResource(f.labelRes)) },
                         )
                     }
                 }
@@ -105,10 +118,12 @@ fun QadaaHistoryScreen() {
 
             if (state.grouped.isEmpty()) {
                 item {
-                    Text("No history yet. Mark some prayers or fasts as made up to see them here.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 24.dp))
+                    Text(
+                        stringResource(R.string.qadaa_history_empty),
+                        style    = MaterialTheme.typography.bodyMedium,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 24.dp),
+                    )
                 }
             }
 
@@ -116,8 +131,8 @@ fun QadaaHistoryScreen() {
                 item(key = date.toString()) {
                     Text(
                         date.format(dateFmt),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style    = MaterialTheme.typography.labelMedium,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 12.dp, bottom = 6.dp),
                     )
                 }
@@ -143,20 +158,26 @@ private fun LogItemCard(item: QadaaLogItem, timeFmt: DateTimeFormatter) {
             .atZone(ZoneId.systemDefault())
             .format(timeFmt)
     }
-    val description = when {
-        item.type == "FAST"           -> "Made up ${item.count} fast day${if (item.count != 1) "s" else ""}${item.fastLabel?.let { " — $it" } ?: ""}"
-        item.prayer != null           -> "Made up ${item.count} ${item.prayer.displayName}"
-        else                          -> "Full day (${item.count} prayers)"
-    }
     val isPrayer = item.type == "PRAYER"
+    val description = when {
+        item.type == "FAST" -> {
+            val daysStr = if (item.count == 1) stringResource(R.string.qadaa_log_fast_day, item.count)
+            else stringResource(R.string.qadaa_log_fast_days, item.count)
+            "$daysStr${item.fastLabel?.let { " — $it" } ?: ""}"
+        }
+        item.prayer != null -> stringResource(
+            R.string.qadaa_log_prayer, item.count, stringResource(item.prayer.nameRes),
+        )
+        else -> stringResource(R.string.qadaa_log_full_day, item.count)
+    }
 
     Card(
-        shape  = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        shape    = RoundedCornerShape(12.dp),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier              = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(if (isPrayer) "🕌" else "🌙", style = MaterialTheme.typography.titleMedium)
@@ -178,10 +199,10 @@ private fun LogItemCard(item: QadaaLogItem, timeFmt: DateTimeFormatter) {
             ) {
                 Text(
                     "+${item.count}",
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.labelSmall,
+                    modifier   = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    style      = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (isPrayer) MaterialTheme.colorScheme.onPrimaryContainer
+                    color      = if (isPrayer) MaterialTheme.colorScheme.onPrimaryContainer
                     else MaterialTheme.colorScheme.onTertiaryContainer,
                 )
             }
@@ -193,21 +214,40 @@ private fun LogItemCard(item: QadaaLogItem, timeFmt: DateTimeFormatter) {
 private fun AllTimeSummaryCard(state: HistoryUiState) {
     Card(shape = RoundedCornerShape(20.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("All time summary", style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.qadaa_all_time_summary),
+                style      = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
             Spacer(Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                SummaryStatCard("${state.totalPrayersMadeUp}", "TOTAL\nPRAYERS",
-                    MaterialTheme.colorScheme.primaryContainer, Modifier.weight(1f))
-                SummaryStatCard("${state.totalFastsMadeUp}", "TOTAL\nFASTS",
-                    MaterialTheme.colorScheme.tertiaryContainer, Modifier.weight(1f))
+                SummaryStatCard(
+                    "${state.totalPrayersMadeUp}",
+                    stringResource(R.string.qadaa_stat_prayers),
+                    MaterialTheme.colorScheme.primaryContainer,
+                    Modifier.weight(1f),
+                )
+                SummaryStatCard(
+                    "${state.totalFastsMadeUp}",
+                    stringResource(R.string.qadaa_stat_fasts),
+                    MaterialTheme.colorScheme.tertiaryContainer,
+                    Modifier.weight(1f),
+                )
             }
             Spacer(Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                SummaryStatCard("🔥 ${state.longestStreak}", "LONGEST\nSTREAK",
-                    MaterialTheme.colorScheme.surfaceContainerHigh, Modifier.weight(1f))
-                SummaryStatCard("🕐 ${state.currentStreak}", "CURRENT\nSTREAK",
-                    MaterialTheme.colorScheme.surfaceContainerHigh, Modifier.weight(1f))
+                SummaryStatCard(
+                    "🔥 ${state.longestStreak}",
+                    stringResource(R.string.qadaa_stat_longest),
+                    MaterialTheme.colorScheme.surfaceContainerHigh,
+                    Modifier.weight(1f),
+                )
+                SummaryStatCard(
+                    "🕐 ${state.currentStreak}",
+                    stringResource(R.string.qadaa_stat_current),
+                    MaterialTheme.colorScheme.surfaceContainerHigh,
+                    Modifier.weight(1f),
+                )
             }
         }
     }
@@ -224,6 +264,7 @@ private fun SummaryStatCard(value: String, label: String, color: Color, modifier
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 object QadaaHistoryPage : AppPage() {
     override val route = "qadaa_history"
     @Composable override fun Content(back: NavBackStackEntry) = QadaaHistoryScreen()

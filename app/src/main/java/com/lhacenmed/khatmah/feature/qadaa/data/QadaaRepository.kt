@@ -1,10 +1,16 @@
 package com.lhacenmed.khatmah.feature.qadaa.data
 
 import android.content.Context
+import android.os.Build
+import androidx.annotation.RequiresApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 class QadaaRepository(context: Context) {
 
@@ -13,7 +19,9 @@ class QadaaRepository(context: Context) {
     // ── Observe ───────────────────────────────────────────────────────────────
 
     fun prayerDebts(): Flow<List<PrayerDebt>> =
-        dao.prayerDebts().map { it.map(PrayerDebtEntity::toDomain) }
+        dao.prayerDebts().map { entities ->
+            entities.map(PrayerDebtEntity::toDomain).sortedBy { it.prayer.ordinal }
+        }
 
     fun activeFastDebts(): Flow<List<FastDebt>> =
         dao.activeFastDebts().map { it.map(FastDebtEntity::toDomain) }
@@ -94,11 +102,61 @@ class QadaaRepository(context: Context) {
             dao.insertLog(QadaaLogEntity(type = "FAST", fastId = fastId, count = count, note = note))
         }
 
-    // ── Streak (future) ───────────────────────────────────────────────────────
+    // ── Streak ────────────────────────────────────────────────────────────────
 
     /**
-     * Streak placeholder — all data needed is in [qadaa_log.completedAt].
-     * TODO: group log rows by calendar day, count consecutive days with SUM(count) > 0.
+     * Calculates (currentStreak, longestStreak) based on calendar days where
+     * the total prayers made up is >= [dailyGoal].
      */
-    suspend fun currentStreak(): Int = 0
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun streaks(dailyGoalFlow: Flow<Int>): Flow<Pair<Int, Int>> = combine(
+        dao.logsWithLabel(),
+        dailyGoalFlow,
+    ) { logs, dailyGoal ->
+        val achievedDays = logs
+            .filter { it.log.type == "PRAYER" }
+            .groupBy { Instant.ofEpochMilli(it.log.completedAt).atZone(ZoneId.systemDefault()).toLocalDate() }
+            .filterValues { items -> items.sumOf { it.log.count } >= dailyGoal }
+            .keys
+            .sortedDescending() // newest to oldest
+
+        if (achievedDays.isEmpty()) return@combine Pair(0, 0)
+
+        // Calculate current streak
+        var currentStreak = 0
+        val today = LocalDate.now()
+        var checkDate = today
+        
+        // The streak is alive if today is achieved, OR if yesterday is achieved (user still has time today).
+        if (achievedDays.contains(today) || achievedDays.contains(today.minusDays(1))) {
+            // Start counting backwards from the most recent possible achieved day in the streak
+            checkDate = if (achievedDays.contains(today)) today else today.minusDays(1)
+            while (achievedDays.contains(checkDate)) {
+                currentStreak++
+                checkDate = checkDate.minusDays(1)
+            }
+        }
+
+        // Calculate longest streak
+        var longestStreak = 0
+        var tempStreak = 0
+        var prevDate: LocalDate? = null
+
+        // iterate from oldest to newest (by reversing the descending list)
+        for (date in achievedDays.reversed()) {
+            if (prevDate == null) {
+                tempStreak = 1
+            } else {
+                if (date == prevDate.plusDays(1)) {
+                    tempStreak++
+                } else {
+                    tempStreak = 1
+                }
+            }
+            if (tempStreak > longestStreak) longestStreak = tempStreak
+            prevDate = date
+        }
+
+        Pair(currentStreak, longestStreak)
+    }
 }

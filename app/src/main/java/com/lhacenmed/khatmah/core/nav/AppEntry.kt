@@ -19,6 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -58,6 +60,8 @@ import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsPage
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarEditorPage
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.prayer.ui.PrayersTab
+import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaTab
+import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 object ShellRoutes {
@@ -166,6 +170,7 @@ fun AppEntry() {
 
 // ─── Main shell ───────────────────────────────────────────────────────────────
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun MainScreen(
     tabs: List<NavTab>,
@@ -177,6 +182,7 @@ private fun MainScreen(
     val activity   = LocalActivity.current as ComponentActivity
     val adhkarVm: AdhkarViewModel = viewModel(activity)
     val adhkarState by adhkarVm.uiState.collectAsState()
+    val qadaaVm: QadaaViewModel = viewModel(activity)
 
     // ── Pager ─────────────────────────────────────────────────────────────────
     val pagerState   = rememberPagerState(
@@ -188,6 +194,7 @@ private fun MainScreen(
     val currentTab     = tabs[pagerState.currentPage]
     val isAdhkarTab    = currentTab.route == AdhkarTab.route
     val isPrayersTab   = currentTab.route == PrayersTab.route
+    val isQadaaTab   = currentTab.route == QadaaTab.route
     val inAdhkarSelect = isAdhkarTab && adhkarState.selectionMode
 
     LaunchedEffect(pagerState.settledPage) {
@@ -283,6 +290,19 @@ private fun MainScreen(
                                 imageVector        = Icons.Outlined.Settings,
                                 contentDescription = stringResource(R.string.prayers_settings),
                             )
+                        }
+                    } else if (isQadaaTab) {
+                        IconButton(
+                            onClick     = { nav.navigate("qadaa_history") },
+                            tooltipText = stringResource(R.string.qadaa_history),
+                        ) {
+                            Icon(Icons.Outlined.History, contentDescription = stringResource(R.string.qadaa_history))
+                        }
+                        IconButton(
+                            onClick     = { qadaaVm.requestAddPrayers() },
+                            tooltipText = stringResource(R.string.qadaa_add_prayers_title),
+                        ) {
+                            Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.qadaa_add_prayers_title))
                         }
                     }
                 },

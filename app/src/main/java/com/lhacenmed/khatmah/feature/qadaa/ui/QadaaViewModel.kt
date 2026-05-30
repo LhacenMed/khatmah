@@ -18,7 +18,7 @@ data class QadaaUiState(
     val totalFastsRemaining: Int = 0,
     val todayDone: Int = 0,
     val dailyGoal: Int = 5,
-    val streak: Int = 0, // TODO: populate when streak feature is implemented
+    val streak: Int = 0,
 )
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -29,12 +29,26 @@ class QadaaViewModel(app: Application) : AndroidViewModel(app) {
     private val todayStartMs: Long = LocalDate.now()
         .atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
+    /** Emitted when the top-bar "Add" button is tapped from MainScreen. */
+    private val _addPrayersEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val addPrayersEvent: SharedFlow<Unit> = _addPrayersEvent.asSharedFlow()
+
     val uiState: StateFlow<QadaaUiState> = combine(
         repo.prayerDebts(),
         repo.activeFastDebts(),
         repo.todayPrayersDone(todayStartMs),
         QadaaPrefs.dailyGoal,
-    ) { prayers, fasts, todayDone, goal ->
+        repo.streaks(QadaaPrefs.dailyGoal),
+    ) { args: Array<Any> ->
+        @Suppress("UNCHECKED_CAST")
+        val prayers = args[0] as List<PrayerDebt>
+        @Suppress("UNCHECKED_CAST")
+        val fasts = args[1] as List<FastDebt>
+        val todayDone = args[2] as Int
+        val goal = args[3] as Int
+        @Suppress("UNCHECKED_CAST")
+        val streaks = args[4] as Pair<Int, Int>
+
         QadaaUiState(
             prayers               = prayers,
             fasts                 = fasts,
@@ -42,8 +56,11 @@ class QadaaViewModel(app: Application) : AndroidViewModel(app) {
             totalFastsRemaining   = fasts.sumOf { it.remaining },
             todayDone             = todayDone,
             dailyGoal             = goal,
+            streak                = streaks.first,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), QadaaUiState())
+
+    fun requestAddPrayers() = viewModelScope.launch { _addPrayersEvent.emit(Unit) }
 
     fun addPrayers(counts: Map<Prayer, Int>) =
         viewModelScope.launch { repo.addPrayers(counts) }

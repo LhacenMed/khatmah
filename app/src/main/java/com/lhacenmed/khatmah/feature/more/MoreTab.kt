@@ -154,11 +154,6 @@ private fun MoreScreen(padding: PaddingValues) {
             onClick = { nav.navigate("daily_alarm") })
         prefItem(R.string.more_start_new_khatmah, Icons.Outlined.Add,
             onClick = { nav.navigate("new_khatmah") })
-        prefItem(
-            titleRes = R.string.more_qadaa,
-            icon     = Icons.Outlined.Autorenew,
-            onClick  = { nav.navigate("qadaa") },
-        )
 
         // ── Prayer Times ──────────────────────────────────────────────────────
         subtitle(R.string.more_prayer_times)

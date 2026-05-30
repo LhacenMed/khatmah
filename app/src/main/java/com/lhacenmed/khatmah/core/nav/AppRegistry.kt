@@ -7,7 +7,6 @@ import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.more.MoreTab
 import com.lhacenmed.khatmah.feature.mushaf.ui.PrintSelectPage
 import com.lhacenmed.khatmah.feature.prayer.ui.PrayersTab
-import com.lhacenmed.khatmah.feature.quran.ui.IndexTab
 import com.lhacenmed.khatmah.feature.settings.AboutPage
 import com.lhacenmed.khatmah.feature.settings.ThemeSettingsPage
 import com.lhacenmed.khatmah.feature.settings.DarkThemePage
@@ -31,7 +30,7 @@ import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahPage
 import com.lhacenmed.khatmah.feature.khatmah.ui.DailyAlarmPage
 import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranSessionReaderPage
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarEditorPage
-import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaPage
+import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaTab
 import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaHistoryPage
 import com.lhacenmed.khatmah.feature.trips.ui.TripRequestsPage
 import com.lhacenmed.khatmah.feature.debug.DbBrowserPage
@@ -60,7 +59,7 @@ object AppRegistry {
         TodayTab,
         AdhkarTab,
         PrayersTab,
-        IndexTab,
+        QadaaTab,
         MoreTab,
     ).sortedBy { it.order }
 
@@ -103,14 +102,13 @@ object AppRegistry {
         QuranSearchPage,
         DebugWarshPage,
 
-        // ── Khatmah & Adhkar ──────────────────────────────────────────────────
+        // ── Khatmah ───────────────────────────────────────────────────────────
         NewKhatmahPage,
         DailyAlarmPage,
         QuranSessionReaderPage,
         FullIndexPage,
 
         // ── Utilities & Debug ─────────────────────────────────────────────────
-        QadaaPage,
         QadaaHistoryPage,
         TripRequestsPage,
         DbBrowserPage,

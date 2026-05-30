@@ -1,5 +1,7 @@
 package com.lhacenmed.khatmah.feature.qadaa.data
 
+import androidx.annotation.StringRes
+import com.lhacenmed.khatmah.R
 import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
@@ -7,12 +9,19 @@ import androidx.room.PrimaryKey
 
 // ── Enums ─────────────────────────────────────────────────────────────────────
 
-enum class Prayer(val displayName: String) {
-    FAJR("Fajr"), DHUHR("Dhuhr"), ASR("Asr"), MAGHRIB("Maghrib"), ISHA("Isha")
+enum class Prayer(val displayName: String, @param:StringRes val nameRes: Int) {
+    FAJR("Fajr",       R.string.prayer_fajr),
+    DHUHR("Dhuhr",     R.string.prayer_dhuhr),
+    ASR("Asr",         R.string.prayer_asr),
+    MAGHRIB("Maghrib", R.string.prayer_maghrib),
+    ISHA("Isha",       R.string.prayer_isha)
 }
 
-enum class FastReason(val label: String) {
-    RAMADAN("Ramadan"), ILLNESS("Illness"), TRAVEL("Travel"), OTHER("Other")
+enum class FastReason(val label: String, @param:StringRes val labelRes: Int) {
+    RAMADAN("Ramadan", R.string.qadaa_reason_ramadan),
+    ILLNESS("Illness", R.string.qadaa_reason_illness),
+    TRAVEL("Travel",   R.string.qadaa_reason_travel),
+    OTHER("Other",     R.string.qadaa_reason_other)
 }
 
 enum class EstimationMethod { CONSERVATIVE, FULL }

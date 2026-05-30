@@ -20,15 +20,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.feature.qadaa.data.EstimationMethod
 import com.lhacenmed.khatmah.feature.qadaa.data.Prayer
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
@@ -44,11 +49,16 @@ fun AddPrayersSheet(
         sheetState       = sheetState,
     ) {
         var tab by rememberSaveable { mutableIntStateOf(0) }
-        val tabs = listOf("Custom", "Date range", "By year", "Calendar")
+        val tabs = listOf(
+            stringResource(R.string.qadaa_tab_custom),
+            stringResource(R.string.qadaa_tab_date_range),
+            stringResource(R.string.qadaa_tab_by_year),
+            stringResource(R.string.qadaa_tab_calendar),
+        )
 
         Column(modifier = Modifier.padding(bottom = 24.dp)) {
             Text(
-                "Add missed prayers",
+                stringResource(R.string.qadaa_add_prayers_title),
                 style    = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
@@ -88,7 +98,7 @@ private fun CustomTab(onAdd: (Map<Prayer, Int>) -> Unit, onDismiss: () -> Unit) 
 
     Column(modifier = Modifier.padding(horizontal = 20.dp).verticalScroll(rememberScrollState())) {
         Text(
-            "Enter how many of each prayer you missed",
+            stringResource(R.string.qadaa_custom_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -97,28 +107,29 @@ private fun CustomTab(onAdd: (Map<Prayer, Int>) -> Unit, onDismiss: () -> Unit) 
             Prayer.entries.forEachIndexed { i, prayer ->
                 if (i > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 PrayerCountRow(
-                    label = prayer.displayName,
-                    count = counts[prayer] ?: 0,
+                    label       = stringResource(prayer.nameRes),
+                    count       = counts[prayer] ?: 0,
                     onDecrement = { counts[prayer] = ((counts[prayer] ?: 0) - 1).coerceAtLeast(0) },
                     onIncrement = { counts[prayer] = (counts[prayer] ?: 0) + 1 },
-                    active = (counts[prayer] ?: 0) > 0,
+                    active      = (counts[prayer] ?: 0) > 0,
                 )
             }
         }
         Spacer(Modifier.height(12.dp))
         if (showNote) {
             OutlinedTextField(
-                value = note, onValueChange = { note = it },
-                placeholder = { Text("e.g. from a trip") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true,
+                value         = note,
+                onValueChange = { note = it },
+                placeholder   = { Text(stringResource(R.string.qadaa_note_hint)) },
+                modifier      = Modifier.fillMaxWidth(),
+                shape         = RoundedCornerShape(12.dp),
+                singleLine    = true,
             )
         } else {
-            TextButton(onClick = { showNote = true }) { Text("+ Add note") }
+            TextButton(onClick = { showNote = true }) { Text(stringResource(R.string.qadaa_add_note)) }
         }
         Spacer(Modifier.height(16.dp))
-        AddButton(total = total, label = "Add to Qadaa") {
+        AddButton(total = total, label = stringResource(R.string.qadaa_add_to_qadaa)) {
             onAdd(counts.filter { it.value > 0 })
             onDismiss()
         }
@@ -145,14 +156,21 @@ private fun DateRangeTab(onAdd: (Map<Prayer, Int>) -> Unit, onDismiss: () -> Uni
     val total = dayCount * selected.size
     val dateFmt = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
+    val labelFrom  = stringResource(R.string.qadaa_from)
+    val labelUntil = stringResource(R.string.qadaa_until)
+    val labelSelect = stringResource(R.string.qadaa_date_select)
+    val labelAdd   = stringResource(R.string.qadaa_add_to_qadaa)
+
     Column(modifier = Modifier.padding(horizontal = 20.dp).verticalScroll(rememberScrollState())) {
-        Text("Select the period you missed prayers",
+        Text(
+            stringResource(R.string.qadaa_date_range_hint),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            DateField("From", fromDate?.format(dateFmt), Modifier.weight(1f)) { showFromPicker = true }
-            DateField("Until", untilDate?.format(dateFmt), Modifier.weight(1f)) { showUntilPicker = true }
+            DateField(labelFrom,  fromDate?.format(dateFmt),  Modifier.weight(1f)) { showFromPicker  = true }
+            DateField(labelUntil, untilDate?.format(dateFmt), Modifier.weight(1f)) { showUntilPicker = true }
         }
         Spacer(Modifier.height(16.dp))
         PrayerChips(selected = selected, onToggle = { prayer ->
@@ -161,14 +179,14 @@ private fun DateRangeTab(onAdd: (Map<Prayer, Int>) -> Unit, onDismiss: () -> Uni
         if (total > 0) {
             Spacer(Modifier.height(12.dp))
             Text(
-                "That's $total prayers",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
+                stringResource(R.string.qadaa_that_is_n_prayers, total),
+                style      = MaterialTheme.typography.bodyMedium,
+                color      = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold,
             )
         }
         Spacer(Modifier.height(16.dp))
-        AddButton(total = total, label = "Add to Qadaa") {
+        AddButton(total = total, label = labelAdd) {
             onAdd(selected.associateWith { dayCount })
             onDismiss()
         }
@@ -178,32 +196,32 @@ private fun DateRangeTab(onAdd: (Map<Prayer, Int>) -> Unit, onDismiss: () -> Uni
     if (showFromPicker) {
         val state = rememberDatePickerState(
             initialSelectedDateMillis = fromMs ?: System.currentTimeMillis(),
-            selectableDates = object : SelectableDates {
-                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                    return utcTimeMillis <= System.currentTimeMillis()
-                }
-            }
+            selectableDates           = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis <= System.currentTimeMillis()
+            },
         )
         DatePickerDialog(
             onDismissRequest = { showFromPicker = false },
-            confirmButton = {
-                TextButton(onClick = { fromMs = state.selectedDateMillis; showFromPicker = false }) { Text("OK") }
+            confirmButton    = {
+                TextButton(onClick = { fromMs = state.selectedDateMillis; showFromPicker = false }) {
+                    Text(stringResource(R.string.dialog_confirm))
+                }
             },
         ) { DatePicker(state = state) }
     }
     if (showUntilPicker) {
         val state = rememberDatePickerState(
             initialSelectedDateMillis = untilMs ?: System.currentTimeMillis(),
-            selectableDates = object : SelectableDates {
-                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                    return utcTimeMillis <= System.currentTimeMillis()
-                }
-            }
+            selectableDates           = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis <= System.currentTimeMillis()
+            },
         )
         DatePickerDialog(
             onDismissRequest = { showUntilPicker = false },
-            confirmButton = {
-                TextButton(onClick = { untilMs = state.selectedDateMillis; showUntilPicker = false }) { Text("OK") }
+            confirmButton    = {
+                TextButton(onClick = { untilMs = state.selectedDateMillis; showUntilPicker = false }) {
+                    Text(stringResource(R.string.dialog_confirm))
+                }
             },
         ) { DatePicker(state = state) }
     }
@@ -217,45 +235,56 @@ private fun ByYearTab(onAdd: (Map<Prayer, Int>) -> Unit, onDismiss: () -> Unit) 
     var selected by remember { mutableStateOf(Prayer.entries.toSet()) }
     var method by rememberSaveable { mutableStateOf(EstimationMethod.CONSERVATIVE) }
 
-    val daysPerYear = if (method == EstimationMethod.CONSERVATIVE) 350 else 365
-    val countPerPrayer = years * daysPerYear
-    val total = countPerPrayer * selected.size
+    val daysPerYear      = if (method == EstimationMethod.CONSERVATIVE) 350 else 365
+    val countPerPrayer   = years * daysPerYear
+    val total            = countPerPrayer * selected.size
+
+    // Pre-build localized prayer names (Prayer.entries.map is inline — safe in composable scope)
+    val prayerNames: List<String> = Prayer.entries.map { stringResource(it.nameRes) }
 
     Column(modifier = Modifier.padding(horizontal = 20.dp).verticalScroll(rememberScrollState())) {
-        Text("Estimate how many prayers you owe from a past period.",
+        Text(
+            stringResource(R.string.qadaa_by_year_hint),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(Modifier.height(16.dp))
-        Text("Duration", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.qadaa_duration), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             CounterButton("-", enabled = years > 1) { years-- }
             Text("$years", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             CounterButton("+") { years++ }
-            Text("years", style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                stringResource(R.string.qadaa_years_unit),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         Spacer(Modifier.height(16.dp))
-        Text("Prayers to include", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.qadaa_prayers_to_include), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(8.dp))
         PrayerChips(selected = selected, onToggle = { prayer ->
             selected = if (prayer in selected) selected - prayer else selected + prayer
         })
         Spacer(Modifier.height(16.dp))
-        Text("Estimation method", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.qadaa_estimation_method), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            EstimationMethod.entries.forEach { m ->
-                FilterChip(
-                    selected = method == m,
-                    onClick  = { method = m },
-                    label    = { Text(if (m == EstimationMethod.CONSERVATIVE) "Conservative" else "Full") },
-                )
-            }
+            FilterChip(
+                selected = method == EstimationMethod.CONSERVATIVE,
+                onClick  = { method = EstimationMethod.CONSERVATIVE },
+                label    = { Text(stringResource(R.string.qadaa_method_conservative)) },
+            )
+            FilterChip(
+                selected = method == EstimationMethod.FULL,
+                onClick  = { method = EstimationMethod.FULL },
+                label    = { Text(stringResource(R.string.qadaa_method_full)) },
+            )
         }
         Text(
-            if (method == EstimationMethod.CONSERVATIVE) "Accounts for valid exemptions"
-            else "Counts every day in the period",
+            if (method == EstimationMethod.CONSERVATIVE) stringResource(R.string.qadaa_conservative_desc)
+            else stringResource(R.string.qadaa_full_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -266,24 +295,29 @@ private fun ByYearTab(onAdd: (Map<Prayer, Int>) -> Unit, onDismiss: () -> Unit) 
                 shape  = RoundedCornerShape(16.dp),
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    modifier            = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
                         "%,d".format(total),
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = MaterialTheme.colorScheme.primary,
+                        style      = MaterialTheme.typography.headlineLarge,
+                        color      = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )
-                    Text("estimated prayers to add",
+                    Text(
+                        stringResource(R.string.qadaa_estimated_prayers_label),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
                     if (selected.isNotEmpty()) {
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            selected.joinToString(" · ") { "${it.displayName} %,d".format(countPerPrayer) },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                            // joinToString is not inline — use pre-built prayerNames list
+                            selected.joinToString(" · ") { prayer ->
+                                "${prayerNames[prayer.ordinal]} %,d".format(countPerPrayer)
+                            },
+                            style     = MaterialTheme.typography.bodySmall,
+                            color     = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                             textAlign = TextAlign.Center,
                         )
                     }
@@ -291,7 +325,7 @@ private fun ByYearTab(onAdd: (Map<Prayer, Int>) -> Unit, onDismiss: () -> Unit) 
             }
         }
         Spacer(Modifier.height(16.dp))
-        AddButton(total = total, label = "Add to Qadaa") {
+        AddButton(total = total, label = stringResource(R.string.qadaa_add_to_qadaa)) {
             onAdd(selected.associateWith { countPerPrayer })
             onDismiss()
         }
@@ -309,37 +343,46 @@ private fun CalendarTab(onAdd: (Map<Prayer, Int>) -> Unit, onDismiss: () -> Unit
     val today = LocalDate.now()
     val total = selectedDays.size * Prayer.entries.size
 
+    // Locale-aware day-of-week abbreviations, Monday-first
+    val dayHeaders = remember {
+        (1..7).map { dow -> DayOfWeek.of(dow).getDisplayName(TextStyle.NARROW, Locale.getDefault()) }
+    }
+
     Column(modifier = Modifier.padding(horizontal = 20.dp).verticalScroll(rememberScrollState())) {
         // Month navigation
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { displayMonth = displayMonth.minusMonths(1) }) {
-                Icon(Icons.Outlined.ChevronLeft, contentDescription = "Previous month")
+                Icon(Icons.Outlined.ChevronLeft, contentDescription = null)
             }
             Text(
                 displayMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
-                modifier = Modifier.weight(1f),
+                modifier  = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.titleMedium,
+                style     = MaterialTheme.typography.titleMedium,
             )
             IconButton(
                 enabled = displayMonth < YearMonth.now(),
                 onClick = { displayMonth = displayMonth.plusMonths(1) },
             ) {
-                Icon(Icons.Outlined.ChevronRight, contentDescription = "Next month")
+                Icon(Icons.Outlined.ChevronRight, contentDescription = null)
             }
         }
         // Day-of-week headers
         Row(modifier = Modifier.fillMaxWidth()) {
-            listOf("M", "T", "W", "T", "F", "S", "S").forEach { d ->
-                Text(d, modifier = Modifier.weight(1f), textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            dayHeaders.forEach { d ->
+                Text(
+                    d,
+                    modifier  = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                    style     = MaterialTheme.typography.labelSmall,
+                    color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
         Spacer(Modifier.height(4.dp))
         // Build day grid (Monday-first; nulls are empty cells before day 1)
         val firstDay = displayMonth.atDay(1)
-        val offset = (firstDay.dayOfWeek.value - 1) // 0=Mon
+        val offset   = (firstDay.dayOfWeek.value - 1) // 0=Mon
         val daysInMonth = displayMonth.lengthOfMonth()
         val cells = buildList<LocalDate?> {
             repeat(offset) { add(null) }
@@ -350,9 +393,9 @@ private fun CalendarTab(onAdd: (Map<Prayer, Int>) -> Unit, onDismiss: () -> Unit
                 week.forEach { date ->
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         if (date != null) {
-                            val isFuture = date.isAfter(today)
+                            val isFuture   = date.isAfter(today)
                             val isSelected = date in selectedDays
-                            val isToday = date == today
+                            val isToday    = date == today
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
@@ -388,14 +431,14 @@ private fun CalendarTab(onAdd: (Map<Prayer, Int>) -> Unit, onDismiss: () -> Unit
         Spacer(Modifier.height(12.dp))
         if (selectedDays.isNotEmpty()) {
             Text(
-                "${selectedDays.size} day${if (selectedDays.size != 1) "s" else ""} selected — $total prayers total",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
+                stringResource(R.string.qadaa_that_is_n_prayers, total),
+                style      = MaterialTheme.typography.bodyMedium,
+                color      = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(8.dp))
         }
-        AddButton(total = total, label = "Add to Qadaa") {
+        AddButton(total = total, label = stringResource(R.string.qadaa_add_to_qadaa)) {
             onAdd(Prayer.entries.associateWith { selectedDays.size })
             onDismiss()
         }
@@ -426,9 +469,9 @@ private fun PrayerCountRow(
         CounterButton("-", enabled = count > 0, onClick = onDecrement)
         Text(
             "$count",
-            modifier = Modifier.width(40.dp),
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.titleMedium,
+            modifier   = Modifier.width(40.dp),
+            textAlign  = TextAlign.Center,
+            style      = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
         )
         CounterButton("+", onClick = onIncrement)
@@ -445,21 +488,27 @@ private fun PrayerChips(selected: Set<Prayer>, onToggle: (Prayer) -> Unit) {
                 if (allSelected) Prayer.entries.forEach { onToggle(it) }
                 else Prayer.entries.filter { it !in selected }.forEach { onToggle(it) }
             },
-            label = { Text("All 5") },
+            label = { Text(stringResource(R.string.qadaa_all_five)) },
         )
     }
     Spacer(Modifier.height(6.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Prayer.entries.toTypedArray().take(3).forEach { prayer ->
-            FilterChip(selected = prayer in selected, onClick = { onToggle(prayer) },
-                label = { Text(prayer.displayName) })
+        Prayer.entries.take(3).forEach { prayer ->
+            FilterChip(
+                selected = prayer in selected,
+                onClick  = { onToggle(prayer) },
+                label    = { Text(stringResource(prayer.nameRes)) },
+            )
         }
     }
     Spacer(Modifier.height(6.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Prayer.entries.drop(3).forEach { prayer ->
-            FilterChip(selected = prayer in selected, onClick = { onToggle(prayer) },
-                label = { Text(prayer.displayName) })
+            FilterChip(
+                selected = prayer in selected,
+                onClick  = { onToggle(prayer) },
+                label    = { Text(stringResource(prayer.nameRes)) },
+            )
         }
     }
 }
@@ -476,16 +525,16 @@ internal fun CounterButton(label: String, enabled: Boolean = true, onClick: () -
 @Composable
 private fun DateField(label: String, value: String?, modifier: Modifier = Modifier, onClick: () -> Unit) {
     OutlinedTextField(
-        value            = value ?: "",
-        onValueChange    = {},
-        readOnly         = true,
-        label            = { Text(label) },
-        trailingIcon     = { Icon(Icons.Outlined.CalendarMonth, contentDescription = null) },
-        placeholder      = { Text("Select") },
-        modifier         = modifier.clickable(onClick = onClick),
-        shape            = RoundedCornerShape(12.dp),
-        enabled          = false,
-        colors           = OutlinedTextFieldDefaults.colors(
+        value         = value ?: "",
+        onValueChange = {},
+        readOnly      = true,
+        label         = { Text(label) },
+        trailingIcon  = { Icon(Icons.Outlined.CalendarMonth, contentDescription = null) },
+        placeholder   = { Text(stringResource(R.string.qadaa_date_select)) },
+        modifier      = modifier.clickable(onClick = onClick),
+        shape         = RoundedCornerShape(12.dp),
+        enabled       = false,
+        colors        = OutlinedTextFieldDefaults.colors(
             disabledTextColor         = MaterialTheme.colorScheme.onSurface,
             disabledBorderColor       = MaterialTheme.colorScheme.outline,
             disabledPlaceholderColor  = MaterialTheme.colorScheme.onSurfaceVariant,
