@@ -90,14 +90,15 @@ Java_com_lhacenmed_khatmah_feature_debug_NativeBindings_getFileMetadataNative(
     jstring pathStr  = env->NewStringUTF(path_c);
     jstring permsStr = env->NewStringUTF(getPermissionsMode(fileStat.st_mode).c_str());
     jobject obj = env->NewObject(fileMetadataClass, constructor,
-                                 nameStr, pathStr,
+                                 nameStr,
+                                 pathStr,
                                  (jlong)fileStat.st_size,
-    (jboolean)S_ISDIR(fileStat.st_mode),
-            (jlong)(fileStat.st_mtime * 1000),
-            permsStr,
-            (jlong)fileStat.st_ino,
-            (jlong)fileStat.st_blksize,
-            (jlong)fileStat.st_blocks);
+                                 (jboolean)S_ISDIR(fileStat.st_mode),
+                                 static_cast<jlong>(fileStat.st_mtime) * 1000LL,
+                                 permsStr,
+                                 (jlong)fileStat.st_ino,
+                                 (jlong)fileStat.st_blksize,
+                                 (jlong)fileStat.st_blocks);
     env->ReleaseStringUTFChars(path, path_c);
     env->DeleteLocalRef(nameStr);
     env->DeleteLocalRef(pathStr);
