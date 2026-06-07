@@ -16,8 +16,8 @@ import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.shared.location.CountriesApi
 import com.lhacenmed.khatmah.shared.location.LocationCache
-import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.nav.ShellRoutes
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import kotlinx.coroutines.launch
 
@@ -71,11 +71,11 @@ fun CitySelectPage(country: String, iso2: String, fromSettings: Boolean = false)
             if (coords != null) {
                 OnboardingPrefs.complete(context, city, coords.first, coords.second, iso2)
                 if (fromSettings) {
-                    nav.navigate(Route.PRAYER_SETTINGS) {
-                        popUpTo(Route.PRAYER_SETTINGS) { inclusive = true }
+                    nav.navigate("prayer_settings") {
+                        popUpTo("prayer_settings") { inclusive = true }
                     }
                 } else {
-                    nav.navigate(Route.MAIN) { popUpTo(0) { inclusive = true } }
+                    nav.navigate(ShellRoutes.MAIN) { popUpTo(0) { inclusive = true } }
                 }
             } else {
                 snackbarState.showSnackbar(geocodeErrorMsg)

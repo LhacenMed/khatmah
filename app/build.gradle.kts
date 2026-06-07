@@ -135,6 +135,13 @@ android {
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
+
+    externalNativeBuild {
+        cmake {
+            path    = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
 }
 
 androidComponents {
@@ -161,6 +168,7 @@ kotlin {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.glance)
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -196,6 +204,8 @@ dependencies {
     implementation(libs.androidsvg)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.org.brotli.dec)
+    implementation(libs.commons.compress)
+    implementation(libs.xz)
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

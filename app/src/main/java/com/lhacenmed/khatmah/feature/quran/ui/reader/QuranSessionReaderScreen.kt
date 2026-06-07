@@ -31,6 +31,10 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.OptionSelectBottomSheet
 import com.lhacenmed.khatmah.core.ui.components.SheetOption
@@ -43,6 +47,8 @@ import com.lhacenmed.khatmah.feature.quran.ui.components.ImageTopBar
 import com.lhacenmed.khatmah.feature.quran.ui.components.QuranBottomBar
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
+import com.lhacenmed.khatmah.feature.quran.data.HafsQcf4Repository
+import com.lhacenmed.khatmah.feature.quran.data.WarshQcf4Repository
 import com.lhacenmed.khatmah.shared.util.AppPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -64,14 +70,19 @@ private const val ANIM = 280
  */
 @Composable
 fun QuranSessionReaderScreen(startPage: Int, endPage: Int) {
+    val context = LocalContext.current
     val print by MushafPrefs.selected.collectAsState()
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         when (print) {
             MushafPrint.WarshImages -> SessionImagePager(startPage, endPage)
             MushafPrint.WarshSvg    -> SessionXmlPager(startPage, endPage)
-            MushafPrint.HafsQcf4 -> SessionQcf4Pager(startPage, endPage)
-            MushafPrint.WarshText    -> {
+            MushafPrint.HafsQcf4    -> SessionQcf4Pager(startPage, endPage,
+                remember { HafsQcf4Repository.get(context) })
+            MushafPrint.WarshQcf4   -> SessionQcf4Pager(startPage, endPage,
+                remember { WarshQcf4Repository.get(context) })
+            MushafPrint.WarshText,
+            MushafPrint.HafsText    -> {
                 // Guard: TodayTab should have prevented this path.
                 Box(Modifier.fillMaxSize(), Alignment.Center) {
                     Text("الرجاء اختيار نوع المصحف من الإعدادات")
@@ -338,5 +349,19 @@ private fun SessionMushhafPage(pageNum: Int, isDark: Boolean, modifier: Modifier
         )
     } else {
         Box(modifier, Alignment.Center) { CircularProgressIndicator() }
+    }
+}
+
+object QuranSessionReaderPage : AppPage() {
+    override val route = "quran_session_reader?startPage={startPage}&endPage={endPage}"
+    override val arguments = listOf(
+        navArgument("startPage") { type = NavType.IntType },
+        navArgument("endPage")   { type = NavType.IntType },
+    )
+    fun routeFor(startPage: Int, endPage: Int) = "quran_session_reader?startPage=$startPage&endPage=$endPage"
+    @Composable override fun Content(back: NavBackStackEntry) {
+        val startPage = back.arguments?.getInt("startPage") ?: 1
+        val endPage   = back.arguments?.getInt("endPage") ?: 1
+        QuranSessionReaderScreen(startPage, endPage)
     }
 }

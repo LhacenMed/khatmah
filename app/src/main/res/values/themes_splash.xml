@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Splash theme wraps the real app theme.
+        installSplashScreen() reads this, then swaps to postSplashScreenTheme
+        before the first Compose frame is drawn.
+    -->
+    <style name="Theme.Khatmah.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_round</item>
+        <item name="postSplashScreenTheme">@style/Theme.Khatmah</item>
+    </style>
+</resources>

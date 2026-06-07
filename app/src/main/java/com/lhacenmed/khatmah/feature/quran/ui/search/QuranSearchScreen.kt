@@ -17,6 +17,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -24,8 +25,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.ui.theme.HafsFamily
 import com.lhacenmed.khatmah.core.ui.theme.WarshFamily
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 import com.lhacenmed.khatmah.feature.quran.data.QuranRepository
 import com.lhacenmed.khatmah.feature.quran.data.SearchResult
 import com.lhacenmed.khatmah.feature.quran.ui.reader.KEY_JUMP_AYA
@@ -55,6 +61,10 @@ class QuranSearchViewModel(app: Application) : AndroidViewModel(app) {
 
     private var searchJob: Job? = null
 
+    /** Current riwaya key — read fresh each search to react to riwaya changes. */
+    private val riwaya: String
+        get() = MushafPrefs.selected.value.riwaya.dbKey
+
     /**
      * Updates the query and triggers a debounced (300 ms) search.
      * Clears results immediately when [query] is blank.
@@ -69,7 +79,7 @@ class QuranSearchViewModel(app: Application) : AndroidViewModel(app) {
         searchJob = viewModelScope.launch {
             delay(300)
             _state.update { it.copy(loading = true) }
-            val results = repo.search(query)
+            val results = repo.search(query, riwaya)
             _state.update { it.copy(results = results, loading = false) }
         }
     }
@@ -81,17 +91,19 @@ class QuranSearchViewModel(app: Application) : AndroidViewModel(app) {
  * Full-screen Quran search page.
  *
  * Navigation contract:
- *   Opened by [QuranReaderScreen] via [Route.QURAN_SEARCH].
+ *   Opened by [QuranReaderScreen] via ["quran_search"].
  *   On result selection, writes [KEY_JUMP_SURA] + [KEY_JUMP_AYA] to the reader's
  *   SavedStateHandle before popping, so the reader scrolls to the correct page.
  *   Back with non-empty query → clears query. Back with empty query → pops.
  */
 @Composable
-fun QuranSearchPage() {
+fun QuranSearchScreen() {
     val vm:   QuranSearchViewModel = viewModel()
     val state by vm.state.collectAsState()
     val nav   = LocalNavController.current
     val focus = remember { FocusRequester() }
+    val selectedPrint by MushafPrefs.selected.collectAsState()
+    val textFamily = if (selectedPrint.riwaya == Riwaya.HAFS) HafsFamily else WarshFamily
 
     BackHandler(enabled = state.query.isNotEmpty()) { vm.onQueryChange("") }
 
@@ -108,6 +120,7 @@ fun QuranSearchPage() {
         SearchContent(
             state      = state,
             modifier   = Modifier.padding(innerPadding),
+            textFamily = textFamily,
             onSelected = { result ->
                 nav.previousBackStackEntry?.savedStateHandle?.run {
                     set(KEY_JUMP_SURA, result.suraNum)
@@ -181,6 +194,7 @@ private fun SearchBar(
 private fun SearchContent(
     state:      QuranSearchViewModel.State,
     modifier:   Modifier,
+    textFamily: FontFamily,
     onSelected: (SearchResult) -> Unit,
 ) {
     when {
@@ -202,7 +216,7 @@ private fun SearchContent(
                 contentPadding = PaddingValues(bottom = 16.dp),
             ) {
                 items(items = state.results, key = { "${it.suraNum}:${it.ayaNum}" }) { result ->
-                    SearchResultRow(result = result, onClick = { onSelected(result) })
+                    SearchResultRow(result = result, textFamily = textFamily, onClick = { onSelected(result) })
                     HorizontalDivider(
                         modifier  = Modifier.padding(horizontal = 16.dp),
                         color     = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
@@ -221,14 +235,14 @@ private fun SearchContent(
  * When [SearchResult.spansPair] is true, two ayas joined by ۝ are shown.
  */
 @Composable
-private fun SearchResultRow(result: SearchResult, onClick: () -> Unit) {
+private fun SearchResultRow(result: SearchResult, textFamily: FontFamily, onClick: () -> Unit) {
     ListItem(
         modifier        = Modifier.clickable(onClick = onClick),
         headlineContent = {
             Text(
                 text     = result.ayaText,
                 style    = TextStyle(
-                    fontFamily    = WarshFamily,
+                    fontFamily    = textFamily,
                     fontSize      = 20.sp,
                     lineHeight    = 32.sp,
                     textDirection = TextDirection.Rtl,
@@ -253,4 +267,9 @@ private fun SearchResultRow(result: SearchResult, onClick: () -> Unit) {
             )
         },
     )
+}
+
+object QuranSearchPage : AppPage() {
+    override val route = "quran_search"
+    @Composable override fun Content(back: NavBackStackEntry) = QuranSearchScreen()
 }

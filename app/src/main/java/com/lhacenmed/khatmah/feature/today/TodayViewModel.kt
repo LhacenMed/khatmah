@@ -36,6 +36,14 @@ class TodayViewModel(private val repo: KhatmahRepository) : ViewModel() {
     private val _state = MutableStateFlow<UiState>(UiState.Loading)
     val state: StateFlow<UiState> = _state.asStateFlow()
 
+    /**
+     * Flipped to true by [markSplashReady] once Compose has committed a frame
+     * with non-Loading content. Read by [MainActivity.setKeepOnScreenCondition].
+     * Volatile so the main-thread condition check always sees the latest value.
+     */
+    @Volatile var splashReady: Boolean = false
+        private set
+
     init {
         viewModelScope.launch {
             repo.activeKhatmahFlow()
@@ -49,9 +57,10 @@ class TodayViewModel(private val repo: KhatmahRepository) : ViewModel() {
                             UiState.AllRead(totalDays = khatmah.totalDays)
                         } else {
                             val meta = repo.sessionMeta(
-                                session.startSura,
-                                session.startAya,
-                                session.endSura,
+                                startSura = session.startSura,
+                                startAya  = session.startAya,
+                                endSura   = session.endSura,
+                                riwayaKey = khatmah.riwaya,
                             )
                             UiState.Active(
                                 session = SessionUi(
@@ -73,6 +82,14 @@ class TodayViewModel(private val repo: KhatmahRepository) : ViewModel() {
 
     fun markRead(id: Long) {
         viewModelScope.launch { repo.markSessionRead(id) }
+    }
+
+    /**
+     * Called from a [androidx.compose.runtime.SideEffect] in [TodayScreen] after
+     * Compose commits the first non-Loading frame. Safe to call multiple times.
+     */
+    fun markSplashReady() {
+        if (!splashReady) splashReady = true
     }
 
     class Factory(private val ctx: Context) : ViewModelProvider.Factory {

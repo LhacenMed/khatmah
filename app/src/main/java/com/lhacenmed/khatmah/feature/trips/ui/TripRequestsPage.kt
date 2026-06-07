@@ -15,6 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.IconButton
@@ -24,7 +26,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun TripRequestsPage(vm: TripRequestsViewModel = viewModel()) {
+fun TripRequestsScreen(vm: TripRequestsViewModel = viewModel()) {
     val state by vm.state.collectAsState()
     val nav = LocalNavController.current
 
@@ -149,3 +151,8 @@ private fun formatDate(iso: String): String = runCatching {
     val formatter = SimpleDateFormat("d MMM yyyy, HH:mm", Locale.getDefault())
     formatter.format(parser.parse(iso)!!)
 }.getOrElse { iso }
+
+object TripRequestsPage : AppPage() {
+    override val route = "trip_requests"
+    @Composable override fun Content(back: NavBackStackEntry) = TripRequestsScreen()
+}

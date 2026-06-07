@@ -1,7 +1,9 @@
 [versions]
 agp = "9.1.0"
 coilCompose = "2.7.0"
+commonsCompress = "1.26.2"
 coreKtx = "1.10.1"
+coreSplashscreen = "1.2.0"
 dec = "0.1.2"
 glanceAppwidget = "1.1.1"
 junit = "4.13.2"
@@ -19,6 +21,7 @@ navigationUiKtx = "2.9.7"
 fragment = "1.8.9"
 ui = "1.10.6"
 work = "2.10.0"
+xz = "1.12"
 androidsvg = "1.4"
 room = "2.7.1"
 ksp  = "2.2.10-2.0.2"
@@ -26,12 +29,15 @@ firebase-bom = "33.7.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 androidx-glance = { module = "androidx.glance:glance", version.ref = "glanceAppwidget" }
 androidx-glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glanceAppwidget" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 androidsvg = { module = "com.caverock:androidsvg-aar", version.ref = "androidsvg" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 coil-svg = { module = "io.coil-kt:coil-svg", version.ref = "coilCompose" }
+commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commonsCompress" }
+xz = { module = "org.tukaani:xz", version.ref = "xz" }
 org-brotli-dec = { module = "org.brotli:dec", version.ref = "dec" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

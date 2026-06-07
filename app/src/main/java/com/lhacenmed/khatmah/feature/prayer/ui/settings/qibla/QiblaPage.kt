@@ -39,6 +39,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lhacenmed.khatmah.R
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import kotlin.math.*
@@ -96,7 +98,7 @@ private fun Double.toDms(): String {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QiblaPage() {
+fun QiblaScreen() {
     val context  = LocalContext.current
     val nav      = LocalNavController.current
     val location = remember { OnboardingPrefs.location(context) }
@@ -595,7 +597,7 @@ private fun CompassDial(
     modifier:      Modifier = Modifier,
 ) {
     val arrowPainter = painterResource(R.drawable.ic_triangle_arrow)
-    val cairoRegular = remember { Typeface.createFromAsset(context.assets, "fonts/cairo_regular.ttf") }
+    val notoKufiRegular = remember { Typeface.createFromAsset(context.assets, "fonts/noto_kufi_regular.ttf") }
 
     /** True if [deg] falls within the shortest arc between [from] and [to]. */
     fun inArcShortest(deg: Float, from: Float, to: Float): Boolean {
@@ -673,7 +675,7 @@ private fun CompassDial(
         val numPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             textAlign = android.graphics.Paint.Align.CENTER
             textSize  = 13.sp.toPx()
-            typeface  = cairoRegular
+            typeface  = notoKufiRegular
         }
         // Position: extra gap below tick inner edge so labels breathe.
         val numR = r - tickLen - numPaint.textSize * 1.1f
@@ -695,7 +697,7 @@ private fun CompassDial(
         val cardPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             textAlign = android.graphics.Paint.Align.CENTER
             textSize  = 28.sp.toPx()
-            typeface  = cairoRegular
+            typeface  = notoKufiRegular
         }
         val cardR = r * 0.55f
         listOf("N" to 0, "E" to 90, "S" to 180, "W" to 270).forEach { (lbl, bearing) ->
@@ -756,4 +758,9 @@ private fun CompassDial(
         }
         nc.drawPath(combinedPath, starPaint)
     }
+}
+
+object QiblaPage : AppPage() {
+    override val route = "qibla"
+    @Composable override fun Content(back: NavBackStackEntry) = QiblaScreen()
 }

@@ -9,7 +9,7 @@ import kotlin.math.max
 sealed class QuranSegment {
     /** Sura title — appears BEFORE Basmala. Name has no "سورة" prefix. */
     data class SuraHeader(val num: Int, val name: String) : QuranSegment()
-    /** Basmala — follows SuraHeader. Omitted for suras 1 and 9. */
+    /** Basmala — follows SuraHeader. */
     data class Basmala(val suraNum: Int)                  : QuranSegment()
     /** Single aya with its number for inline rendering. */
     data class Aya(val suraNum: Int, val ayaNum: Int, val text: String) : QuranSegment()
@@ -20,10 +20,9 @@ sealed class QuranSegment {
  *
  * [pageNum]  — 1-based sequential page number.
  * [suraName] — dominant sura on this page (top bar title).
- * [juz]      — juz identifier from the first aya on this page.
+ * [juz]      — juz label from the first aya on this page e.g. "الجزء ١".
  * [segments] — ordered segments to render top-to-bottom.
- * [centered] — true for special opening pages (Al-Fatiha, Al-Baqarah intro)
- *              where aya text is center-aligned rather than justified.
+ * [centered] — true for special opening pages (Al-Fatiha, Al-Baqarah intro).
  */
 data class QuranPageData(
     val pageNum:  Int,
@@ -44,15 +43,9 @@ internal fun toArNums(n: Int): String =
 /**
  * Builds [QuranPageData] pages from raw aya data using pure line-count arithmetic.
  *
- * Performance: O(n) integer arithmetic — completes in < 10 ms for the full Quran.
- * Each item is assigned an estimated line count:
- *   SuraHeader = 1 · Basmala = 1 · Aya = ceil(text.length / CHARS_PER_LINE).
- * Items are packed greedily until lines ≥ [LINES_PER_PAGE].
- *
- * Special opening pages ([centered] = true):
- *   Al-Fatiha (sura 1) and Al-Baqarah ayas 1–5 are isolated onto their own
- *   centered pages before normal pagination. Suras emitted there are recorded
- *   in [headedSuras] so normal pagination never re-emits their header/basmala.
+ * [bismillahPre] — map of suraNum → whether a basmala precedes it.
+ *   Derived from [SurahEntity.bismillahPre]; defaults to the standard rule
+ *   (all surahs except 1 and 9) when empty.
  */
 object QuranPageBuilder {
 
@@ -60,17 +53,18 @@ object QuranPageBuilder {
     const val LINES_PER_PAGE = 25
 
     /**
-     * Estimated Unicode code units per rendered line for WarshFamily at 20sp.
-     * Quran text has many diacritics inflating code-unit count ~2-3× vs visible
-     * glyphs. Calibrated for ~360 dp content width.
+     * Estimated Unicode code units per rendered line.
+     * Calibrated for ~360 dp content width.
      */
     private const val CHARS_PER_LINE = 58
 
     private fun estimateLines(text: String): Int =
         max(1, ceil(text.length.toFloat() / CHARS_PER_LINE).toInt())
 
-    fun build(ayas: List<QuranAya>): List<QuranPageData> {
-        // Filter blank ayas — these would render as an empty line + number ornament.
+    fun build(
+        ayas:          List<QuranAya>,
+        bismillahPre:  Map<Int, Boolean> = emptyMap(),
+    ): List<QuranPageData> {
         val valid = ayas.filter { it.aya.isNotBlank() }
         if (valid.isEmpty()) return emptyList()
 
@@ -78,7 +72,11 @@ object QuranPageBuilder {
         var pageNum     = 1
         val headedSuras = mutableSetOf<Int>()
 
-        // ── Special opening pages (centered) ─────────────────────────────────
+        // Moved up so special-pages block can use it too.
+        fun hasBismillah(suraNum: Int): Boolean =
+            bismillahPre[suraNum] ?: (suraNum != 1 && suraNum != 9)
+
+// ── Special opening pages (centered) ─────────────────────────────────
 
         val fatihaAyas = valid.filter { it.suraNum == 1 }
         if (fatihaAyas.isNotEmpty()) {
@@ -89,6 +87,7 @@ object QuranPageBuilder {
                 juz      = fatihaAyas.first().juz,
                 segments = buildList {
                     add(QuranSegment.SuraHeader(1, name))
+                    if (hasBismillah(1)) add(QuranSegment.Basmala(1))
                     fatihaAyas.forEach { add(QuranSegment.Aya(it.suraNum, it.ayaNum, it.aya)) }
                 },
                 centered = true,
@@ -151,7 +150,7 @@ object QuranPageBuilder {
             val firstJuz = first.juz
 
             val skipHeader = suraNum in headedSuras
-            val hasBasmala = !skipHeader && suraNum != 1 && suraNum != 9
+            val hasBasmala = !skipHeader && hasBismillah(suraNum)
             val headerCost = if (skipHeader) 0 else (1 + if (hasBasmala) 1 else 0)
 
             if (!skipHeader) {

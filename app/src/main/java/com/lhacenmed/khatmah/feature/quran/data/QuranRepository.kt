@@ -1,19 +1,22 @@
 package com.lhacenmed.khatmah.feature.quran.data
 
 import android.content.Context
-import android.database.sqlite.SQLiteDatabase
+import com.lhacenmed.khatmah.feature.mushaf.data.DivType
+import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
+import com.lhacenmed.khatmah.feature.mushaf.data.db.PageStartEntity
+import com.lhacenmed.khatmah.feature.mushaf.data.db.VerseEntity
+import com.lhacenmed.khatmah.feature.mushaf.data.normalizeArabic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlin.text.iterator
 
 // ── Models ────────────────────────────────────────────────────────────────────
 
 data class QuranAya(
     val suraNum: Int,
-    val sura:    String,
+    val sura:    String,   // surah Arabic name
     val ayaNum:  Int,
-    val aya:     String,
-    val juz:     String,
+    val aya:     String,   // verse text
+    val juz:     String,   // formatted Arabic string e.g. "الجزء ١٥"
 )
 
 data class SurahInfo(val num: Int, val name: String, val ayaCount: Int)
@@ -26,66 +29,17 @@ data class SearchResult(
     val spansPair: Boolean = false,
 )
 
-// ── Arabic normalizer ─────────────────────────────────────────────────────────
-
-/**
- * Unifies visually/semantically equivalent Arabic characters and strips diacritics
- * (harakat) for robust search matching.
- *
- *   أ / إ / آ / ٱ (U+0671) → ا   all alef variants → bare alef
- *   ؤ             → و
- *   ئ             → ي
- *   ة             → ه
- *   ى             → ي
- *   U+064B–U+065F  stripped   harakat
- *   U+0640         stripped   kashida
- */
-fun String.normalizeArabic(): String {
-    val sb = StringBuilder(length)
-    for (c in this) {
-        if (c in '\u064B'..'\u065F' || c == '\u0640') continue
-        sb.append(when (c) {
-            'أ', 'إ', 'آ', '\u0671' -> 'ا'
-            'ؤ'                      -> 'و'
-            'ئ'                      -> 'ي'
-            'ة'                      -> 'ه'
-            'ى'                      -> 'ي'
-            else                     -> c
-        })
-    }
-    return sb.toString()
-}
-
-// ── Database (private — used only by this file) ───────────────────────────────
-
-/**
- * Opens quran.db from app-private storage, copying it from assets on first launch.
- * Read-only handle is opened once and reused for the app lifetime.
- */
-private object QuranDb {
-
-    private const val DB_NAME = "quran.db"
-    private const val ASSET   = "databases/quran.db"
-
-    @Volatile private var handle: SQLiteDatabase? = null
-
-    fun open(context: Context): SQLiteDatabase = handle ?: synchronized(this) {
-        handle ?: build(context.applicationContext).also { handle = it }
-    }
-
-    private fun build(ctx: Context): SQLiteDatabase {
-        val dest = ctx.getDatabasePath(DB_NAME)
-        if (!dest.exists()) {
-            dest.parentFile?.mkdirs()
-            ctx.assets.open(ASSET).use { src -> dest.outputStream().use(src::copyTo) }
-        }
-        return SQLiteDatabase.openDatabase(dest.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-    }
-}
-
 // ── Repository ────────────────────────────────────────────────────────────────
 
+/**
+ * Reads Quran text data from [MushafDb] (seeded from bundled riwaya JSON files).
+ * All methods accept a [riwaya] key ("hafs" | "warsh") to support riwaya switching.
+ */
 class QuranRepository(private val context: Context) {
+
+    private val dao = MushafDb.get(context).dao()
+
+    // ── In-memory search cache ────────────────────────────────────────────────
 
     private data class CacheEntry(
         val suraNum:    Int,
@@ -95,83 +49,100 @@ class QuranRepository(private val context: Context) {
         val normalized: String,
     )
 
-    @Volatile private var cache: List<CacheEntry>? = null
+    // Pair of (riwaya, entries) — invalidated when riwaya changes.
+    @Volatile private var searchCache: Pair<String, List<CacheEntry>>? = null
 
-    private suspend fun getCache(): List<CacheEntry> =
-        cache ?: withContext(Dispatchers.IO) {
-            cache ?: buildCache().also { cache = it }
-        }
-
-    private fun buildCache(): List<CacheEntry> =
-        QuranDb.open(context).rawQuery(SQL_CACHE, null).use { c ->
-            buildList {
-                while (c.moveToNext()) add(
-                    CacheEntry(
-                        suraNum    = c.getInt(0),
-                        ayaNum     = c.getInt(1),
-                        suraName   = c.getString(2).orEmpty().removePrefix("سورة ").trim(),
-                        ayaText    = c.getString(3).orEmpty(),
-                        normalized = c.getString(4).orEmpty().normalizeArabic(),
-                    )
-                )
+    private suspend fun getSearchCache(riwaya: String): List<CacheEntry> {
+        searchCache?.let { (r, e) -> if (r == riwaya) return e }
+        return withContext(Dispatchers.IO) {
+            val verses  = dao.verses(riwaya)
+            val names   = dao.surahs(riwaya).associate { it.num to it.name }
+            val entries = verses.map { v ->
+                CacheEntry(v.sura, v.aya, names[v.sura].orEmpty(), v.text, v.normalized)
             }
-        }
-
-    suspend fun allAyas(): List<QuranAya> = withContext(Dispatchers.IO) {
-        QuranDb.open(context).rawQuery(SQL_AYAS, null).use { c ->
-            val iSuraNum = c.getColumnIndexOrThrow("sura_num")
-            val iSura    = c.getColumnIndexOrThrow("sura")
-            val iAyaNum  = c.getColumnIndexOrThrow("aya_num")
-            val iAya     = c.getColumnIndexOrThrow("aya")
-            val iJuz     = c.getColumnIndexOrThrow("juz")
-            buildList {
-                while (c.moveToNext()) add(
-                    QuranAya(c.getInt(iSuraNum), c.getString(iSura).orEmpty(),
-                        c.getInt(iAyaNum),  c.getString(iAya).orEmpty(),
-                        c.getString(iJuz).orEmpty())
-                )
-            }
+            searchCache = riwaya to entries
+            entries
         }
     }
 
-    suspend fun surahList(): List<SurahInfo> = withContext(Dispatchers.IO) {
-        QuranDb.open(context).rawQuery(SQL_SURAHS, null).use { c ->
-            buildList {
-                while (c.moveToNext())
-                    add(SurahInfo(c.getInt(0), c.getString(1).orEmpty(), c.getInt(2)))
-            }
-        }
-    }
+    // ── Public API ────────────────────────────────────────────────────────────
 
     /**
-     * Returns a map of ayaKey(suraNum, ayaNum) → 0-based mushaf image index (page_aya - 1).
-     * Used in image reader mode so jump-to-aya and jump-to-sura resolve to the correct image.
+     * Returns all ayas with surah name and juz label for the text page builder.
+     * Juz is computed via two-pointer scan over sorted juz markers (O(n)).
      */
-    suspend fun ayaMushhafPages(): Map<Long, Int> = withContext(Dispatchers.IO) {
-        QuranDb.open(context).rawQuery(SQL_MUSHAF_PAGES, null).use { c ->
-            val map = HashMap<Long, Int>(6300)
-            while (c.moveToNext()) {
-                val key  = c.getInt(0).toLong() shl 32 or c.getInt(1).toLong()
-                map[key] = c.getInt(2) - 1  // page_aya is 1-based → 0-based pager index
+    suspend fun allAyas(riwaya: String): List<QuranAya> = withContext(Dispatchers.IO) {
+        val verses  = dao.verses(riwaya)               // sorted by sura, aya
+        val names   = dao.surahs(riwaya).associate { it.num to it.name }
+        val juzList = dao.divisions(riwaya, DivType.JUZ) // sorted by sura, aya
+
+        var juzIdx = 0
+        verses.map { v ->
+            // Advance juz pointer while the next juz boundary is still ≤ this aya.
+            while (juzIdx + 1 < juzList.size) {
+                val nj = juzList[juzIdx + 1]
+                if (nj.sura < v.sura || (nj.sura == v.sura && nj.aya <= v.aya)) juzIdx++
+                else break
             }
-            map
+            val juzNum = juzList.getOrNull(juzIdx)?.num ?: 1
+            QuranAya(
+                suraNum = v.sura,
+                sura    = names[v.sura].orEmpty(),
+                ayaNum  = v.aya,
+                aya     = v.text,
+                juz     = "الجزء ${juzNum.toArabicNum()}",
+            )
         }
     }
 
+    /** Returns surah list for the index tab. */
+    suspend fun surahList(riwaya: String): List<SurahInfo> = withContext(Dispatchers.IO) {
+        dao.surahs(riwaya).map { SurahInfo(it.num, it.name, it.ayat) }
+    }
+
     /**
-     * Two-pass normalized Arabic search.
+     * Returns a map of bismillah_pre per surah number.
+     * Used by [QuranPageBuilder] to decide where to show the basmala.
+     */
+    suspend fun bismillahMap(riwaya: String): Map<Int, Boolean> = withContext(Dispatchers.IO) {
+        dao.surahs(riwaya).associate { it.num to it.bismillahPre }
+    }
+
+    /**
+     * Returns packed (sura shl 32 or aya) → 0-based page index.
+     * Derived from [mushaf_page_start] via two-pointer scan (O(n)). Used by image/xml modes.
+     */
+    suspend fun ayaPageIndex(riwaya: String): Map<Long, Int> = withContext(Dispatchers.IO) {
+        val starts = dao.allPageStarts(riwaya)           // sorted by page_num
+        val verses = dao.verses(riwaya)                  // sorted by sura, aya
+        val map    = HashMap<Long, Int>(verses.size)
+
+        var pageIdx = 0
+        for (v in verses) {
+            // Advance page pointer while the next page start is ≤ this verse.
+            while (pageIdx + 1 < starts.size) {
+                val ns = starts[pageIdx + 1]
+                if (ns.sura < v.sura || (ns.sura == v.sura && ns.aya <= v.aya)) pageIdx++
+                else break
+            }
+            val pageNum = starts.getOrNull(pageIdx)?.pageNum ?: 1
+            map[(v.sura.toLong() shl 32) or v.aya.toLong()] = pageNum - 1
+        }
+        map
+    }
+
+    /**
+     * Two-pass normalized Arabic search — matches existing search UX.
      *
-     * Pass 1 — single ayas: entry's normalized text contains the normalized query.
-     * Pass 2 — consecutive pairs: for queries spanning an aya boundary, concatenated
-     *          text of [i] + [i+1] is checked; result points to first aya with
-     *          [SearchResult.spansPair] = true.
+     * Pass 1: single ayas whose normalized text contains the normalized query.
+     * Pass 2: consecutive pairs spanning an aya boundary.
      */
-    suspend fun search(query: String, limit: Int = 50): List<SearchResult> =
+    suspend fun search(query: String, riwaya: String, limit: Int = 50): List<SearchResult> =
         withContext(Dispatchers.Default) {
             val normalized = query.normalizeArabic().trim()
             if (normalized.isBlank()) return@withContext emptyList()
 
-            val entries = getCache()
+            val entries = getSearchCache(riwaya)
             val seen    = HashSet<Long>(limit * 2)
             val results = mutableListOf<SearchResult>()
 
@@ -188,25 +159,27 @@ class QuranRepository(private val context: Context) {
                     val a = entries[i]; val b = entries[i + 1]
                     if (!("${a.normalized} ${b.normalized}").contains(normalized)) continue
                     if (seen.add(ayaKey(a.suraNum, a.ayaNum)))
-                        results += SearchResult(a.suraNum, a.ayaNum, a.suraName,
-                            "${a.ayaText} ۝ ${b.ayaText}", spansPair = true)
+                        results += SearchResult(
+                            a.suraNum, a.ayaNum, a.suraName,
+                            "${a.ayaText} ۝ ${b.ayaText}", spansPair = true,
+                        )
                 }
             }
             results
         }
 
+    /** True if the bundled data for [riwaya] has been seeded into the DB. */
+    suspend fun isSeeded(riwaya: String): Boolean = withContext(Dispatchers.IO) {
+        dao.verseCount(riwaya) > 0
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     private fun ayaKey(suraNum: Int, ayaNum: Int): Long =
         suraNum.toLong() shl 32 or ayaNum.toLong()
-
-    private companion object {
-        const val SQL_AYAS         = "SELECT sura_num,sura,aya_num,aya,juz FROM quran ORDER BY sura_num,aya_num"
-        const val SQL_SURAHS       = "SELECT sura_num,sura,COUNT(aya_num) FROM quran GROUP BY sura_num ORDER BY sura_num"
-        const val SQL_MUSHAF_PAGES = "SELECT sura_num,aya_num,page_aya FROM quran ORDER BY sura_num,aya_num"
-        const val SQL_CACHE        = """
-            SELECT q.sura_num,q.aya_num,q.sura,q.aya,COALESCE(at.arabic_text,q.aya)
-            FROM quran q
-            LEFT JOIN arabic_text at ON at.sura=q.sura_num AND at.ayah=q.aya_num
-            ORDER BY q.sura_num,q.aya_num
-        """
-    }
 }
+
+// ── Arabic numeral formatter ──────────────────────────────────────────────────
+
+private fun Int.toArabicNum(): String =
+    toString().map { "٠١٢٣٤٥٦٧٨٩"[it - '0'] }.joinToString("")

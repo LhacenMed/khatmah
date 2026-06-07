@@ -37,3 +37,9 @@
 
 # Suppress notes about missing WorkManager internals (safe to ignore).
 -dontnote androidx.work.**
+
+# Keep AppTab and AppPage subclass names to prevent route collision in release mode.
+# The core/nav/AppDest.kt autoRoute() function relies on class simpleName to generate unique route keys.
+# Without this, R8 minifies multiple tabs to the same name (e.g. "s8"), causing LazyLayout key crashes.
+-keepnames class * extends com.lhacenmed.khatmah.core.nav.AppTab
+-keepnames class * extends com.lhacenmed.khatmah.core.nav.AppPage

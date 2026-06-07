@@ -1,0 +1,69 @@
+MIT License
+
+Copyright (c) 2025 Khatmah Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+Third-party components
+----------------------
+
+This project makes use of the following open-source libraries. Each is
+distributed under its own license as noted below.
+
+  Jetpack Compose, Navigation, Room, WorkManager, Glance, Lifecycle
+    Apache License 2.0 — https://www.apache.org/licenses/LICENSE-2.0
+
+  Material Components for Android
+    Apache License 2.0 — https://www.apache.org/licenses/LICENSE-2.0
+
+  Coil
+    Apache License 2.0 — https://www.apache.org/licenses/LICENSE-2.0
+
+  AndroidSVG
+    Apache License 2.0 — https://www.apache.org/licenses/LICENSE-2.0
+
+  Apache Commons Compress
+    Apache License 2.0 — https://www.apache.org/licenses/LICENSE-2.0
+
+  XZ for Java
+    Public Domain — https://tukaani.org/xz/java.html
+
+  Google Brotli (org.brotli:dec)
+    MIT License — https://github.com/google/brotli/blob/master/LICENSE
+
+  Firebase Cloud Messaging SDK
+    Apache License 2.0 — https://www.apache.org/licenses/LICENSE-2.0
+
+  Noto Kufi Arabic font
+    SIL Open Font License 1.1 — https://openfontlicense.org
+
+  KFGQPC Uthmanic Script fonts (Hafs & Warsh)
+    Distributed for non-commercial use in accordance with the terms
+    of the King Fahd Glorious Quran Printing Complex. See
+    https://qurancomplex.gov.sa for details.
+
+Quran text data
+---------------
+
+The Quran text included in this application is used solely for the
+purpose of facilitating Quran recitation and memorisation. The text
+is not modified in any way. All rights to the Quran text remain with
+its respective sources.

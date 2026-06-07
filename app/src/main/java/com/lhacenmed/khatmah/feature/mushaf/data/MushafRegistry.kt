@@ -1,12 +1,13 @@
 package com.lhacenmed.khatmah.feature.mushaf.data
 
-/** Single source of truth for all available mushaf prints. */
 object MushafRegistry {
 
     val all: List<MushafPrint> = listOf(
         MushafPrint.WarshText,
         MushafPrint.WarshImages,
         MushafPrint.WarshSvg,
+        MushafPrint.WarshQcf4,
+        MushafPrint.HafsText,
         MushafPrint.HafsQcf4,
     )
 

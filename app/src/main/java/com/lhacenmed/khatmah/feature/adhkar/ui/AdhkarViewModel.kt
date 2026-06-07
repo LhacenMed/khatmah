@@ -114,6 +114,8 @@ class AdhkarViewModel(app: Application) : AndroidViewModel(app) {
     /** Overwrites an existing category's metadata and full dhikr list. */
     fun updateCategory(category: AdhkarCategory, dhikrList: List<Dhikr>) {
         viewModelScope.launch {
+            // Update cache immediately so any return visit reads fresh data without a DB round-trip.
+            dhikrCache[category.id] = dhikrList
             repo.updateCategory(category, dhikrList)
             reload()
         }

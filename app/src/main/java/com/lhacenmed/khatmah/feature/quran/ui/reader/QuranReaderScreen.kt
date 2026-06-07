@@ -43,14 +43,22 @@ import androidx.compose.foundation.Image
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.ui.components.OptionSelectBottomSheet
 import com.lhacenmed.khatmah.core.ui.components.SheetOption
 import com.lhacenmed.khatmah.feature.audio.AyaAudioManager
 import com.lhacenmed.khatmah.feature.audio.AyaPlayerBar
 import com.lhacenmed.khatmah.feature.audio.DriveAudioRepository
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
+import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
+import com.lhacenmed.khatmah.feature.quran.data.HafsQcf4Repository
+import com.lhacenmed.khatmah.feature.quran.data.Qcf4PageSource
 import com.lhacenmed.khatmah.feature.quran.data.WarshPageData
+import com.lhacenmed.khatmah.feature.quran.data.WarshQcf4Repository
 import com.lhacenmed.khatmah.feature.quran.data.WarshXmlRepository
 import com.lhacenmed.khatmah.feature.quran.ui.QuranViewModel
 import com.lhacenmed.khatmah.feature.quran.ui.components.QuranBottomBar
@@ -87,6 +95,7 @@ fun QuranReaderScreen() {
     val vm: QuranViewModel = viewModel()
     val nav   = LocalNavController.current
     val state by vm.state.collectAsState()
+    val context = LocalContext.current
 
     val backEntry = nav.currentBackStackEntry
     val jumpSura by remember(backEntry) {
@@ -109,26 +118,37 @@ fun QuranReaderScreen() {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         when (val s = state) {
             is QuranViewModel.State.Loading    -> LoadingBox()
-            is QuranViewModel.State.Ready      -> QuranPager(
-                pages    = s.pages,
-                vm       = vm,
-                onSearch = { nav.navigate(Route.QURAN_SEARCH) },
+            is QuranViewModel.State.Ready -> QuranPager(
+                pages     = s.pages,
+                riwaya    = s.riwaya,
+                bismillah = s.bismillah,
+                vm        = vm,
+                onSearch  = { nav.navigate("quran_search") },
             )
             is QuranViewModel.State.ImageReady -> QuranImagePager(
                 pageCount = s.pageCount,
                 vm        = vm,
-                onSearch  = { nav.navigate(Route.QURAN_SEARCH) },
+                onSearch  = { nav.navigate("quran_search") },
             )
             is QuranViewModel.State.XmlReady   -> QuranXmlPager(
                 pageCount = s.pageCount,
                 vm        = vm,
-                onSearch  = { nav.navigate(Route.QURAN_SEARCH) },
+                onSearch  = { nav.navigate("quran_search") },
             )
-            is QuranViewModel.State.Qcf4Ready   -> QuranQcf4Pager(
-                pageCount = s.pageCount,
-                vm        = vm,
-                onSearch  = { nav.navigate(Route.QURAN_SEARCH) },
-            )
+            is QuranViewModel.State.Qcf4Ready -> {
+                val repo = remember(s.print) {
+                    when (s.print) {
+                        MushafPrint.WarshQcf4 -> WarshQcf4Repository.get(context) as Qcf4PageSource
+                        else                  -> HafsQcf4Repository.get(context)  as Qcf4PageSource
+                    }
+                }
+                QuranQcf4Pager(
+                    pageCount = s.pageCount,
+                    repo      = repo,
+                    vm        = vm,
+                    onSearch  = { nav.navigate("quran_search") },
+                )
+            }
         }
     }
 }
@@ -164,9 +184,11 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun QuranPager(
-    pages:    List<QuranPageData>,
-    vm:       QuranViewModel,
-    onSearch: () -> Unit,
+    pages:     List<QuranPageData>,
+    riwaya:    Riwaya,
+    bismillah: String,
+    vm:        QuranViewModel,
+    onSearch:  () -> Unit,
 ) {
     val nav        = LocalNavController.current
     val context    = LocalContext.current
@@ -226,6 +248,8 @@ private fun QuranPager(
             ) { idx ->
                 PageContent(
                     page           = pages[idx],
+                    riwaya         = riwaya,
+                    bismillah      = bismillah,
                     selectedAya    = selectedAya,
                     onTap          = { barsVisible = !barsVisible },
                     onAyaLongPress = { suraNum, ayaNum ->
@@ -639,4 +663,14 @@ private fun LoadingBox() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
     }
+}
+
+object QuranReaderPage : AppPage() {
+    override val route = "quran_reader?suraNum={suraNum}&ayaNum={ayaNum}"
+    override val arguments = listOf(
+        navArgument("suraNum") { type = NavType.IntType; defaultValue = 0 },
+        navArgument("ayaNum")  { type = NavType.IntType; defaultValue = 0 },
+    )
+    fun routeFor(suraNum: Int = 0, ayaNum: Int = 0) = "quran_reader?suraNum=$suraNum&ayaNum=$ayaNum"
+    @Composable override fun Content(back: NavBackStackEntry) = QuranReaderScreen()
 }

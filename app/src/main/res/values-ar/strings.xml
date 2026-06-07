@@ -506,4 +506,119 @@
 
     <string name="print_hafs_qcf4">حفص — مصحف QCF4</string>
     <string name="print_hafs_qcf4_desc">مصحف المدينة النبوية بخط رواية حفص عن عاصم</string>
+
+    <string name="more_files_browser">متصفح الملفات</string>
+    <string name="more_qadaa">قضاء</string>
+
+    <string name="print_warsh_qcf4">ورش — مصحف QCF4</string>
+    <string name="print_warsh_qcf4_desc">مصحف المغرب بخط رواية ورش عن نافع</string>
+
+    <string name="print_hafs_text">نص حفص</string>
+    <string name="print_hafs_text_desc">قراءة نصية بخط عثماني - رواية حفص</string>
+
+    <string name="print_select">تحديد</string>
+    <string name="print_active">مفعل</string>
+    <string name="print_connecting">جارٍ الاتصال…</string>
+    <string name="print_processing">جارٍ المعالجة…</string>
+    <string name="print_downloading">جارٍ التنزيل…</string>
+
+    <string name="today_riwaya_mismatch_title">رواية مختلفة</string>
+    <string name="today_riwaya_mismatch_msg">هذه الختمة أُنشئت بقراءة %1$s. اختر مصحفاً بنفس القراءة للمتابعة، أو أنشئ ختمة جديدة بالقراءة الحالية.</string>
+
+    <string name="print_cancel_download_title">إلغاء التنزيل</string>
+    <string name="print_cancel_download_msg">هل تريد إيقاف التنزيل الجاري؟</string>
+    <string name="print_stop">إيقاف</string>
+
+    <!-- Quick index — TodayTab -->
+    <string name="today_quick_index">الوصول السريع</string>
+    <string name="today_full_index">الفهرس</string>
+    <string name="today_continue_reading">متابعة القراءة</string>
+
+    <!-- Full index page -->
+    <string name="full_index_title">الفهرس</string>
+    <string name="full_index_tab_surahs">السور</string>
+    <string name="full_index_tab_ajza">الأجزاء</string>
+    <string name="full_index_juz">الجزء %d</string>
+
+    <!-- ── Qadaa feature ──────────────────────────────────────────────────── -->
+    <string name="qadaa_history">السجل</string>
+    <string name="qadaa_prayers_remaining">صلاة متبقية</string>
+    <string name="qadaa_fasts_remaining">يوم صيام متبقٍ</string>
+    <string name="qadaa_pace_months">في هذه الوتيرة — ستنتهي خلال %d شهر تقريبًا</string>
+    <string name="qadaa_pace_months_plural">في هذه الوتيرة — ستنتهي خلال %d أشهر تقريبًا</string>
+    <string name="qadaa_today_section">اليوم</string>
+    <string name="qadaa_streak">🔥 %d يوم متواصل</string>
+    <string name="qadaa_goal_label">الهدف اليومي: %d ✏️</string>
+    <string name="qadaa_mark_prayers">تسجيل الصلوات</string>
+    <string name="qadaa_mark_fasts">تسجيل الصيام</string>
+    <string name="qadaa_no_fasts_recorded">لا يوجد صيام فائت مسجّل.</string>
+    <string name="qadaa_see_all">عرض الكل</string>
+    <string name="qadaa_section_prayers">الصلوات</string>
+    <string name="qadaa_section_fasts">الصيام</string>
+    <string name="qadaa_set_goal_title">تحديد الهدف اليومي</string>
+    <string name="qadaa_mark_one_done">+ تسجيل واحدة</string>
+    <string name="qadaa_mark_done">تسجيل القضاء</string>
+    <string name="qadaa_add_fasts_btn">+ إضافة صيام</string>
+    <string name="qadaa_making_up_prayer">قضاء %d صلاة اليوم</string>
+    <string name="qadaa_making_up_prayers">قضاء %d صلوات اليوم</string>
+    <string name="qadaa_day_remaining">متبقٍ %d يوم</string>
+    <string name="qadaa_days_remaining">متبقٍ %d أيام</string>
+    <!-- History -->
+    <string name="qadaa_history_empty">لا يوجد سجل بعد. سجّل قضاء بعض الصلوات أو الأيام لتظهر هنا.</string>
+    <string name="qadaa_all_time_summary">ملخص إجمالي</string>
+    <string name="qadaa_stat_prayers">إجمالي\nالصلوات</string>
+    <string name="qadaa_stat_fasts">إجمالي\nالصيام</string>
+    <string name="qadaa_stat_longest">أطول\nسلسلة</string>
+    <string name="qadaa_stat_current">السلسلة\nالحالية</string>
+    <string name="qadaa_log_fast_day">قضاء %d يوم صيام</string>
+    <string name="qadaa_log_fast_days">قضاء %d أيام صيام</string>
+    <string name="qadaa_log_prayer">قضاء %d %s</string>
+    <string name="qadaa_log_full_day">يوم كامل (%d صلوات)</string>
+    <string name="qadaa_filter_all">الكل</string>
+    <string name="qadaa_filter_prayers">الصلوات</string>
+    <string name="qadaa_filter_fasts">الصيام</string>
+    <!-- AddFastsSheet -->
+    <string name="qadaa_add_fasts_title">إضافة صيام فائت</string>
+    <string name="qadaa_fast_reason">السبب</string>
+    <string name="qadaa_hijri_year_hint">السنة الهجرية (مثال: 1441)</string>
+    <string name="qadaa_hijri_year_error">أدخل سنة هجرية صحيحة</string>
+    <string name="qadaa_how_many_days">كم عدد الأيام؟</string>
+    <string name="qadaa_days_unit">أيام</string>
+    <string name="qadaa_add_note">+ إضافة ملاحظة</string>
+    <string name="qadaa_note_hint">ملاحظة اختيارية</string>
+    <string name="qadaa_add_to_qadaa">إضافة إلى القضاء</string>
+    <string name="qadaa_reason_ramadan">رمضان</string>
+    <string name="qadaa_reason_illness">مرض</string>
+    <string name="qadaa_reason_travel">سفر</string>
+    <string name="qadaa_reason_other">أخرى</string>
+    <!-- AddPrayersSheet -->
+    <string name="qadaa_add_prayers_title">إضافة صلوات فائتة</string>
+    <string name="qadaa_tab_custom">مخصص</string>
+    <string name="qadaa_tab_date_range">نطاق تاريخ</string>
+    <string name="qadaa_tab_by_year">بالسنة</string>
+    <string name="qadaa_tab_calendar">التقويم</string>
+    <string name="qadaa_custom_hint">أدخل عدد كل صلاة فاتتك</string>
+    <string name="qadaa_date_range_hint">حدد الفترة التي فاتتك فيها الصلوات</string>
+    <string name="qadaa_by_year_hint">قدّر عدد الصلوات الفائتة من فترة ماضية.</string>
+    <string name="qadaa_from">من</string>
+    <string name="qadaa_until">إلى</string>
+    <string name="qadaa_date_select">اختر</string>
+    <string name="qadaa_that_is_n_prayers">المجموع: %d صلاة</string>
+    <string name="qadaa_duration">المدة</string>
+    <string name="qadaa_years_unit">سنوات</string>
+    <string name="qadaa_prayers_to_include">الصلوات المشمولة</string>
+    <string name="qadaa_estimation_method">طريقة التقدير</string>
+    <string name="qadaa_method_conservative">تحفظي</string>
+    <string name="qadaa_method_full">كامل</string>
+    <string name="qadaa_conservative_desc">يراعي الأعذار المشروعة</string>
+    <string name="qadaa_full_desc">يحسب كل يوم في الفترة</string>
+    <string name="qadaa_estimated_prayers_label">صلاة تقديرية للإضافة</string>
+    <string name="qadaa_all_five">الخمس</string>
+    <!-- MarkDoneSheet -->
+    <string name="qadaa_mark_as_made_up">تسجيل القضاء</string>
+    <string name="qadaa_full_day_btn">+ يوم كامل (5 صلوات)</string>
+    <string name="qadaa_no_fast_groups">لم تُضف أي مجموعة صيام بعد. استخدم \'+ إضافة صيام\' من الشاشة الرئيسية.</string>
+    <string name="qadaa_from_which_group">من أي مجموعة؟</string>
+    <string name="qadaa_day_unit">يوم</string>
+    <string name="qadaa_confirm">تأكيد</string>
 </resources>

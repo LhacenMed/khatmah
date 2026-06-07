@@ -6,9 +6,9 @@ package com.lhacenmed.khatmah.feature.prayer.notification
  * [Off]     — no notification at all.
  * [Silent]  — notification posted but with a silent channel (no sound/vibration).
  * [Device]  — notification uses the device's default notification sound.
- * [Asset]   — plays a specific mp3 from assets/adhan/; [filename] is the bare
- *             filename including extension, e.g. "أذان الحرم المكي - كامل.mp3".
- *             Adding a new sound = drop the mp3 into assets/adhan/ — nothing else needed.
+ * [Asset]   — plays a specific opus from assets/adhan/; [filename] is the bare
+ *             filename including extension, e.g. "makkah.opus".
+ *             Adding a new sound = drop the opus into assets/adhan/ — nothing else needed.
  * [Custom]  — plays a user-picked audio file via its persisted SAF content URI.
  *             Requires a persistent URI permission taken at pick time.
  */
@@ -35,7 +35,10 @@ sealed class AdhanSound {
             key == "off"                    -> Off
             key == "silent"                 -> Silent
             key == "device"                 -> Device
-            key.startsWith("asset:")        -> Asset(key.removePrefix("asset:"))
+            key.startsWith("asset:")        -> {
+                val filename = key.removePrefix("asset:").replace(".mp3", ".opus")
+                Asset(filename)
+            }
             key.startsWith("custom\u0000") -> {
                 val parts = key.split('\u0000')
                 if (parts.size >= 3) Custom(parts[2], parts[1]) else Asset(DEFAULT_ASSET)
@@ -44,6 +47,6 @@ sealed class AdhanSound {
         }
 
         /** Filename used as the app-wide default. */
-        const val DEFAULT_ASSET = "makkah.mp3"
+        const val DEFAULT_ASSET = "makkah.opus"
     }
 }

@@ -12,6 +12,7 @@ data class KhatmahEntity(
     val totalDays: Int,
     val dailyAjza: Int,
     val dailyArba: Int,
+    val riwaya: String = "warsh",
     val createdAt: Long = System.currentTimeMillis(),
     val isActive: Boolean = true,
 )

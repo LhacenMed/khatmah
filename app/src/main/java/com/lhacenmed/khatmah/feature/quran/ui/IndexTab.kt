@@ -12,12 +12,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranReaderPage
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,21 +37,24 @@ import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
-import com.lhacenmed.khatmah.core.nav.NavTab
-import com.lhacenmed.khatmah.core.nav.Route
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.quran.data.QuranRepository
 import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
+import androidx.compose.runtime.collectAsState
+import com.lhacenmed.khatmah.core.nav.AppTab
 
 // Items within this distance from the top animate directly; farther ones jump-then-animate.
 private const val SMOOTH_SCROLL_THRESHOLD = 4
 
 // ── Tab registration ──────────────────────────────────────────────────────────
 
-val IndexTab = NavTab(
-    route    = Route.INDEX,
+object IndexTab : AppTab(
     iconRes  = R.drawable.ic_list,
     labelRes = R.string.index,
-) { padding -> IndexScreen(padding) }
+    order    = 3,
+) {
+    @Composable override fun Content(padding: PaddingValues) = IndexScreen(padding)
+}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -60,10 +65,11 @@ private fun IndexScreen(padding: PaddingValues) {
     val listState   = rememberLazyListState()
     val scrollToTop = LocalScrollToTop.current
 
-    val repo = remember { QuranRepository(context) }
+    val repo        = remember { QuranRepository(context) }
+    val riwaya      = MushafPrefs.selected.collectAsState().value.riwaya.dbKey   // "hafs" | "warsh"
     var surahs by remember { mutableStateOf<List<SurahInfo>>(emptyList()) }
 
-    LaunchedEffect(Unit) { surahs = repo.surahList() }
+    LaunchedEffect(riwaya) { surahs = repo.surahList(riwaya) }
 
     // Two-phase scroll-to-top: instant jump near the top, then smooth animation.
     LaunchedEffect(scrollToTop) {
@@ -91,7 +97,7 @@ private fun IndexScreen(padding: PaddingValues) {
         // ── Read Quran button ─────────────────────────────────────────────────
         item(key = "read_quran_btn") {
             ReadQuranButton(
-                onClick  = { nav.navigate(Route.quranReader()) },
+                onClick  = { nav.navigate(QuranReaderPage.routeFor()) },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
@@ -100,7 +106,7 @@ private fun IndexScreen(padding: PaddingValues) {
         itemsIndexed(surahs, key = { _, surah -> surah.num }) { index, surah ->
             SurahRow(
                 surah   = surah,
-                onClick = { nav.navigate(Route.quranReader(suraNum = surah.num)) },
+                onClick = { nav.navigate(QuranReaderPage.routeFor(suraNum = surah.num)) },
             )
             if (index < surahs.lastIndex) {
                 HorizontalDivider(
@@ -126,7 +132,7 @@ private fun ReadQuranButton(onClick: () -> Unit, modifier: Modifier = Modifier) 
             verticalAlignment     = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector        = Icons.Outlined.MenuBook,
+                imageVector        = Icons.AutoMirrored.Outlined.MenuBook,
                 contentDescription = null,
             )
             Text(

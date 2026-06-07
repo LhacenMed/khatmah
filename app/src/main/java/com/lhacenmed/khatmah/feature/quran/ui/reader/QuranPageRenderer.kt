@@ -12,12 +12,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.*
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lhacenmed.khatmah.core.ui.theme.HafsFamily
+import com.lhacenmed.khatmah.core.ui.theme.HafsSuraNameFamily
 import com.lhacenmed.khatmah.core.ui.theme.WarshFamily
 import com.lhacenmed.khatmah.core.ui.theme.WarshSuraNameFamily
+import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 
 // ── Render units ──────────────────────────────────────────────────────────────
 
@@ -51,6 +55,11 @@ internal fun groupSegments(segments: List<QuranSegment>): List<PageRun> {
     flushAyas()
     return runs
 }
+
+// ── Font helpers ──────────────────────────────────────────────────────────────
+
+private fun Riwaya.textFamily():   FontFamily = if (this == Riwaya.HAFS) HafsFamily   else WarshFamily
+private fun Riwaya.headerFamily(): FontFamily = if (this == Riwaya.HAFS) HafsSuraNameFamily else WarshSuraNameFamily
 
 // ── Annotated string builder ──────────────────────────────────────────────────
 
@@ -96,14 +105,17 @@ internal fun buildAyaRunAnnotated(
 /**
  * Renders one Quran page, vertically centered in the screen.
  *
+ * [riwaya]         — selects the correct text and header font families.
+ * [bismillah]      — riwaya-specific basmala text shown between surahs.
  * [selectedAya]    — (suraNum, ayaNum) of the highlighted aya, or null.
  * [onAyaLongPress] — called when the user long-presses within a run.
- * [onTap]          — forwarded from aya text areas so the screen-level tap-to-toggle
- *                    bars still fires even when the user taps on aya text.
+ * [onTap]          — forwarded so the screen-level tap-to-toggle bars fires.
  */
 @Composable
 internal fun PageContent(
-    page: QuranPageData,
+    page:            QuranPageData,
+    riwaya:          Riwaya,
+    bismillah:       String,
     selectedAya:     Pair<Int, Int>? = null,
     onAyaLongPress:  (suraNum: Int, ayaNum: Int) -> Unit = { _, _ -> },
     onTap:           () -> Unit = {},
@@ -121,14 +133,15 @@ internal fun PageContent(
     ) {
         runs.forEach { run ->
             when (run) {
-                is PageRun.Header  -> SuraHeaderText(name = run.name, primary = primary)
-                is PageRun.Basmala -> BasmalaText(primary = primary)
+                is PageRun.Header  -> SuraHeaderText(name = run.name, primary = primary, riwaya = riwaya)
+                is PageRun.Basmala -> BasmalaText(text = bismillah, primary = primary, riwaya = riwaya)
                 is PageRun.AyaRun  -> AyaFlowText(
                     run         = run,
                     selectedAya = selectedAya,
                     primary     = primary,
                     onBg        = onBg,
                     centered    = page.centered,
+                    riwaya      = riwaya,
                     onLongPress = onAyaLongPress,
                     onTap       = onTap,
                 )
@@ -139,9 +152,9 @@ internal fun PageContent(
 
 // ── Segment composables ───────────────────────────────────────────────────────
 
-/** Sura name centered between two dividers, using [WarshSuraNameFamily]. */
+/** Sura name centered between two dividers, using the riwaya-appropriate header font. */
 @Composable
-private fun SuraHeaderText(name: String, primary: Color) {
+private fun SuraHeaderText(name: String, primary: Color, riwaya: Riwaya) {
     Row(
         modifier          = Modifier
             .fillMaxWidth()
@@ -156,7 +169,7 @@ private fun SuraHeaderText(name: String, primary: Color) {
         Text(
             text  = name,
             style = TextStyle(
-                fontFamily    = WarshSuraNameFamily,
+                fontFamily    = riwaya.headerFamily(),
                 fontSize      = 28.sp,
                 lineHeight    = 40.sp,
                 textDirection = TextDirection.Rtl,
@@ -172,13 +185,13 @@ private fun SuraHeaderText(name: String, primary: Color) {
     }
 }
 
-/** Basmala line centered and tinted in [primary]. */
+/** Basmala line centered, using the riwaya-specific text and font. */
 @Composable
-private fun BasmalaText(primary: Color) {
+private fun BasmalaText(text: String, primary: Color, riwaya: Riwaya) {
     Text(
-        text      = "بِسْمِ اِ۬للَّهِ اِ۬لرَّحْمَٰنِ اِ۬لرَّحِيمِ",
+        text      = text,
         style     = TextStyle(
-            fontFamily    = WarshFamily,
+            fontFamily    = riwaya.textFamily(),
             fontSize      = 28.sp,
             lineHeight    = 40.sp,
             textDirection = TextDirection.Rtl,
@@ -205,6 +218,7 @@ private fun AyaFlowText(
     primary:     Color,
     onBg:        Color,
     centered:    Boolean,
+    riwaya:      Riwaya,
     onLongPress: (suraNum: Int, ayaNum: Int) -> Unit,
     onTap:       () -> Unit,
 ) {
@@ -217,7 +231,7 @@ private fun AyaFlowText(
     Text(
         text         = annotated,
         style        = TextStyle(
-            fontFamily    = WarshFamily,
+            fontFamily    = riwaya.textFamily(),
             fontSize      = 28.sp,
             lineHeight    = 40.sp,
             textDirection = TextDirection.Rtl,

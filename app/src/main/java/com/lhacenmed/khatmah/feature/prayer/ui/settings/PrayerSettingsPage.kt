@@ -15,8 +15,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.nav.Route
+import com.lhacenmed.khatmah.core.nav.ShellRoutes
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSwitch
@@ -26,7 +28,7 @@ import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PrayerSettingsContent() {
+fun PrayerSettingsScreen() {
     val nav       = LocalNavController.current
     val context   = LocalContext.current
     val scrollBeh = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -63,7 +65,7 @@ fun PrayerSettingsContent() {
 
             PreferenceItem(
                 title   = stringResource(R.string.prayer_settings_qibla),
-                onClick = { nav.navigate(Route.QIBLA) },
+                onClick = { nav.navigate("qibla") },
                 trailingIcon = {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                 },
@@ -74,7 +76,7 @@ fun PrayerSettingsContent() {
 
             PreferenceItem(
                 title   = stringResource(R.string.prayer_settings_adhan_reminders),
-                onClick = { nav.navigate(Route.ADHAN_REMINDERS) },
+                onClick = { nav.navigate("adhan_reminders") },
                 trailingIcon = {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                 },
@@ -101,7 +103,7 @@ fun PrayerSettingsContent() {
             // Auto-detect Location
             PreferenceItem(
                 title   = stringResource(R.string.prayer_settings_auto_location),
-                onClick = { nav.navigate(Route.ONBOARDING_LOCATION) },
+                onClick = { nav.navigate(ShellRoutes.ONBOARDING_LOCATION) },
                 trailingIcon = {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                 },
@@ -111,7 +113,7 @@ fun PrayerSettingsContent() {
             PreferenceItem(
                 title   = stringResource(R.string.prayer_settings_manual_location),
                 onClick = {
-                    nav.navigate(Route.ONBOARDING_COUNTRY_SELECT.replace("{fromSettings}", "true"))
+                    nav.navigate(ShellRoutes.ONBOARDING_COUNTRY_SELECT.replace("{fromSettings}", "true"))
                 },
                 trailingIcon = {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
@@ -145,7 +147,7 @@ fun PrayerSettingsContent() {
                 title       = stringResource(R.string.prayer_settings_calc_method),
                 description = effective.method.displayName,
                 enabled     = !settings.autoSettings,
-                onClick     = { nav.navigate(Route.PRAYER_CALC_METHOD) },
+                onClick     = { nav.navigate("prayer_calc_method") },
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -163,7 +165,7 @@ fun PrayerSettingsContent() {
                     else R.string.juristic_shafi
                 ),
                 enabled     = !settings.autoSettings,
-                onClick     = { nav.navigate(Route.PRAYER_JURISTIC) },
+                onClick     = { nav.navigate("prayer_juristic") },
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -184,7 +186,7 @@ fun PrayerSettingsContent() {
                     }
                 ),
                 enabled     = !settings.autoSettings,
-                onClick     = { nav.navigate(Route.PRAYER_DST) },
+                onClick     = { nav.navigate("prayer_dst") },
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -200,7 +202,7 @@ fun PrayerSettingsContent() {
                 description = if (settings.corrections.isAllZero) stringResource(R.string.corrections_all_default)
                 else stringResource(R.string.corrections_customized),
                 enabled     = !settings.autoSettings,
-                onClick     = { nav.navigate(Route.PRAYER_MANUAL_CORRECTIONS) },
+                onClick     = { nav.navigate("prayer_manual_corrections") },
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -222,7 +224,7 @@ fun PrayerSettingsContent() {
                     }
                 ),
                 enabled     = !settings.autoSettings,
-                onClick     = { nav.navigate(Route.PRAYER_HIGHER_LAT) },
+                onClick     = { nav.navigate("prayer_higher_lat") },
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -235,4 +237,9 @@ fun PrayerSettingsContent() {
             Spacer(Modifier.height(24.dp))
         }
     }
+}
+
+object PrayerSettingsPage : AppPage() {
+    override val route = "prayer_settings"
+    @Composable override fun Content(back: NavBackStackEntry) = PrayerSettingsScreen()
 }

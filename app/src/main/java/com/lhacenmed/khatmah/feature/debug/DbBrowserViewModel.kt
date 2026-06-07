@@ -1,5 +1,6 @@
 package com.lhacenmed.khatmah.feature.debug
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.lifecycle.ViewModel
@@ -30,12 +31,12 @@ data class DbBrowserState(
     val isLoading: Boolean = false,
     val error: String? = null,
 )
-
+@SuppressLint("StaticFieldLeak")
 class DbBrowserViewModel(private val context: Context) : ViewModel() {
 
     companion object {
         private const val MAX_ROWS   = 500
-        private val KNOWN_DBS        = listOf("khatmah.db", "quran.db")
+        private val KNOWN_DBS        = listOf("khatmah.db", "quran.db", "mushaf.db", "qadaa.db")
     }
 
     private val _state = MutableStateFlow(DbBrowserState())

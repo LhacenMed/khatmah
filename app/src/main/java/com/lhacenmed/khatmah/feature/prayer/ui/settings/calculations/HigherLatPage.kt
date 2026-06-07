@@ -11,6 +11,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.feature.prayer.data.HigherLatMode
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
@@ -18,7 +20,7 @@ import com.lhacenmed.khatmah.feature.prayer.ui.components.PrayerTimesPreviewBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HigherLatContent() {
+fun HigherLatScreen() {
     val nav      = LocalNavController.current
     val context  = LocalContext.current
     val settings by PrayerSettings.flow.collectAsState()
@@ -70,4 +72,9 @@ fun HigherLatContent() {
             }
         }
     }
+}
+
+object HigherLatPage : AppPage() {
+    override val route = "prayer_higher_lat"
+    @Composable override fun Content(back: NavBackStackEntry) = HigherLatScreen()
 }

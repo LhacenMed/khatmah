@@ -22,13 +22,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahResult
 import com.lhacenmed.khatmah.feature.khatmah.data.SessionDisplay
 
 @Composable
-fun NewKhatmahPage() {
+fun NewKhatmahScreen() {
     val context = LocalContext.current
     val nav     = LocalNavController.current
     val vm: NewKhatmahViewModel = viewModel(factory = NewKhatmahViewModel.Factory(context))
@@ -364,4 +366,9 @@ private fun DurationStepper(onIncrement: () -> Unit, onDecrement: () -> Unit) {
             }
         }
     }
+}
+
+object NewKhatmahPage : AppPage() {
+    override val route = "new_khatmah"
+    @Composable override fun Content(back: NavBackStackEntry) = NewKhatmahScreen()
 }

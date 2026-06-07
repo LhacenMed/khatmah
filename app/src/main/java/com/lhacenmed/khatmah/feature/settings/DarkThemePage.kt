@@ -17,6 +17,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -25,8 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.nav.NavPage
-import com.lhacenmed.khatmah.core.nav.Route
+import androidx.navigation.NavBackStackEntry
+import com.lhacenmed.khatmah.core.nav.AppPage
 import com.lhacenmed.khatmah.core.ui.components.IconButton
 import com.lhacenmed.khatmah.core.ui.components.LargeTopAppBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
@@ -35,7 +36,9 @@ import com.lhacenmed.khatmah.core.ui.components.PreferenceSwitch
 import com.lhacenmed.khatmah.shared.util.ThemeManager
 
 @OptIn(ExperimentalMaterial3Api::class)
-val DarkThemePage = NavPage(route = Route.DARK_THEME) {
+object DarkThemePage : AppPage() {
+    override val route = "dark_theme"
+    @Composable override fun Content(back: NavBackStackEntry) {
     val nav = LocalNavController.current
     val context = LocalContext.current
     val scrollBehavior =
@@ -99,4 +102,5 @@ val DarkThemePage = NavPage(route = Route.DARK_THEME) {
             )
         }
     }
+}
 }

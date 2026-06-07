@@ -26,9 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
-import com.lhacenmed.khatmah.core.nav.NavTab
-import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerRepository
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerTime
 import com.lhacenmed.khatmah.feature.prayer.data.toAmPm
@@ -44,19 +43,20 @@ import java.util.Locale
 
 // ─── Tab registration ─────────────────────────────────────────────────────────
 
-val PrayersTab = NavTab(
-    route = Route.PRAYERS,
-    iconRes = R.drawable.ic_mosque,
+object PrayersTab : AppTab(
+    iconRes  = R.drawable.ic_mosque,
     labelRes = R.string.prayers,
-) { padding ->
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        PrayersScreenContent(padding)
-    } else {
-        // Prayer times use java.time APIs which require API 26+.
-        Box(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentAlignment = Alignment.Center,
-        ) { Text(stringResource(R.string.prayers_requires_android_8)) }
+    order    = 2,
+) {
+    @Composable override fun Content(padding: PaddingValues) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            PrayersScreenContent(padding)
+        } else {
+            Box(
+                modifier         = Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center,
+            ) { Text(stringResource(R.string.prayers_requires_android_8)) }
+        }
     }
 }
 

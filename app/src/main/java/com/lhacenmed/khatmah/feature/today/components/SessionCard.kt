@@ -1,5 +1,6 @@
 package com.lhacenmed.khatmah.feature.today.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -16,7 +17,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.ui.theme.WarshFamily
+import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 import com.lhacenmed.khatmah.feature.today.TodayViewModel
+import androidx.compose.runtime.remember
+import com.lhacenmed.khatmah.core.ui.theme.HafsFamily
 
 /** Returns at most [maxWords] space-separated words from [text], appending "…" if truncated. */
 private fun truncateAya(text: String, maxWords: Int = 4): String {
@@ -30,10 +34,18 @@ internal fun SessionCard(
     onMarkRead: () -> Unit,
     onRead:     () -> Unit,
 ) {
-    val sess = state.session
-    val e    = sess.entity
+    val sess   = state.session
+    val e      = sess.entity
+    // Use the riwaya the khatmah was created with — not the currently selected one.
+    val riwaya = remember(state.khatmah.riwaya) {
+        if (state.khatmah.riwaya == "hafs") Riwaya.HAFS else Riwaya.WARSH
+    }
 
-    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
+        colors   = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.7f)),
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
             // Header row
@@ -60,7 +72,10 @@ internal fun SessionCard(
                 Text(
                     text      = truncateAya(sess.firstAyaText),
                     style     = TextStyle(
-                        fontFamily    = WarshFamily,
+                        fontFamily    = when (riwaya) {
+                            Riwaya.WARSH -> WarshFamily
+                            Riwaya.HAFS  -> HafsFamily
+                        },
                         fontSize      = 26.sp,
                         lineHeight    = 42.sp,
                         textDirection = TextDirection.Rtl,
@@ -72,7 +87,7 @@ internal fun SessionCard(
             }
 
             Spacer(Modifier.height(20.dp))
-            HorizontalDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
             Spacer(Modifier.height(12.dp))
 
             // Start / end rows
@@ -122,7 +137,11 @@ internal fun SessionCard(
  */
 @Composable
 internal fun SkeletonCard() {
-    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        border   = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
+        colors   = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.7f)),
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
             // Header row

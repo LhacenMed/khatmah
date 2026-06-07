@@ -475,4 +475,116 @@
 
     <string name="print_hafs_qcf4">Hafs — QCF4 Mushaf</string>
     <string name="print_hafs_qcf4_desc">Madinah Mushaf · Hafs recitation · QCF4 fonts</string>
+
+    <string name="more_files_browser">File Browser</string>
+    <string name="more_qadaa">Qadaa</string>
+
+    <string name="print_warsh_qcf4">Warsh — QCF4 Mushaf</string>
+    <string name="print_warsh_qcf4_desc">Moroccan Mushaf in Warsh narration from Nafiʿ</string>
+
+    <string name="print_hafs_text">نص حفص</string>
+    <string name="print_hafs_text_desc">قراءة نصية بخط عثماني - رواية حفص</string>
+
+    <string name="print_select">Select</string>
+    <string name="print_active">Active</string>
+    <string name="print_connecting">Connecting…</string>
+    <string name="print_processing">Processing…</string>
+    <string name="print_downloading">Downloading…</string>
+
+    <string name="today_riwaya_mismatch_title">رواية مختلفة</string>
+    <string name="today_riwaya_mismatch_msg">هذه الختمة أُنشئت بقراءة %1$s. اختر مصحفاً بنفس القراءة للمتابعة، أو أنشئ ختمة جديدة بالقراءة الحالية.</string>
+
+    <string name="print_cancel_download_title">Cancel Download</string>
+    <string name="print_cancel_download_msg">Stop the ongoing download?</string>
+    <string name="print_stop">Stop</string>
+
+    <string name="today_quick_index">Quick Access</string>
+    <string name="today_full_index">Index</string>
+    <string name="today_continue_reading">Continue Reading</string>
+    <string name="full_index_title">Index</string>
+    <string name="full_index_tab_surahs">Surahs</string>
+    <string name="full_index_tab_ajza">Juz</string>
+    <string name="full_index_juz">Juz %d</string>
+
+    <!-- ── Qadaa feature ──────────────────────────────────────────────────── -->
+    <string name="qadaa_history">History</string>
+    <string name="qadaa_prayers_remaining">prayers remaining</string>
+    <string name="qadaa_fasts_remaining">fasts remaining</string>
+    <string name="qadaa_pace_months">At your current pace — done in approx. %d month</string>
+    <string name="qadaa_pace_months_plural">At your current pace — done in approx. %d months</string>
+    <string name="qadaa_today_section">Today</string>
+    <string name="qadaa_streak">🔥 %d-day streak</string>
+    <string name="qadaa_goal_label">Daily goal: %d ✏️</string>
+    <string name="qadaa_mark_prayers">Mark prayers</string>
+    <string name="qadaa_mark_fasts">Mark fasts</string>
+    <string name="qadaa_no_fasts_recorded">No missed fasts recorded.</string>
+    <string name="qadaa_see_all">See all</string>
+    <string name="qadaa_section_prayers">Prayers</string>
+    <string name="qadaa_section_fasts">Fasts</string>
+    <string name="qadaa_set_goal_title">Set daily goal</string>
+    <string name="qadaa_mark_one_done">+ Mark one done</string>
+    <string name="qadaa_mark_done">Mark done</string>
+    <string name="qadaa_add_fasts_btn">+ Add fasts</string>
+    <string name="qadaa_making_up_prayer">Making up %d prayer today</string>
+    <string name="qadaa_making_up_prayers">Making up %d prayers today</string>
+    <string name="qadaa_day_remaining">%d day remaining</string>
+    <string name="qadaa_days_remaining">%d days remaining</string>
+    <!-- History -->
+    <string name="qadaa_history_empty">No history yet. Mark some prayers or fasts as made up to see them here.</string>
+    <string name="qadaa_all_time_summary">All time summary</string>
+    <string name="qadaa_stat_prayers">TOTAL\nPRAYERS</string>
+    <string name="qadaa_stat_fasts">TOTAL\nFASTS</string>
+    <string name="qadaa_stat_longest">LONGEST\nSTREAK</string>
+    <string name="qadaa_stat_current">CURRENT\nSTREAK</string>
+    <string name="qadaa_log_fast_day">Made up %d fast day</string>
+    <string name="qadaa_log_fast_days">Made up %d fast days</string>
+    <string name="qadaa_log_prayer">Made up %d %s</string>
+    <string name="qadaa_log_full_day">Full day (%d prayers)</string>
+    <string name="qadaa_filter_all">All</string>
+    <string name="qadaa_filter_prayers">Prayers</string>
+    <string name="qadaa_filter_fasts">Fasts</string>
+    <!-- AddFastsSheet -->
+    <string name="qadaa_add_fasts_title">Add missed fasts</string>
+    <string name="qadaa_fast_reason">Reason</string>
+    <string name="qadaa_hijri_year_hint">Hijri year (e.g. 1441)</string>
+    <string name="qadaa_hijri_year_error">Enter a valid Hijri year</string>
+    <string name="qadaa_how_many_days">How many days?</string>
+    <string name="qadaa_days_unit">days</string>
+    <string name="qadaa_add_note">+ Add note</string>
+    <string name="qadaa_note_hint">Optional note</string>
+    <string name="qadaa_add_to_qadaa">Add to Qadaa</string>
+    <string name="qadaa_reason_ramadan">Ramadan</string>
+    <string name="qadaa_reason_illness">Illness</string>
+    <string name="qadaa_reason_travel">Travel</string>
+    <string name="qadaa_reason_other">Other</string>
+    <!-- AddPrayersSheet -->
+    <string name="qadaa_add_prayers_title">Add missed prayers</string>
+    <string name="qadaa_tab_custom">Custom</string>
+    <string name="qadaa_tab_date_range">Date range</string>
+    <string name="qadaa_tab_by_year">By year</string>
+    <string name="qadaa_tab_calendar">Calendar</string>
+    <string name="qadaa_custom_hint">Enter how many of each prayer you missed</string>
+    <string name="qadaa_date_range_hint">Select the period you missed prayers</string>
+    <string name="qadaa_by_year_hint">Estimate how many prayers you owe from a past period.</string>
+    <string name="qadaa_from">From</string>
+    <string name="qadaa_until">Until</string>
+    <string name="qadaa_date_select">Select</string>
+    <string name="qadaa_that_is_n_prayers">That\'s %d prayers</string>
+    <string name="qadaa_duration">Duration</string>
+    <string name="qadaa_years_unit">years</string>
+    <string name="qadaa_prayers_to_include">Prayers to include</string>
+    <string name="qadaa_estimation_method">Estimation method</string>
+    <string name="qadaa_method_conservative">Conservative</string>
+    <string name="qadaa_method_full">Full</string>
+    <string name="qadaa_conservative_desc">Accounts for valid exemptions</string>
+    <string name="qadaa_full_desc">Counts every day in the period</string>
+    <string name="qadaa_estimated_prayers_label">estimated prayers to add</string>
+    <string name="qadaa_all_five">All 5</string>
+    <!-- MarkDoneSheet -->
+    <string name="qadaa_mark_as_made_up">Mark as made up</string>
+    <string name="qadaa_full_day_btn">+ Full day (5 prayers)</string>
+    <string name="qadaa_no_fast_groups">No fast groups added yet. Use \'+ Add fasts\' on the main screen.</string>
+    <string name="qadaa_from_which_group">From which group?</string>
+    <string name="qadaa_day_unit">day</string>
+    <string name="qadaa_confirm">Confirm</string>
 </resources>

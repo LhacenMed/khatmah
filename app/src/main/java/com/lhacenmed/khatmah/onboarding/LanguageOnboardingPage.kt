@@ -10,9 +10,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.Route
 import com.lhacenmed.khatmah.core.ui.components.SingleChoiceItem
 import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.nav.ShellRoutes
 import com.lhacenmed.khatmah.shared.util.LocaleManager
 
 private data class LangOption(val tag: String?, val labelRes: Int)
@@ -31,8 +31,8 @@ fun LanguageOnboardingPage() {
     val nav = LocalNavController.current
     var currentTag by remember { mutableStateOf(LocaleManager.getCurrentTag()) }
 
-    fun advance() = nav.navigate(Route.ONBOARDING_NOTIFICATIONS) {
-        popUpTo(Route.ONBOARDING_LANGUAGE) { inclusive = true }
+    fun advance() = nav.navigate(ShellRoutes.ONBOARDING_NOTIFICATIONS) {
+        popUpTo(ShellRoutes.ONBOARDING_LANGUAGE) { inclusive = true }
     }
 
     OnboardingPage(
