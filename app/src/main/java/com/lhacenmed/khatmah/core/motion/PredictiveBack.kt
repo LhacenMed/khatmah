@@ -54,21 +54,28 @@ val LocalBackGestureProgress = staticCompositionLocalOf { BackGestureState() }
  *  • Corners are shown instantly whenever [scale] < 1f — no ramp animation.
  *
  * On commit (finger released past threshold):
- *  • [shiftX] is zeroed so it doesn't fight [popExit]'s directional slide.
- *  • [scale] is left at its current throw value so [popExit] continues naturally
- *    from that state rather than snapping back to 1f first.
+ *  • [onCommitShift] is invoked with [shiftX]'s current dp value so the NavHost
+ *    pop-exit transition can offset its slide start position, eliminating the
+ *    center-snap glitch that occurred when shiftX was zeroed before [onBack].
+ *  • [shiftX] is NOT zeroed — the graphicsLayer continues to hold the shift
+ *    until Compose removes this composable and the exit transition takes over.
+ *  • [scale] is also preserved so [popExit] continues naturally from that state.
  *  • [onBack] is called immediately after.
  *
  * On cancel (finger pulled back):
  *  • All values spring back to resting state.
  *
- * @param enabled Whether to intercept the system back.
- * @param onBack  Invoked on commit — should call `navController.popBackStack()`.
+ * @param enabled       Whether to intercept the system back.
+ * @param onBack        Invoked on commit — should call `navController.popBackStack()`.
+ * @param onCommitShift Called with the horizontal shift in dp at gesture commit time.
+ *                      Write this into the [MutableFloatState] that [pageComposable]
+ *                      captures so the pop-exit transition can read it.
  */
 @Composable
 fun PredictiveBackContainer(
     enabled: Boolean,
     onBack: () -> Unit,
+    onCommitShift: (shiftDp: Float) -> Unit = {},
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -91,9 +98,10 @@ fun PredictiveBackContainer(
                 shiftX.snapTo(targetShift)
                 backState.progress = p
             }
-            // Gesture committed — zero the nudge so popExit slides cleanly,
-            // but preserve scale so the exit animation continues from this state.
-            shiftX.snapTo(0f)
+            // Gesture committed — report current shift dp before calling onBack
+            // so the exit transition can offset its start position.
+            // Do NOT zero shiftX: graphicsLayer still references it until removal.
+            onCommitShift(shiftX.value)
             backState.progress = 0f
             onBack()
         } catch (_: CancellationException) {

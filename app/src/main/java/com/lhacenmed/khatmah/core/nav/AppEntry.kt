@@ -32,6 +32,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -92,6 +93,9 @@ fun AppEntry() {
 
     // Tabs driven by AppRegistry — add a new AppTab object + one registry line to extend.
     val tabs = AppRegistry.tabs.map { it.toNavTab() }
+
+    val density            = LocalDensity.current.density
+    val gestureCommitShift = remember { mutableFloatStateOf(0f) }
 
     val navController = rememberNavController()
 
@@ -165,7 +169,11 @@ fun AppEntry() {
             // ── App shell (root) ──────────────────────────────────────────────────────
             // MAIN is the root destination — registered with pageComposable so popEnter
             // is EnterTransition.None and it never animates when returning to it.
-            pageComposable(ShellRoutes.MAIN) {
+            pageComposable(
+                route              = ShellRoutes.MAIN,
+                gestureCommitShift = gestureCommitShift,
+                screenDensity      = density,
+            ) {
                 MainScreen(
                     tabs          = tabs,
                     selectedIndex = selectedTabIndex,
@@ -177,10 +185,16 @@ fun AppEntry() {
             // Each page uses pageComposable (enter-only push / exit-only pop) and
             // is wrapped in PredictiveBackContainer for the scale-down back gesture.
             AppRegistry.pages.forEach { page ->
-                pageComposable(route = page.route, arguments = page.arguments) { back ->
+                pageComposable(
+                    route              = page.route,
+                    arguments          = page.arguments,
+                    gestureCommitShift = gestureCommitShift,
+                    screenDensity      = density,
+                ) { back ->
                     PredictiveBackContainer(
-                        enabled = canGoBack,
-                        onBack  = { navController.popBackStack() },
+                        enabled       = canGoBack,
+                        onBack        = { navController.popBackStack() },
+                        onCommitShift = { shiftDp -> gestureCommitShift.floatValue = shiftDp },
                     ) {
                         page.Content(back)
                     }

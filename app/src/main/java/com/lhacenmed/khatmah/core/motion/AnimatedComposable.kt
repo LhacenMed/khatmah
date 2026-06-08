@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableFloatState
 import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavBackStackEntry
@@ -89,14 +90,26 @@ fun NavGraphBuilder.animatedComposable(
 
 /**
  * Push forward → only the entering page animates ([pushEnter] / [pushExit]).
- * Pop backward  → only the exiting page animates ([popExit] / [popEnter]).
+ * Pop backward  → only the exiting page animates ([buildPopExit] / [popEnter]).
  * Predictive back gesture → [PredictiveBackContainer] handles scale + corners;
  * the previous destination is already at rest ([popEnter] = None).
+ *
+ * [gestureCommitShift] — a [MutableFloatState] written by [PredictiveBackContainer]
+ * via [onCommitShift] at gesture commit time, holding the horizontal shift in dp.
+ * This function is called in composable context (inside NavHost), so the State
+ * object is captured by closure. The non-composable [popExitTransition] lambda
+ * reads [MutableFloatState.floatValue] and resets it to 0f so tap-back navigations
+ * that follow always get the zero-offset transition.
+ *
+ * [screenDensity] — dp-to-px multiplier captured by closure for the same reason.
  */
+@OptIn(ExperimentalAnimationApi::class)
 fun NavGraphBuilder.pageComposable(
     route: String,
     arguments: List<NamedNavArgument> = emptyList(),
     deepLinks: List<NavDeepLink> = emptyList(),
+    gestureCommitShift: MutableFloatState,
+    screenDensity: Float,
     content: @Composable AnimatedVisibilityScope.(NavBackStackEntry) -> Unit,
 ) = composable(
     route              = route,
@@ -105,6 +118,10 @@ fun NavGraphBuilder.pageComposable(
     enterTransition    = { pushEnter },
     exitTransition     = { pushExit  },
     popEnterTransition = { popEnter  },
-    popExitTransition  = { popExit   },
+    popExitTransition  = {
+        val shiftDp = gestureCommitShift.floatValue
+        gestureCommitShift.floatValue = 0f   // consume — next pop starts clean
+        buildPopExit(commitShiftDp = shiftDp, density = screenDensity)
+    },
     content            = content,
 )
