@@ -2,17 +2,10 @@ package com.lhacenmed.khatmah.core.motion
 
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.VisibilityThreshold
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.NamedNavArgument
@@ -54,22 +47,19 @@ fun NavGraphBuilder.fadeThroughComposable(
     content = content
 )
 
+// ── Shared constants ──────────────────────────────────────────────────────────
+
 const val DURATION_ENTER = 400
-const val DURATION_EXIT = 200
-const val initialOffset = 0.10f
+const val DURATION_EXIT  = 200
+const val initialOffset  = 0.10f
 
-private val enterTween =
-    tween<IntOffset>(durationMillis = DURATION_ENTER, easing = emphasizeEasing)
-private val exitTween =
-    tween<IntOffset>(durationMillis = DURATION_ENTER, easing = emphasizeEasing)
-
-private val fadeSpring = spring<Float>(
-    dampingRatio = Spring.DampingRatioNoBouncy,
-    stiffness = Spring.StiffnessMedium,
+private val slideTween = tween<IntOffset>(
+    durationMillis = DURATION_ENTER,
+    easing         = emphasizeEasing,
 )
 private val fadeTween = tween<Float>(durationMillis = DURATION_EXIT)
 
-private val fadeSpec = fadeTween
+// ── Shared-axis slide + fade (used by onboarding linear flow) ─────────────────
 
 fun NavGraphBuilder.animatedComposable(
     route: String,
@@ -95,108 +85,26 @@ fun NavGraphBuilder.animatedComposable(
     content = content
 )
 
+// ── Predictive-back-aware page transition ─────────────────────────────────────
 
-fun NavGraphBuilder.animatedComposableLegacy(
+/**
+ * Push forward → only the entering page animates ([pushEnter] / [pushExit]).
+ * Pop backward  → only the exiting page animates ([popExit] / [popEnter]).
+ * Predictive back gesture → [PredictiveBackContainer] handles scale + corners;
+ * the previous destination is already at rest ([popEnter] = None).
+ */
+fun NavGraphBuilder.pageComposable(
     route: String,
     arguments: List<NamedNavArgument> = emptyList(),
     deepLinks: List<NavDeepLink> = emptyList(),
-    content: @Composable AnimatedVisibilityScope.(NavBackStackEntry) -> Unit
+    content: @Composable AnimatedVisibilityScope.(NavBackStackEntry) -> Unit,
 ) = composable(
-    route = route,
-    arguments = arguments,
-    deepLinks = deepLinks,
-    enterTransition = {
-        slideInHorizontally(
-            enterTween,
-            initialOffsetX = { (it * initialOffset).toInt() }) + fadeIn(fadeSpec)
-    },
-    exitTransition = {
-        slideOutHorizontally(
-            exitTween,
-            targetOffsetX = { -(it * initialOffset).toInt() }) + fadeOut(fadeSpec)
-    },
-    popEnterTransition = {
-        slideInHorizontally(
-            enterTween,
-            initialOffsetX = { -(it * initialOffset).toInt() }) + fadeIn(fadeSpec)
-    },
-    popExitTransition = {
-        slideOutHorizontally(
-            exitTween,
-            targetOffsetX = { (it * initialOffset).toInt() }) + fadeOut(fadeSpec)
-    },
-    content = content
-)
-
-
-fun NavGraphBuilder.animatedComposableVariant(
-    route: String,
-    arguments: List<NamedNavArgument> = emptyList(),
-    deepLinks: List<NavDeepLink> = emptyList(),
-    content: @Composable AnimatedVisibilityScope.(NavBackStackEntry) -> Unit
-) = composable(
-    route = route,
-    arguments = arguments,
-    deepLinks = deepLinks,
-    enterTransition = {
-        slideInHorizontally(
-            enterTween,
-            initialOffsetX = { (it * initialOffset).toInt() }) + fadeIn(fadeSpec)
-    },
-    exitTransition = {
-        fadeOut(fadeSpec)
-    },
-    popEnterTransition = {
-        fadeIn(fadeSpec)
-    },
-    popExitTransition = {
-        slideOutHorizontally(
-            exitTween,
-            targetOffsetX = { (it * initialOffset).toInt() }) + fadeOut(fadeSpec)
-    },
-    content = content
-)
-
-//fun slideInVertically(
-//    animationSpec: FiniteAnimationSpec<IntOffset> =
-//        spring(
-//            stiffness = Spring.StiffnessMedium,
-//            visibilityThreshold = IntOffset.VisibilityThreshold
-//        ),
-//    initialOffsetY: (fullHeight: Int) -> Int = { it },
-//): EnterTransition =
-//    slideIn(
-//        initialOffset = { IntOffset(0, initialOffsetY(it.height)) },
-//        animationSpec = animationSpec
-//    )
-
-val springSpec = spring(
-    stiffness = Spring.StiffnessMedium,
-    visibilityThreshold = IntOffset.VisibilityThreshold
-)
-
-@OptIn(ExperimentalAnimationApi::class)
-fun NavGraphBuilder.slideInVerticallyComposable(
-    route: String,
-    arguments: List<NamedNavArgument> = emptyList(),
-    deepLinks: List<NavDeepLink> = emptyList(),
-    content: @Composable AnimatedVisibilityScope.(NavBackStackEntry) -> Unit
-) = composable(
-    route = route,
-    arguments = arguments,
-    deepLinks = deepLinks,
-    enterTransition = {
-        slideInVertically(
-            initialOffsetY = { it }, animationSpec = enterTween
-        ) + fadeIn()
-    },
-    exitTransition = { slideOutVertically() },
-    popEnterTransition = { slideInVertically() },
-    popExitTransition = {
-        slideOutVertically(
-            targetOffsetY = { it },
-            animationSpec = enterTween
-        ) + fadeOut()
-    },
-    content = content
+    route              = route,
+    arguments          = arguments,
+    deepLinks          = deepLinks,
+    enterTransition    = { pushEnter },
+    exitTransition     = { pushExit  },
+    popEnterTransition = { popEnter  },
+    popExitTransition  = { popExit   },
+    content            = content,
 )
