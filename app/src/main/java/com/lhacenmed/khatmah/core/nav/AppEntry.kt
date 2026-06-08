@@ -45,7 +45,7 @@ import androidx.navigation.navArgument
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.motion.animatedComposable
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
-import com.lhacenmed.khatmah.core.ui.components.BottomNavBar
+import com.lhacenmed.khatmah.core.ui.components.bottomnav.BottomNavBar
 import com.lhacenmed.khatmah.core.ui.components.IconButton
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarViewModel
 import com.lhacenmed.khatmah.onboarding.CitySelectPage

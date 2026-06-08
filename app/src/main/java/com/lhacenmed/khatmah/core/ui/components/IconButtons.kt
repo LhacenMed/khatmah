@@ -39,7 +39,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 
 /**
  * An icon button that shows a native Android tooltip on long-press and suppresses
- * the click action after the long-press gesture — matching the behavior of [NavButton].
+ * the click action after the long-press gesture — matching the behavior of [com.lhacenmed.khatmah.core.ui.components.bottomnav.NavButton].
  *
  * Uses [combinedClickable] with a no-op [onLongClick] so:
  *  • The gesture detector knows a long-press handler exists → [onClick] is suppressed
@@ -48,7 +48,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
  *    [MotionEvent.ACTION_CANCEL] to the invisible anchor → tooltip dismisses immediately,
  *    before any navigation or composition change can cancel the forwarding coroutine.
  *
- * Out-of-bounds cancel mirrors [NavButton]: a [pointerInput] on the touch-target Box
+ * Out-of-bounds cancel mirrors [com.lhacenmed.khatmah.core.ui.components.bottomnav.NavButton]: a [pointerInput] on the touch-target Box
  * monitors Final-pass events; if the pressed pointer exits the button's layout bounds,
  * a [PressInteraction.Cancel] is enqueued via [cancelRequest] so the ripple disappears
  * immediately — [combinedClickable] alone does not emit Cancel on out-of-bounds drag

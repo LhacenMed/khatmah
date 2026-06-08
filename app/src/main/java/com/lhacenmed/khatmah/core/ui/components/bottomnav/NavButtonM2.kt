@@ -1,4 +1,4 @@
-package com.lhacenmed.khatmah.core.ui.components
+package com.lhacenmed.khatmah.core.ui.components.bottomnav
 
 import android.os.SystemClock
 import android.view.MotionEvent
@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.lhacenmed.khatmah.core.ui.components.dispatchSyntheticMotion
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 /**
@@ -67,7 +68,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
  * @param onClick         Invoked on a normal tap.
  */
 @Composable
-fun NavButton(
+fun NavButtonM2(
     icon: Painter,
     label: String,
     selected: Boolean,
