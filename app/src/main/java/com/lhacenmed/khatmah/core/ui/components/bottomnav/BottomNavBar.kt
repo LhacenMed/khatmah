@@ -26,6 +26,7 @@ import com.lhacenmed.khatmah.core.nav.NavTab
  * @param style        Visual style — [NavBarStyle.M2] (unbounded ripple, original) or
  *                     [NavBarStyle.M3] (pill indicator, bounded ripple).
  * @param anchorViewAt Lazily resolves the invisible tooltip-anchor View for a tab index.
+ *                     Used by [NavBarStyle.M2] only; [NavBarStyle.M3] manages its own anchor.
  * @param circleScale  M2 only — ripple radius as a fraction of slot width.
  * @param modifier     Optional outer modifier.
  */
@@ -34,7 +35,7 @@ fun BottomNavBar(
     screens: List<NavTab>,
     currentRoute: String?,
     onNavigate: (String) -> Unit,
-    style: NavBarStyle = NavBarStyle.M2,
+    style: NavBarStyle = NavBarStyle.M3,
     anchorViewAt: (Int) -> View? = { null },
     circleScale: Float = 1.2f,
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
@@ -43,7 +44,6 @@ fun BottomNavBar(
     val selectedColor   = MaterialTheme.colorScheme.primary
     val unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
     val rippleColor     = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-    // M3 pill fill — secondaryContainer gives the tonal surface the spec recommends.
     val pillColor       = MaterialTheme.colorScheme.secondaryContainer
 
     // ⚠️  No clipToBounds for M2 — unbounded ripple overflows the bar's top edge.
@@ -82,9 +82,6 @@ fun BottomNavBar(
                         selectedColor   = selectedColor,
                         unselectedColor = unselectedColor,
                         pillColor       = pillColor,
-                        // Lambda reads directly from the live array at touch time —
-                        // never a stale list snapshot that would return null permanently.
-                        anchorProvider  = { anchorViewAt(index) },
                         modifier        = Modifier.weight(1f),
                         onClick         = { onNavigate(screen.route) },
                     )
