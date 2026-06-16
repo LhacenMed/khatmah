@@ -2,10 +2,10 @@ package com.lhacenmed.khatmah.core.motion
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideOutHorizontally
 
 // ── Push: navigate forward ─────────────────────────────────────────────────
@@ -19,46 +19,55 @@ val pushEnter: EnterTransition = materialSharedAxisXIn(
 /** Current page is frozen while a new page pushes over it. */
 val pushExit: ExitTransition = ExitTransition.None
 
-// ── Pop: navigate backward ─────────────────────────────────────────────────
-// Only the exiting page animates; the destination is already at rest.
+// ── Pop: navigate backward (taps + predictive back gesture) ─────────────────
+// Only the exiting page animates; the destination is revealed at rest behind it.
 
-/** Destination page is already at rest; no enter animation on pop. */
+/**
+ * Destination page is the real, live composition kept alive by NavHost — it is
+ * simply revealed at rest behind the shrinking top page. No enter animation.
+ */
 val popEnter: EnterTransition = EnterTransition.None
 
-/**
- * Standard pop-exit for tap-back with no preceding gesture.
- * Exiting page slides to the right and fades out.
- */
-val popExit: ExitTransition = buildPopExit(commitShiftDp = 0f, density = 0f)
+/** Scale the exiting page settles at while the back gesture is held. */
+const val POP_EXIT_SCALE = 0.90f
+
+/** Fraction of progress that is scale-dominant before the slide ramps in. */
+private const val SLIDE_LEAD = 0.35f
 
 /**
- * Builds a pop-exit transition whose slide target is adjusted by [commitShiftDp]
- * to eliminate the center-snap glitch after a predictive back gesture.
- *
- * Problem: [slideOutHorizontally]'s [targetOffsetX] is measured from the
- * composable's *layout* origin (x=0), but [PredictiveBackContainer]'s graphicsLayer
- * has already shifted the page visually by [commitShiftDp] dp. When the exit
- * animation starts from layout x=0, the page appears to snap from its shifted
- * visual position back to center before sliding.
- *
- * Fix: subtract [commitShiftDp] (in px) from [targetOffsetX] so the animation
- * starts from the page's actual visual position and slides out as one continuous
- * motion. When [commitShiftDp] is 0f, the result is identical to [popExit].
+ * Slide curve: near-flat through the early, scale-dominant part of the drag, then
+ * eases out so the page travels off-screen — mostly as the gesture commits.
  */
-fun buildPopExit(commitShiftDp: Float, density: Float): ExitTransition =
-    slideOutHorizontally(
-        animationSpec = tween(
-            durationMillis = MotionConstants.DefaultMotionDuration,
-            easing         = FastOutSlowInEasing,
-        ),
-        targetOffsetX = { fullWidth ->
-            val basePx       = (fullWidth * initialOffset).toInt()
-            val commitPx     = (commitShiftDp * density).toInt()
-            basePx - commitPx
-        },
-    ) + fadeOut(
-        animationSpec = tween(
-            durationMillis = (MotionConstants.DefaultMotionDuration * 0.35f).toInt(),
-            easing         = FastOutLinearInEasing,
-        ),
-    )
+private val slideEasing = Easing { t ->
+    if (t <= SLIDE_LEAD) 0f
+    else FastOutSlowInEasing.transform((t - SLIDE_LEAD) / (1f - SLIDE_LEAD))
+}
+
+/**
+ * Exiting page scales down toward its center (no fade) and slides off to the
+ * right, revealing the previous destination behind it — the "card sliding away"
+ * look. Both effects are part of the **single seekable transition**, so:
+ *
+ *  • NavHost drives the fraction by the back-gesture progress (live preview),
+ *    springing back on cancel;
+ *  • on commit the motion continues smoothly from wherever the finger left it to
+ *    fully off-screen — the page stays composed until the slide *completes*, so
+ *    it never disappears mid-slide.
+ *
+ * [slideEasing] keeps the first [SLIDE_LEAD] of the drag scale-dominant, so a
+ * short swipe reads as a scale that finishes its slide on release. Rounded
+ * corners are layered on via [popExitCorners] in [pageComposable].
+ */
+val popExit: ExitTransition = scaleOut(
+    targetScale   = POP_EXIT_SCALE,
+    animationSpec = tween(
+        durationMillis = MotionConstants.DefaultMotionDuration,
+        easing         = FastOutSlowInEasing,
+    ),
+) + slideOutHorizontally(
+    animationSpec = tween(
+        durationMillis = MotionConstants.DefaultMotionDuration,
+        easing         = slideEasing,
+    ),
+    targetOffsetX = { fullWidth -> fullWidth },
+)

@@ -32,7 +32,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -41,11 +40,9 @@ import androidx.core.view.ViewCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.motion.PredictiveBackContainer
 import com.lhacenmed.khatmah.core.motion.animatedComposable
 import com.lhacenmed.khatmah.core.motion.pageComposable
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
@@ -94,9 +91,6 @@ fun AppEntry() {
     // Tabs driven by AppRegistry — add a new AppTab object + one registry line to extend.
     val tabs = AppRegistry.tabs.map { it.toNavTab() }
 
-    val density            = LocalDensity.current.density
-    val gestureCommitShift = remember { mutableFloatStateOf(0f) }
-
     val navController = rememberNavController()
 
     var selectedTabIndex by rememberSaveable {
@@ -123,79 +117,59 @@ fun AppEntry() {
         WidgetNavRequest.consume()
     }
 
-    // Observe the back stack as State so canGoBack recomposes when the stack changes.
-    // currentBackStackEntry is read inside derivedStateOf to establish the dependency.
-    val currentEntry by navController.currentBackStackEntryAsState()
-    val canGoBack by remember {
-        derivedStateOf {
-            // Reading currentEntry establishes the recomposition trigger;
-            // previousBackStackEntry is the actual signal we care about.
-            currentEntry?.let { navController.previousBackStackEntry } != null
-        }
-    }
-
-    CompositionLocalProvider(LocalNavController provides navController) {
-        NavHost(
-            navController    = navController,
-            startDestination = start,
-            modifier         = Modifier.fillMaxSize(),
-        ) {
-            // ── Onboarding ────────────────────────────────────────────────────
-            // Uses legacy animatedComposable — linear flow, back gesture not needed.
-            animatedComposable(ShellRoutes.ONBOARDING_LANGUAGE)      { LanguageOnboardingPage()     }
-            animatedComposable(ShellRoutes.ONBOARDING_NOTIFICATIONS) { NotificationPermissionPage() }
-            animatedComposable(ShellRoutes.ONBOARDING_LOCATION)      { LocationPermissionPage()     }
-            animatedComposable(
-                route     = ShellRoutes.ONBOARDING_COUNTRY_SELECT,
-                arguments = listOf(
-                    navArgument("fromSettings") { type = NavType.BoolType; defaultValue = false },
-                ),
-            ) { CountrySelectPage() }
-            animatedComposable(
-                route     = ShellRoutes.ONBOARDING_CITY_SELECT,
-                arguments = listOf(
-                    navArgument("country")      { type = NavType.StringType; defaultValue = "" },
-                    navArgument("iso2")         { type = NavType.StringType; defaultValue = "" },
-                    navArgument("fromSettings") { type = NavType.BoolType;   defaultValue = false },
-                ),
-            ) { backStack ->
-                CitySelectPage(
-                    country      = backStack.arguments?.getString("country") ?: "",
-                    iso2         = backStack.arguments?.getString("iso2") ?: "",
-                    fromSettings = backStack.arguments?.getBoolean("fromSettings") ?: false,
-                )
-            }
-
-            // ── App shell (root) ──────────────────────────────────────────────────────
-            // MAIN is the root destination — registered with pageComposable so popEnter
-            // is EnterTransition.None and it never animates when returning to it.
-            pageComposable(
-                route              = ShellRoutes.MAIN,
-                gestureCommitShift = gestureCommitShift,
-                screenDensity      = density,
+    CompositionLocalProvider(
+        LocalNavController provides navController,
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // ── NavHost ───────────────────────────────────────────────────────
+            // Predictive back is handled natively by NavHost: it keeps the previous
+            // destination's live composition alive and seeks the pop transition by
+            // the gesture progress — no separate reveal layer, no re-composition.
+            NavHost(
+                navController    = navController,
+                startDestination = start,
+                modifier         = Modifier.fillMaxSize(),
             ) {
-                MainScreen(
-                    tabs          = tabs,
-                    selectedIndex = selectedTabIndex,
-                    onSelect      = { selectedTabIndex = it },
-                )
-            }
+                // ── Onboarding ────────────────────────────────────────────────
+                animatedComposable(ShellRoutes.ONBOARDING_LANGUAGE)      { LanguageOnboardingPage()     }
+                animatedComposable(ShellRoutes.ONBOARDING_NOTIFICATIONS) { NotificationPermissionPage() }
+                animatedComposable(ShellRoutes.ONBOARDING_LOCATION)      { LocationPermissionPage()     }
+                animatedComposable(
+                    route     = ShellRoutes.ONBOARDING_COUNTRY_SELECT,
+                    arguments = listOf(
+                        navArgument("fromSettings") { type = NavType.BoolType; defaultValue = false },
+                    ),
+                ) { CountrySelectPage() }
+                animatedComposable(
+                    route     = ShellRoutes.ONBOARDING_CITY_SELECT,
+                    arguments = listOf(
+                        navArgument("country")      { type = NavType.StringType; defaultValue = "" },
+                        navArgument("iso2")         { type = NavType.StringType; defaultValue = "" },
+                        navArgument("fromSettings") { type = NavType.BoolType;   defaultValue = false },
+                    ),
+                ) { backStack ->
+                    CitySelectPage(
+                        country      = backStack.arguments?.getString("country") ?: "",
+                        iso2         = backStack.arguments?.getString("iso2") ?: "",
+                        fromSettings = backStack.arguments?.getBoolean("fromSettings") ?: false,
+                    )
+                }
 
-            // ── AppRegistry pages ─────────────────────────────────────────────
-            // Each page uses pageComposable (enter-only push / exit-only pop) and
-            // is wrapped in PredictiveBackContainer for the scale-down back gesture.
-            AppRegistry.pages.forEach { page ->
-                pageComposable(
-                    route              = page.route,
-                    arguments          = page.arguments,
-                    gestureCommitShift = gestureCommitShift,
-                    screenDensity      = density,
-                ) { back ->
-                    PredictiveBackContainer(
-                        enabled       = canGoBack,
-                        onBack        = { navController.popBackStack() },
-                        onCommitShift = { shiftDp -> gestureCommitShift.floatValue = shiftDp },
-                    ) {
+                // ── App shell (root) ──────────────────────────────────────────
+                pageComposable(route = ShellRoutes.MAIN) {
+                    MainScreen(
+                        tabs          = tabs,
+                        selectedIndex = selectedTabIndex,
+                        onSelect      = { selectedTabIndex = it },
+                    )
+                }
+
+                // ── AppRegistry pages ─────────────────────────────────────────
+                AppRegistry.pages.forEach { page ->
+                    pageComposable(
+                        route     = page.route,
+                        arguments = page.arguments,
+                    ) { back ->
                         page.Content(back)
                     }
                 }
