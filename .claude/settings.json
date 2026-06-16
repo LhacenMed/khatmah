@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "andrej-karpathy-skills@karpathy-skills": true,
+    "expo@claude-plugins-official": true
+  }
+}

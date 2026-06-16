@@ -1,12 +1,11 @@
 # context-builder.ps1
 # GUI context-file builder -- scrollable tree, mouse checkboxes, encoding-safe output.
-# Respects .gitignore files found in any scanned directory.
 #
 # Usage: .\context-builder.ps1 [-Path <dir>] [-Out <file.txt>] [-Hidden]
 # Keys : ENTER -> Generate   F5 -> Refresh   ESC -> Close
 #
-# Example:
-#   .\scripts\context-builder.ps1 -Path "C:\Users\lhacenmed\AndroidStudioProjects\Khatmah\app\"
+# Run:
+#   .\scripts\context-builder.ps1 -Path "C:\Users\lhacenmed\AndroidStudioProjects\Khatmah\"
 
 param (
     [string]$Path   = ".",
@@ -62,99 +61,65 @@ function Read-FileText {
     return $enc.GetString($bytes).TrimEnd()
 }
 
-# --- .gitignore support ------------------------------------------------------
-# Converts a single raw .gitignore pattern line into a regex + metadata object.
-# Returned object has: Pattern (regex string), Negate (bool), DirOnly (bool),
-# and Base (the folder path the .gitignore lives in -- added by Read-GitIgnore).
-function ConvertTo-GitIgnoreRegex {
-    param([string]$Raw)
-
-    $negate  = $Raw.StartsWith('!')
-    if ($negate)  { $Raw = $Raw.Substring(1) }
-    $dirOnly = $Raw.EndsWith('/')
-    if ($dirOnly) { $Raw = $Raw.TrimEnd('/') }
-
-    # A pattern containing a slash (after trimming the trailing one) is
-    # anchored to the directory containing the .gitignore file.
-    $rooted = $Raw.Contains('/')
-
-    # Convert glob syntax to regex (operate on the Regex.Escape'd string).
-    $r = [Text.RegularExpressions.Regex]::Escape($Raw)
-    $r = $r -replace '\\\*\\\*/', '(?:.+/)?'   # **/  -> zero-or-more path segments
-    $r = $r -replace '\\\*\\\*',  '.*'          # **   -> anything
-    $r = $r -replace '\\\*',      '[^/]*'        # *    -> any chars within one segment
-    $r = $r -replace '\\\?',      '[^/]'         # ?    -> single char within one segment
-
-    # Rooted patterns are anchored at the base dir; unrooted can match at any depth.
-    $r = if ($rooted) { '^' + $r + '(/|$)' } else { '(?:^|/)' + $r + '(/|$)' }
-
-    return [PSCustomObject]@{
-        Pattern = $r
-        Negate  = $negate
-        DirOnly = $dirOnly
-    }
-}
-
-# Reads and parses the .gitignore in $Folder (if present).
-# Returns an array of pattern objects tagged with the Base folder path.
-function Read-GitIgnore {
-    param([string]$Folder)
-    $file = Join-Path $Folder '.gitignore'
-    if (-not (Test-Path -LiteralPath $file)) { return @() }
-    $lines = Get-Content -LiteralPath $file -Encoding UTF8 -ErrorAction SilentlyContinue
-    if (-not $lines) { return @() }
-    return $lines |
-            Where-Object { $_ -and -not $_.TrimStart().StartsWith('#') } |
-            ForEach-Object {
-                $p = ConvertTo-GitIgnoreRegex $_.Trim()
-                # Tag the pattern with the folder it came from so relative paths
-                # can be computed correctly even for inherited (parent) rules.
-                $p | Add-Member -NotePropertyName Base -NotePropertyValue $Folder -PassThru
-            }
-}
-
-# Returns $true when $FullPath should be excluded based on the given pattern list.
-# Patterns are tested in order; the last matching rule wins (git semantics).
-# Negation (!) un-ignores a previously ignored path.
-function Test-GitIgnored {
-    param([string]$FullPath, [bool]$IsDir, [array]$Patterns)
-    if (-not $Patterns -or $Patterns.Count -eq 0) { return $false }
-    $result = $false
-    foreach ($p in $Patterns) {
-        if ($p.DirOnly -and -not $IsDir) { continue }
-        # Compute the path relative to the folder where the .gitignore lives.
-        $rel = $FullPath.Substring($p.Base.Length).TrimStart('\', '/').Replace('\', '/')
-        if ($rel -match $p.Pattern) { $result = -not $p.Negate }
-    }
-    return $result
+# --- Ignore lists ------------------------------------------------------------
+# Add directory names and file extensions/names to skip during tree population.
+# Skipping directories avoids recursion entirely -- the biggest speed win.
+$IGNORE = @{
+    Dirs  = [System.Collections.Generic.HashSet[string]]::new(
+        [string[]]@(
+            'node_modules', '.git', '.svn', '.hg',
+            'dist', 'build', 'out', 'bin', 'obj',
+            '.next', '.nuxt', '.vite', '.turbo',
+            '__pycache__', '.pytest_cache', '.mypy_cache',
+            'venv', '.venv', 'env', '.env',
+            'coverage', '.nyc_output',
+            '.idea', '.vscode', '.vs',
+            'vendor', 'packages', 'bower_components',
+            'Migrations', 'migrations',
+            'logs', 'tmp', 'temp', '.cache', '.agents', '.claude', '.expo',
+            '.gradle', '.kotlin', 'release', '.cxx', 'androidTest', 'test', '.oldgit'
+        ),
+        [StringComparer]::OrdinalIgnoreCase
+    )
+    Exts  = [System.Collections.Generic.HashSet[string]]::new(
+        [string[]]@(
+            '.lock', '.log', '.map', '.min.js', '.min.css',
+            '.exe', '.dll', '.pdb', '.obj', '.bin',
+            '.zip', '.tar', '.gz', '.rar', '.7z',
+            '.jpg', '.jpeg', '.png', '.gif', '.ico', '.svg', '.webp',
+            '.mp4', '.mp3', '.woff', '.woff2', '.ttf', '.eot',
+            '.DS_Store', '.suo', '.user'
+        ),
+        [StringComparer]::OrdinalIgnoreCase
+    )
+    Files = [System.Collections.Generic.HashSet[string]]::new(
+        [string[]]@(
+            'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
+            'Thumbs.db', '.DS_Store', '.gitignore', '.gitattributes',
+            'composer.lock', 'poetry.lock', 'Cargo.lock'
+        ),
+        [StringComparer]::OrdinalIgnoreCase
+    )
 }
 
 # --- Tree population ---------------------------------------------------------
 # Eagerly builds all TreeNodes in one pass inside BeginUpdate/EndUpdate.
-# $InheritedPatterns carries .gitignore rules from ancestor directories so that
-# a rule defined higher up the tree is honoured in subdirectories too.
+# Items matching $IGNORE are skipped before node creation -- no wasted work.
 function Add-ChildNodes {
-    param(
-        [System.Windows.Forms.TreeNodeCollection]$Nodes,
-        [string]$Folder,
-        [string]$Root,
-        [array]$InheritedPatterns = @()
-    )
-
-    # Combine rules from ancestor directories with any .gitignore in this folder.
-    $localPatterns = Read-GitIgnore $Folder
-    $allPatterns   = @($InheritedPatterns) + @($localPatterns)
+    param([System.Windows.Forms.TreeNodeCollection]$Nodes, [string]$Folder, [string]$Root)
 
     $opts  = @{ LiteralPath = $Folder; Force = $Hidden.IsPresent; ErrorAction = 'SilentlyContinue' }
     $items = Get-ChildItem @opts |
             Sort-Object @{ Expression = { $_.PSIsContainer }; Descending = $true }, Name
 
     foreach ($item in $items) {
-        # Always hide the .git metadata directory itself.
-        if ($item.Name -eq '.git') { continue }
-
-        # Skip anything matched by an active .gitignore rule.
-        if ($allPatterns.Count -gt 0 -and (Test-GitIgnored $item.FullName $item.PSIsContainer $allPatterns)) { continue }
+        if ($item.PSIsContainer) {
+            if ($IGNORE.Dirs.Contains($item.Name)) { continue }
+        } else {
+            if ($IGNORE.Files.Contains($item.Name)) { continue }
+            $ext = [IO.Path]::GetExtension($item.Name)
+            if ($ext -and $IGNORE.Exts.Contains($ext))  { continue }
+        }
 
         $rel  = '/' + $item.FullName.Substring($Root.Length).TrimStart('\', '/').Replace('\', '/')
         $node = [System.Windows.Forms.TreeNode]::new($item.Name)
@@ -165,8 +130,7 @@ function Add-ChildNodes {
             Name  = $item.Name
         }
         $node.ForeColor = if ($item.PSIsContainer) { $CLR.Dir } else { $CLR.File }
-        # Recurse, passing the combined pattern list so child dirs inherit all rules.
-        if ($item.PSIsContainer) { Add-ChildNodes $node.Nodes $item.FullName $Root $allPatterns }
+        if ($item.PSIsContainer) { Add-ChildNodes $node.Nodes $item.FullName $Root }
         [void]$Nodes.Add($node)
     }
 }
@@ -487,7 +451,7 @@ function Invoke-TreeRefresh {
     try {
         $tree.BeginUpdate()
         $tree.Nodes.Clear()
-        Add-ChildNodes $tree.Nodes $root $root   # InheritedPatterns defaults to @()
+        Add-ChildNodes $tree.Nodes $root $root
 
         if (-not $script:_initialized) {
             # First load: expand top-level directories by default
@@ -586,9 +550,25 @@ $generate = {
         $genFlashTimer.Stop()
         $genFlashTimer.Start()
 
+        # --- Build top-files summary -----------------------------------------
+        # Count lines per file (split on LF; CR+LF and bare LF both handled).
+        # Sort descending, cap at 5 (or total count if fewer).
+        $showCount = if ($files.Count -lt 5) { $files.Count } else { 5 }
+        $ranked = $files |
+            ForEach-Object {
+                try   { $lines = (Read-FileText $_.Full) -split "`n" | Measure-Object | Select-Object -ExpandProperty Count }
+                catch { $lines = 0 }
+                [PSCustomObject]@{ Rel = $_.Rel; Lines = $lines }
+            } |
+            Sort-Object Lines -Descending |
+            Select-Object -First $showCount
+
+        $label   = if ($files.Count -lt 5) { 'All files' } else { 'Top 5 largest files' }
+        $summary = ($ranked | ForEach-Object { "  $($_.Rel)  ($($_.Lines) lines)" }) -join "`n"
+
         [System.Windows.Forms.MessageBox]::Show(
-                "Saved to:`n$outPath`n`n$($files.Count) file(s) bundled.`nContent copied to clipboard.",
-                'Done!', 'OK', 'Information'
+            "Saved to:`n$outPath`n`n$($files.Count) file(s) bundled. Content copied to clipboard.`n`n$label by line count:`n$summary",
+            'Done!', 'OK', 'Information'
         ) | Out-Null
     } catch {
         [System.Windows.Forms.MessageBox]::Show("Error writing file:`n$_", 'Context Builder', 'OK', 'Error') | Out-Null
