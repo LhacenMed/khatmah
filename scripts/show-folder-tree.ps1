@@ -1,6 +1,11 @@
-# Show-FolderTree.ps1
+# show-folder-tree.ps1
 # Displays a tree-like structure of all files and folders in a given directory
-# run: .\scripts\show-folder-tree.ps1 -Path "C:\Users\lhacenmed\AndroidStudioProjects\Khatmah\app\src\main"
+#
+# Usage: .\scripts\show-folder-tree.ps1 -Path "C:\Path\To\Directory" [-ShowHidden]
+#
+# Run:
+#   .\scripts\show-folder-tree.ps1 -Path "C:\Users\lhacenmed\AndroidStudioProjects\Khatmah\"
+
 param (
     [Parameter(Mandatory = $false)]
     [string]$Path = ".",
@@ -15,6 +20,38 @@ $BRANCH_MID  = [char]0x251C + [char]0x2500 + [char]0x2500 + " "  # ├──
 $BRANCH_LAST = [char]0x2514 + [char]0x2500 + [char]0x2500 + " "  # └──
 $PIPE        = [char]0x2502 + "   "                               # │
 $BLANK       = "    "
+
+# --- Ignore lists ------------------------------------------------------------
+$IGNORE = @{
+    Dirs  = [System.Collections.Generic.HashSet[string]]::new(
+        [string[]]@(
+            'node_modules', '.git', '.svn', '.hg',
+            'dist', 'build', 'out', 'bin', 'obj',
+            '.next', '.nuxt', '.vite', '.turbo',
+            '__pycache__', '.pytest_cache', '.mypy_cache',
+            'venv', '.venv', 'env', '.env',
+            'coverage', '.nyc_output',
+            '.idea', '.vscode', '.vs',
+            'vendor', 'packages', 'bower_components',
+            'Migrations', 'migrations',
+            'logs', 'tmp', 'temp', '.cache', '.agents', '.claude', '.expo',
+            '.gradle', '.kotlin', 'release', '.cxx', 'androidTest', 'test', '.oldgit'
+        ),
+        [StringComparer]::OrdinalIgnoreCase
+    )
+    Exts  = [System.Collections.Generic.HashSet[string]]::new(
+        [string[]]@(
+            '.user'
+        ),
+        [StringComparer]::OrdinalIgnoreCase
+    )
+    Files = [System.Collections.Generic.HashSet[string]]::new(
+        [string[]]@(
+            'Cargo.lock'
+        ),
+        [StringComparer]::OrdinalIgnoreCase
+    )
+}
 
 function Show-Tree {
     param (
@@ -31,6 +68,17 @@ function Show-Tree {
     # Folders first, then files — both sorted alphabetically
     $items = Get-ChildItem @getChildParams |
             Sort-Object @{ Expression = { $_.PSIsContainer }; Descending = $true }, Name
+
+    # Filter ignored items before rendering — avoids wasted index/branch logic
+    $items = @($items | Where-Object {
+        if ($_.PSIsContainer) {
+            -not $IGNORE.Dirs.Contains($_.Name)
+        } else {
+            if ($IGNORE.Files.Contains($_.Name)) { return $false }
+            $ext = [IO.Path]::GetExtension($_.Name)
+            -not ($ext -and $IGNORE.Exts.Contains($ext))
+        }
+    })
 
     for ($i = 0; $i -lt $items.Count; $i++) {
         $item   = $items[$i]

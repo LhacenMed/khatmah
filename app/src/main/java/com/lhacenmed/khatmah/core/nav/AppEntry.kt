@@ -32,6 +32,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -40,14 +41,24 @@ import androidx.core.view.ViewCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.core.motion.PredictiveBackContainer
 import com.lhacenmed.khatmah.core.motion.animatedComposable
+import com.lhacenmed.khatmah.core.motion.pageComposable
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
-import com.lhacenmed.khatmah.core.ui.components.BottomNavBar
 import com.lhacenmed.khatmah.core.ui.components.IconButton
+import com.lhacenmed.khatmah.core.ui.components.bottomnav.BottomNavBar
+import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarEditorPage
+import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarViewModel
+import com.lhacenmed.khatmah.feature.prayer.ui.PrayersTab
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsPage
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.qibla.QiblaPage
+import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaTab
+import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaViewModel
 import com.lhacenmed.khatmah.onboarding.CitySelectPage
 import com.lhacenmed.khatmah.onboarding.CountrySelectPage
 import com.lhacenmed.khatmah.onboarding.LanguageOnboardingPage
@@ -55,13 +66,6 @@ import com.lhacenmed.khatmah.onboarding.LocationPermissionPage
 import com.lhacenmed.khatmah.onboarding.NotificationPermissionPage
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import com.lhacenmed.khatmah.widget.WidgetNavRequest
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.qibla.QiblaPage
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsPage
-import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarEditorPage
-import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
-import com.lhacenmed.khatmah.feature.prayer.ui.PrayersTab
-import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaTab
-import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 
 object ShellRoutes {
@@ -90,6 +94,9 @@ fun AppEntry() {
     // Tabs driven by AppRegistry — add a new AppTab object + one registry line to extend.
     val tabs = AppRegistry.tabs.map { it.toNavTab() }
 
+    val density            = LocalDensity.current.density
+    val gestureCommitShift = remember { mutableFloatStateOf(0f) }
+
     val navController = rememberNavController()
 
     var selectedTabIndex by rememberSaveable {
@@ -116,6 +123,17 @@ fun AppEntry() {
         WidgetNavRequest.consume()
     }
 
+    // Observe the back stack as State so canGoBack recomposes when the stack changes.
+    // currentBackStackEntry is read inside derivedStateOf to establish the dependency.
+    val currentEntry by navController.currentBackStackEntryAsState()
+    val canGoBack by remember {
+        derivedStateOf {
+            // Reading currentEntry establishes the recomposition trigger;
+            // previousBackStackEntry is the actual signal we care about.
+            currentEntry?.let { navController.previousBackStackEntry } != null
+        }
+    }
+
     CompositionLocalProvider(LocalNavController provides navController) {
         NavHost(
             navController    = navController,
@@ -123,6 +141,7 @@ fun AppEntry() {
             modifier         = Modifier.fillMaxSize(),
         ) {
             // ── Onboarding ────────────────────────────────────────────────────
+            // Uses legacy animatedComposable — linear flow, back gesture not needed.
             animatedComposable(ShellRoutes.ONBOARDING_LANGUAGE)      { LanguageOnboardingPage()     }
             animatedComposable(ShellRoutes.ONBOARDING_NOTIFICATIONS) { NotificationPermissionPage() }
             animatedComposable(ShellRoutes.ONBOARDING_LOCATION)      { LocationPermissionPage()     }
@@ -147,8 +166,14 @@ fun AppEntry() {
                 )
             }
 
-            // ── App shell ─────────────────────────────────────────────────────
-            animatedComposable(ShellRoutes.MAIN) {
+            // ── App shell (root) ──────────────────────────────────────────────────────
+            // MAIN is the root destination — registered with pageComposable so popEnter
+            // is EnterTransition.None and it never animates when returning to it.
+            pageComposable(
+                route              = ShellRoutes.MAIN,
+                gestureCommitShift = gestureCommitShift,
+                screenDensity      = density,
+            ) {
                 MainScreen(
                     tabs          = tabs,
                     selectedIndex = selectedTabIndex,
@@ -156,12 +181,23 @@ fun AppEntry() {
                 )
             }
 
-            // ── AppRegistry pages (auto-driven) ───────────────────────────────
-            // To add a new page: create AppPage object → add to AppRegistry.pages.
-            // Remove the corresponding manual block above when migrating an existing page.
+            // ── AppRegistry pages ─────────────────────────────────────────────
+            // Each page uses pageComposable (enter-only push / exit-only pop) and
+            // is wrapped in PredictiveBackContainer for the scale-down back gesture.
             AppRegistry.pages.forEach { page ->
-                animatedComposable(route = page.route, arguments = page.arguments) { back ->
-                    page.Content(back)
+                pageComposable(
+                    route              = page.route,
+                    arguments          = page.arguments,
+                    gestureCommitShift = gestureCommitShift,
+                    screenDensity      = density,
+                ) { back ->
+                    PredictiveBackContainer(
+                        enabled       = canGoBack,
+                        onBack        = { navController.popBackStack() },
+                        onCommitShift = { shiftDp -> gestureCommitShift.floatValue = shiftDp },
+                    ) {
+                        page.Content(back)
+                    }
                 }
             }
         }
@@ -191,9 +227,9 @@ private fun MainScreen(
     )
     val adhkarTabIdx = remember(tabs) { tabs.indexOfFirst { it.route == AdhkarTab.route } }
 
-    val currentTab     = tabs[pagerState.currentPage]
-    val isAdhkarTab    = currentTab.route == AdhkarTab.route
-    val isPrayersTab   = currentTab.route == PrayersTab.route
+    val currentTab   = tabs[pagerState.currentPage]
+    val isAdhkarTab  = currentTab.route == AdhkarTab.route
+    val isPrayersTab = currentTab.route == PrayersTab.route
     val isQadaaTab   = currentTab.route == QadaaTab.route
     val inAdhkarSelect = isAdhkarTab && adhkarState.selectionMode
 

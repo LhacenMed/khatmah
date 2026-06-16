@@ -1,4 +1,4 @@
-package com.lhacenmed.khatmah.core.ui.components
+package com.lhacenmed.khatmah.core.ui.components.bottomnav
 
 import android.annotation.SuppressLint
 import android.view.View
@@ -20,22 +20,14 @@ import com.lhacenmed.khatmah.core.nav.NavTab
 /**
  * Full-width bottom navigation bar driven by a NavTab list.
  *
- * Colours are resolved from MaterialTheme.colorScheme — dynamic colour and
- * dark/light theming are handled automatically without hardcoded values.
- *
- * ⚠️  No clipToBounds on the Surface — the unbounded ripple in NavButton
- * intentionally overflows the bar's top edge; clipping defeats circleScale.
- *
- * Selection is driven by currentRoute (the NavHost's live back-stack route) so
- * the bar stays in sync with back-press and deep-link navigation automatically.
- *
  * @param screens      Ordered tab list; left→right order matches the list order.
  * @param currentRoute Active NavHost route; determines which tab appears selected.
  * @param onNavigate   Called with the destination route when a tab is tapped.
+ * @param style        Visual style — [NavBarStyle.M2] (unbounded ripple, original) or
+ *                     [NavBarStyle.M3] (pill indicator, bounded ripple).
  * @param anchorViewAt Lazily resolves the invisible tooltip-anchor View for a tab index.
- *                     Evaluated at touch time — always reads the live post-layout value
- *                     rather than a snapshot taken before factory blocks have run.
- * @param circleScale  Ripple radius as a fraction of slot width.
+ *                     Used by [NavBarStyle.M2] only; [NavBarStyle.M3] manages its own anchor.
+ * @param circleScale  M2 only — ripple radius as a fraction of slot width.
  * @param modifier     Optional outer modifier.
  */
 @Composable
@@ -43,6 +35,7 @@ fun BottomNavBar(
     screens: List<NavTab>,
     currentRoute: String?,
     onNavigate: (String) -> Unit,
+    style: NavBarStyle = NavBarStyle.M3,
     anchorViewAt: (Int) -> View? = { null },
     circleScale: Float = 1.2f,
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
@@ -51,8 +44,9 @@ fun BottomNavBar(
     val selectedColor   = MaterialTheme.colorScheme.primary
     val unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
     val rippleColor     = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+    val pillColor       = MaterialTheme.colorScheme.secondaryContainer
 
-    // ⚠️  No clipToBounds — see KDoc above.
+    // ⚠️  No clipToBounds for M2 — unbounded ripple overflows the bar's top edge.
     Surface(
         modifier        = modifier.fillMaxWidth(),
         color           = bgColor,
@@ -67,20 +61,31 @@ fun BottomNavBar(
             verticalAlignment     = Alignment.CenterVertically,
         ) {
             screens.forEachIndexed { index, screen ->
-                NavButton(
-                    icon            = painterResource(screen.iconRes),
-                    label           = stringResource(screen.labelRes),
-                    selected        = screen.route == currentRoute,
-                    selectedColor   = selectedColor,
-                    unselectedColor = unselectedColor,
-                    rippleColor     = rippleColor,
-                    circleScale     = circleScale,
-                    // Lambda reads directly from the live array at touch time —
-                    // never a stale list snapshot that would return null permanently.
-                    anchorProvider  = { anchorViewAt(index) },
-                    modifier        = Modifier.weight(1f),
-                    onClick         = { onNavigate(screen.route) },
-                )
+                val selected = screen.route == currentRoute
+                when (style) {
+                    NavBarStyle.M2 -> NavButtonM2(
+                        icon            = painterResource(screen.iconRes),
+                        label           = stringResource(screen.labelRes),
+                        selected        = selected,
+                        selectedColor   = selectedColor,
+                        unselectedColor = unselectedColor,
+                        rippleColor     = rippleColor,
+                        circleScale     = circleScale,
+                        anchorProvider  = { anchorViewAt(index) },
+                        modifier        = Modifier.weight(1f),
+                        onClick         = { onNavigate(screen.route) },
+                    )
+                    NavBarStyle.M3 -> NavButtonM3(
+                        icon            = painterResource(screen.iconRes),
+                        label           = stringResource(screen.labelRes),
+                        selected        = selected,
+                        selectedColor   = selectedColor,
+                        unselectedColor = unselectedColor,
+                        pillColor       = pillColor,
+                        modifier        = Modifier.weight(1f),
+                        onClick         = { onNavigate(screen.route) },
+                    )
+                }
             }
         }
     }

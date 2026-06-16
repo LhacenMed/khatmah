@@ -57,9 +57,9 @@ object AppRegistry {
     /** Tab-bar destinations sorted by [AppTab.order]. */
     val tabs: List<AppTab> = listOf(
         TodayTab,
-        AdhkarTab,
+//        AdhkarTab,
         PrayersTab,
-        QadaaTab,
+//        QadaaTab,
         MoreTab,
     ).sortedBy { it.order }
 

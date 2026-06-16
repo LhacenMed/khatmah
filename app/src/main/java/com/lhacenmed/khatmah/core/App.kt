@@ -2,11 +2,14 @@ package com.lhacenmed.khatmah.core
 
 import android.app.Application
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import coil.Coil
 import coil.ImageLoader
 import coil.decode.SvgDecoder
 import com.google.android.material.color.DynamicColors
+import com.lhacenmed.khatmah.BuildConfig
+import com.lhacenmed.khatmah.feature.debug.buildDynamicColorJson
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafInitializer
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
@@ -73,5 +76,16 @@ class App : Application() {
         appScope.launch { KhatmahRepository(this@App).warmCache() }
         // Seed MushafDb from bundled riwaya JSON files (hafs.json + warsh.json in quran.7z).
         MushafInitializer.init(this, appScope)
+
+        // Dump Material You dynamic colors to external storage for dev use.
+        if (BuildConfig.DEBUG && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            appScope.launch {
+                val json = buildDynamicColorJson(this@App)
+                getExternalFilesDir(null)
+                    ?.resolve("dynamic_colors.json")
+                    ?.writeText(json)
+                Log.d("DynamicColors", json)
+            }
+        }
     }
 }
