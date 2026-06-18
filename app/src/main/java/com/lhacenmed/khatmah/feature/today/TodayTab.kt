@@ -38,15 +38,14 @@ import com.lhacenmed.khatmah.core.motion.initialOffset
 import com.lhacenmed.khatmah.core.motion.materialSharedAxisX
 import com.lhacenmed.khatmah.core.motion.materialSharedAxisZ
 import com.lhacenmed.khatmah.core.nav.AppTab
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.nav.Dest
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
 import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
 import com.lhacenmed.khatmah.feature.mushaf.data.db.PageStartEntity
 import com.lhacenmed.khatmah.feature.quran.data.QuranRepository
 import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
-import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranReaderPage
-import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranSessionReaderPage
 import com.lhacenmed.khatmah.feature.today.components.KhatmahStats
 import com.lhacenmed.khatmah.feature.today.components.NoKhatmahCard
 import com.lhacenmed.khatmah.feature.today.components.AllReadCard
@@ -72,7 +71,7 @@ object TodayTab : AppTab(
 
 @Composable
 private fun TodayScreen(padding: PaddingValues) {
-    val nav      = LocalNavController.current
+    val nav      = LocalNavigator.current
     val context  = LocalContext.current
     val activity = LocalActivity.current as ComponentActivity
     val vm: TodayViewModel = viewModel(activity)
@@ -102,7 +101,7 @@ private fun TodayScreen(padding: PaddingValues) {
     // ── Dialogs ───────────────────────────────────────────────────────────────
     if (showDlDialog) {
         MushafDownloadDialog(
-            onSettings = { showDlDialog = false; nav.navigate("mushaf_prints") },
+            onSettings = { showDlDialog = false; nav.go(Dest.MushafPrints) },
             onDismiss  = { showDlDialog = false },
         )
     }
@@ -110,8 +109,8 @@ private fun TodayScreen(padding: PaddingValues) {
     mismatchState?.let { active ->
         RiwayaMismatchDialog(
             khatmahRiwayaKey = active.khatmah.riwaya,
-            onSettings       = { mismatchState = null; nav.navigate("mushaf_prints") },
-            onNewKhatmah     = { mismatchState = null; nav.navigate("new_khatmah") },
+            onSettings       = { mismatchState = null; nav.go(Dest.MushafPrints) },
+            onNewKhatmah     = { mismatchState = null; nav.go(Dest.NewKhatmah) },
             onDismiss        = { mismatchState = null },
         )
     }
@@ -154,10 +153,10 @@ private fun TodayScreen(padding: PaddingValues) {
                 ) { s ->
                     when (s) {
                         is TodayViewModel.UiState.Loading   -> SkeletonCard()
-                        is TodayViewModel.UiState.NoKhatmah -> NoKhatmahCard { nav.navigate("new_khatmah") }
+                        is TodayViewModel.UiState.NoKhatmah -> NoKhatmahCard { nav.go(Dest.NewKhatmah) }
                         is TodayViewModel.UiState.AllRead   -> AllReadCard(
                             onDua        = { /* TODO: navigate to dua */ },
-                            onNewKhatmah = { nav.navigate("new_khatmah") },
+                            onNewKhatmah = { nav.go(Dest.NewKhatmah) },
                         )
                         is TodayViewModel.UiState.Active    -> SessionCard(
                             state      = s,
@@ -169,8 +168,8 @@ private fun TodayScreen(padding: PaddingValues) {
                                     mushaf.riwaya.dbKey != s.khatmah.riwaya ->
                                         mismatchState = s
                                     else ->
-                                        nav.navigate(
-                                            QuranSessionReaderPage.routeFor(
+                                        nav.go(
+                                            Dest.QuranSessionReader(
                                                 s.session.entity.startPage,
                                                 s.session.entity.endPage,
                                             )
@@ -188,13 +187,13 @@ private fun TodayScreen(padding: PaddingValues) {
                     QuickIndexSection(
                         surahs            = quickSurahs,
                         pageFor           = { surahPageMap[it] ?: 1 },
-                        onContinueReading = { nav.navigate(QuranReaderPage.routeFor()) },
+                        onContinueReading = { nav.go(Dest.QuranReader()) },
                         onSurahClick = { suraNum ->
                             RecentSurahsPrefs.record(context, suraNum)
                             quickSurahs = resolveQuickSurahs(allSurahs, RecentSurahsPrefs.get(context))
-                            nav.navigate(QuranReaderPage.routeFor(suraNum = suraNum))
+                            nav.go(Dest.QuranReader(suraNum = suraNum))
                         },
-                        onFullIndex       = { nav.navigate(FullIndexPage.route) },
+                        onFullIndex       = { nav.go(Dest.FullIndex) },
                     )
                 }
             }

@@ -17,10 +17,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.AdhanSoundSelectionPage
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import android.os.Bundle
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.Dest
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
@@ -31,7 +31,7 @@ import com.lhacenmed.khatmah.shared.util.AdhanSoundFiles
 
 @Composable
 fun AdhanRemindersScreen() {
-    val nav    = LocalNavController.current
+    val nav    = LocalNavigator.current
     val configs by AdhanPrefs.flow.collectAsState()
 
     val prayerNames = listOf(
@@ -48,7 +48,7 @@ fun AdhanRemindersScreen() {
             AppTopBar(
                 title      = stringResource(R.string.adhan_reminders_title),
                 isTopLevel = false,
-                onBack     = { nav.popBackStack() },
+                onBack     = { nav.back() },
             )
         }
     ) { padding ->
@@ -67,7 +67,7 @@ fun AdhanRemindersScreen() {
 
                 PreferenceItem(
                     title = stringResource(nameRes),
-                    onClick = { nav.navigate(AdhanSoundSelectionPage.routeFor(index)) },
+                    onClick = { nav.go(Dest.AdhanSoundSelection(index)) },
                     leadingIcon = {
                         val icon = when {
                             !isOn -> Icons.Outlined.NotificationsOff
@@ -116,7 +116,9 @@ private fun soundSubtitle(sound: AdhanSound): String = when (sound) {
     is AdhanSound.Custom -> sound.displayName
 }
 
-object AdhanRemindersPage : AppPage() {
-    override val route = "adhan_reminders"
-    @Composable override fun Content(back: NavBackStackEntry) = AdhanRemindersScreen()
+class AdhanRemindersActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { AdhanRemindersScreen() }
+    }
 }

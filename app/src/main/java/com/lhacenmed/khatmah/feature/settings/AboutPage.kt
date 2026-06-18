@@ -1,5 +1,6 @@
 package com.lhacenmed.khatmah.feature.settings
 
+import android.os.Bundle
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,23 +23,21 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
-import androidx.navigation.NavBackStackEntry
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.IconButton
 import com.lhacenmed.khatmah.core.ui.components.LargeTopAppBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 
-// ── Navigation destination ────────────────────────────────────────────────────
+// ── Activity host ─────────────────────────────────────────────────────────────
 
-/**
- * Route auto-derived: "about" — matches "about".
- * Call sites continue to use nav.navigate("about") unchanged.
- */
-object AboutPage : AppPage() {
-    @Composable override fun Content(back: NavBackStackEntry) = AboutScreen()
+class AboutActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { AboutScreen() }
+    }
 }
 
 // ── Screen ────────────────────────────────────────────────────────────────────
@@ -46,7 +45,7 @@ object AboutPage : AppPage() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AboutScreen() {
-    val nav = LocalNavController.current
+    val nav = LocalNavigator.current
     val context = LocalContext.current
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
@@ -66,7 +65,7 @@ private fun AboutScreen() {
                 title = { Text(stringResource(R.string.about_page)) },
                 navigationIcon = {
                     IconButton(
-                        onClick = { nav.popBackStack() },
+                        onClick = { nav.back() },
                         tooltipText = stringResource(R.string.navigate_up),
                         anchorExtraBottom = tooltipAnchorBottom,
                     ) {

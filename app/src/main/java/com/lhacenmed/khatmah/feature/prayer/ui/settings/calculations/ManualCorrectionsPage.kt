@@ -14,9 +14,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import android.os.Bundle
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.prayer.data.ManualCorrections
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.feature.prayer.ui.components.PrayerTimesPreviewBar
@@ -24,7 +24,7 @@ import com.lhacenmed.khatmah.feature.prayer.ui.components.PrayerTimesPreviewBar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManualCorrectionsScreen() {
-    val nav      = LocalNavController.current
+    val nav      = LocalNavigator.current
     val context  = LocalContext.current
     val settings by PrayerSettings.flow.collectAsState()
     val corr     = settings.corrections
@@ -46,7 +46,7 @@ fun ManualCorrectionsScreen() {
             TopAppBar(
                 title          = { Text(stringResource(R.string.prayer_settings_corrections)) },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
+                    IconButton(onClick = { nav.back() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.navigate_up))
                     }
                 },
@@ -170,7 +170,9 @@ private fun CorrectionRow(
     )
 }
 
-object ManualCorrectionsPage : AppPage() {
-    override val route = "prayer_manual_corrections"
-    @Composable override fun Content(back: NavBackStackEntry) = ManualCorrectionsScreen()
+class ManualCorrectionsActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { ManualCorrectionsScreen() }
+    }
 }

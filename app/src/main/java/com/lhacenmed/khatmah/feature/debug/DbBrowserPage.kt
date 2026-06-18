@@ -24,9 +24,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import android.os.Bundle
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import kotlinx.coroutines.launch
 
@@ -34,7 +34,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun DbBrowserScreen() {
     val context     = LocalContext.current
-    val nav         = LocalNavController.current
+    val nav         = LocalNavigator.current
     val vm          = viewModel<DbBrowserViewModel>(factory = DbBrowserViewModel.Factory(context))
     val state       by vm.state.collectAsState()
     val drawerState = rememberDrawerState(DrawerValue.Open)
@@ -61,7 +61,7 @@ fun DbBrowserScreen() {
                     title      = state.selectedTable ?: "DB Browser",
                     subtitle   = state.selectedDb,
                     isTopLevel = false,
-                    onBack     = { nav.popBackStack() },
+                    onBack     = { nav.back() },
                     actions    = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = "Open tables")
@@ -395,7 +395,9 @@ private fun DataCell(
     }
 }
 
-object DbBrowserPage : AppPage() {
-    override val route = "debug_db"
-    @Composable override fun Content(back: NavBackStackEntry) = DbBrowserScreen()
+class DbBrowserActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { DbBrowserScreen() }
+    }
 }

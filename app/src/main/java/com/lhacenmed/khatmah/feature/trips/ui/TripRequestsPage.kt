@@ -15,9 +15,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import android.os.Bundle
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.IconButton
 import com.lhacenmed.khatmah.feature.trips.data.StatusColor
@@ -28,7 +28,7 @@ import java.util.*
 @Composable
 fun TripRequestsScreen(vm: TripRequestsViewModel = viewModel()) {
     val state by vm.state.collectAsState()
-    val nav = LocalNavController.current
+    val nav = LocalNavigator.current
 
     Scaffold(
         topBar = {
@@ -40,7 +40,7 @@ fun TripRequestsScreen(vm: TripRequestsViewModel = viewModel()) {
                         Icon(Icons.Outlined.Refresh, contentDescription = "Refresh")
                     }
                 },
-                onBack = { nav.navigateUp() },
+                onBack = { nav.back() },
             )
         },
     ) { padding ->
@@ -152,7 +152,9 @@ private fun formatDate(iso: String): String = runCatching {
     formatter.format(parser.parse(iso)!!)
 }.getOrElse { iso }
 
-object TripRequestsPage : AppPage() {
-    override val route = "trip_requests"
-    @Composable override fun Content(back: NavBackStackEntry) = TripRequestsScreen()
+class TripRequestsActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { TripRequestsScreen() }
+    }
 }

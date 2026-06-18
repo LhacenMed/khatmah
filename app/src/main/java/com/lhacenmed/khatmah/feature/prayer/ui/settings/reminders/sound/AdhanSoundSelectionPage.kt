@@ -25,11 +25,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
-import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import android.os.Bundle
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
@@ -48,7 +46,7 @@ private val PRE_ALERT_OPTIONS = listOf(0, 5, 10, 15, 20, 25, 30)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AdhanSoundSelectionScreen(prayerId: Int) {
-    val nav     = LocalNavController.current
+    val nav     = LocalNavigator.current
     val context = LocalContext.current
     val configs by AdhanPrefs.flow.collectAsState()
     val customSounds by AdhanPrefs.customSoundsFlow.collectAsState()
@@ -127,7 +125,7 @@ fun AdhanSoundSelectionScreen(prayerId: Int) {
             AppTopBar(
                 title      = stringResource(R.string.adhan_alarm_title_format, prayerName),
                 isTopLevel = false,
-                onBack     = { mediaPlayer?.release(); nav.popBackStack() },
+                onBack     = { mediaPlayer?.release(); nav.back() },
             )
         }
     ) { padding ->
@@ -433,10 +431,13 @@ private fun preAlertLabel(minutes: Int): String = when (minutes) {
     else -> stringResource(R.string.adhan_alert_before_minutes, minutes)
 }
 
-object AdhanSoundSelectionPage : AppPage() {
-    override val route = "adhan_sound_selection/{prayerId}"
-    override val arguments = listOf(navArgument("prayerId") { type = NavType.IntType })
-    fun routeFor(prayerId: Int) = "adhan_sound_selection/$prayerId"
+class AdhanSoundSelectionActivity : BaseComposeActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
-    @Composable override fun Content(back: NavBackStackEntry) = AdhanSoundSelectionScreen(back.arguments?.getInt("prayerId") ?: 0)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val prayerId = intent.getIntExtra(EXTRA_PRAYER_ID, 0)
+        setAppContent { AdhanSoundSelectionScreen(prayerId) }
+    }
+
+    companion object { const val EXTRA_PRAYER_ID = "prayerId" }
 }

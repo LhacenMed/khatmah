@@ -37,11 +37,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavBackStackEntry
+import android.os.Bundle
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.Dest
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.adhkar.data.Dhikr
 import com.lhacenmed.khatmah.feature.adhkar.ui.components.CompletionBody
 import com.lhacenmed.khatmah.feature.adhkar.ui.components.DhikrBody
@@ -80,7 +81,7 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun AdhkarDetailScreen(categoryId: String) {
-    val nav      = LocalNavController.current
+    val nav      = LocalNavigator.current
     val context  = LocalContext.current
     val activity = LocalActivity.current as ComponentActivity
 
@@ -108,7 +109,7 @@ fun AdhkarDetailScreen(categoryId: String) {
 
     // Empty / not-found guard
     if (!isDhikrLoading && adhkar.isEmpty()) {
-        LaunchedEffect(Unit) { nav.popBackStack() }
+        LaunchedEffect(Unit) { nav.back() }
         return
     }
     if (isDhikrLoading) {
@@ -169,7 +170,7 @@ fun AdhkarDetailScreen(categoryId: String) {
     /** Advances to the next page (or pops back from the completion page). */
     fun goNext() = scope.launch {
         if (page < totalPages - 1) pagerState.animateScrollToPage(page + 1)
-        else nav.popBackStack()
+        else nav.back()
         // isBusy remains true until LaunchedEffect(page) fires on the new page.
     }
 
@@ -240,8 +241,8 @@ fun AdhkarDetailScreen(categoryId: String) {
         topBar = {
             DhikrTopBar(
                 title    = categoryName,
-                onBack   = { nav.popBackStack() },
-                onEdit   = { nav.navigate(AdhkarEditorPage.routeFor(categoryId)) },
+                onBack   = { nav.back() },
+                onEdit   = { nav.go(Dest.AdhkarEditor(categoryId)) },
                 onResize = { fontSize = fontSize.next() },
             )
         },
@@ -254,7 +255,7 @@ fun AdhkarDetailScreen(categoryId: String) {
                 arcFraction      = arcAnim.value,
                 allDone          = allDone,
                 isCompletionPage = isCompletionPage,
-                onBack           = { nav.popBackStack() },
+                onBack           = { nav.back() },
                 onShare          = ::share,
                 onAction         = ::handleTap,
                 onTap            = ::handleTap,
@@ -426,18 +427,12 @@ fun AdhkarDetailScreen(categoryId: String) {
 
 // ── Navigation destination ────────────────────────────────────────────────────
 
-object AdhkarDetailPage : AppPage() {
-    override val route     = "adhkar_detail/{categoryId}"
-    override val arguments = listOf(
-        navArgument("categoryId") { type = NavType.StringType },
-    )
-
-    fun routeFor(categoryId: String) = "adhkar_detail/$categoryId"
-
-    @Composable
-    override fun Content(back: NavBackStackEntry) {
-        AdhkarDetailScreen(
-            categoryId = back.arguments?.getString("categoryId").orEmpty(),
-        )
+class AdhkarDetailActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val categoryId = intent.getStringExtra(EXTRA_CATEGORY_ID).orEmpty()
+        setAppContent { AdhkarDetailScreen(categoryId = categoryId) }
     }
+
+    companion object { const val EXTRA_CATEGORY_ID = "categoryId" }
 }

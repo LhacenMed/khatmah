@@ -26,9 +26,9 @@ import android.widget.ImageButton
 import androidx.activity.compose.BackHandler
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import android.os.Bundle
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.createRippleDrawable
 import com.lhacenmed.khatmah.core.ui.components.popupmenu.MenuItem
@@ -47,7 +47,7 @@ private val TOP_BAR_MENU_ITEMS = listOf(
 @Composable
 fun FileBrowserScreen() {
     val ctx = LocalContext.current
-    val nav = LocalNavController.current
+    val nav = LocalNavigator.current
     val vm  = viewModel<FileBrowserViewModel>(factory = FileBrowserViewModel.Factory(ctx))
     val s   by vm.state.collectAsState()
 
@@ -75,7 +75,7 @@ fun FileBrowserScreen() {
                 dir            = s.currentDir,
                 onBack         = {
                     if (!atRoot) vm.openDir(s.currentDir.parentFile!!)
-                    else nav.popBackStack()
+                    else nav.back()
                 },
                 onMenuSelected = { item -> if (item == "Refresh") vm.openDir(s.currentDir) },
             )
@@ -312,7 +312,9 @@ private fun FileBrowserRenameDialog(
     )
 }
 
-object FileBrowserPage : AppPage() {
-    override val route = "files_browser"
-    @Composable override fun Content(back: NavBackStackEntry) = FileBrowserScreen()
+class FileBrowserActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { FileBrowserScreen() }
+    }
 }

@@ -1,5 +1,6 @@
 package com.lhacenmed.khatmah.feature.settings
 
+import android.os.Bundle
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,9 +26,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.LocalNavController
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.IconButton
 import com.lhacenmed.khatmah.core.ui.components.LargeTopAppBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
@@ -35,11 +35,21 @@ import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSwitch
 import com.lhacenmed.khatmah.shared.util.ThemeManager
 
+// ── Activity host ─────────────────────────────────────────────────────────────
+
+class DarkThemeActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { DarkThemeScreen() }
+    }
+}
+
+// ── Screen ────────────────────────────────────────────────────────────────────
+
 @OptIn(ExperimentalMaterial3Api::class)
-object DarkThemePage : AppPage() {
-    override val route = "dark_theme"
-    @Composable override fun Content(back: NavBackStackEntry) {
-    val nav = LocalNavController.current
+@Composable
+private fun DarkThemeScreen() {
+    val nav = LocalNavigator.current
     val context = LocalContext.current
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
@@ -63,7 +73,7 @@ object DarkThemePage : AppPage() {
                 title = { Text(stringResource(R.string.theme_dark)) },
                 navigationIcon = {
                     IconButton(
-                        onClick = { nav.popBackStack() },
+                        onClick = { nav.back() },
                         tooltipText = stringResource(R.string.navigate_up),
                         anchorExtraBottom = tooltipAnchorBottom,
                     ) {
@@ -102,5 +112,4 @@ object DarkThemePage : AppPage() {
             )
         }
     }
-}
 }

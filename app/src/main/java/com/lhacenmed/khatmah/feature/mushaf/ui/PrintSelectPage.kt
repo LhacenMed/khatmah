@@ -68,10 +68,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavBackStackEntry
+import android.os.Bundle
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
@@ -107,14 +107,14 @@ fun PrintSelectScreen() {
     val vm: PrintSelectViewModel = viewModel()
     val selected by vm.selected.collectAsState()
     val states   by vm.downloadStates.collectAsState()
-    val nav      = LocalNavController.current
+    val nav      = LocalNavigator.current
 
     Scaffold(
         topBar = {
             AppTopBar(
                 title      = stringResource(R.string.mushaf_print_title),
                 isTopLevel = false,
-                onBack     = { nav.navigateUp() },
+                onBack     = { nav.back() },
             )
         }
     ) { padding ->
@@ -535,10 +535,9 @@ private fun ActionButton(
 
 // ── Navigation destination ────────────────────────────────────────────────────
 
-object PrintSelectPage : AppPage() {
-    // "mushaf_prints" = "mushaf_prints" — doesn't match auto-derived "print_select".
-    override val route = "mushaf_prints"
-
-    @Composable
-    override fun Content(back: NavBackStackEntry) = PrintSelectScreen()
+class PrintSelectActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { PrintSelectScreen() }
+    }
 }

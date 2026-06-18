@@ -69,13 +69,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
+import android.os.Bundle
 import coil.compose.AsyncImage
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.ColorPickerDialog
 import com.lhacenmed.khatmah.core.ui.components.LargeTopAppBar
 import com.lhacenmed.khatmah.feature.adhkar.data.AdhkarCategory
@@ -193,7 +191,7 @@ private fun AdhkarEditorContent(
     builtInDefaults: BuiltInDefaults?,
     vm:              AdhkarViewModel,
 ) {
-    val nav = LocalNavController.current
+    val nav = LocalNavigator.current
 
     // ── Form state ────────────────────────────────────────────────────────────
     var title     by rememberSaveable { mutableStateOf(initialTitle) }
@@ -274,13 +272,13 @@ private fun AdhkarEditorContent(
         val items = dhikrList.map { it.toDhikr() }
         if (isEditMode && categoryId != null) vm.updateCategory(category, items)
         else vm.addCategory(category, items)
-        nav.popBackStack()
+        nav.back()
     }
 
     fun resetToDefaults() {
         if (categoryId != null) {
             vm.resetCategoryToDefaults(categoryId)
-            nav.popBackStack()
+            nav.back()
         }
     }
 
@@ -296,7 +294,7 @@ private fun AdhkarEditorContent(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
+                    IconButton(onClick = { nav.back() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.navigate_up))
                     }
                 },
@@ -497,13 +495,11 @@ private fun AdhkarEditorContent(
 
 // ── Navigation destination ────────────────────────────────────────────────────
 
-object AdhkarEditorPage : AppPage() {
-    override val route = "adhkar_editor?categoryId={categoryId}"
-    override val arguments = listOf(
-        navArgument("categoryId") { type = NavType.StringType; nullable = true }
-    )
-    fun routeFor(categoryId: String? = null) = "adhkar_editor?categoryId=${categoryId.orEmpty()}"
-    @Composable override fun Content(back: NavBackStackEntry) {
-        AdhkarEditorScreen(back.arguments?.getString("categoryId"))
+class AdhkarEditorActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { AdhkarEditorScreen(intent.getStringExtra(EXTRA_CATEGORY_ID)) }
     }
+
+    companion object { const val EXTRA_CATEGORY_ID = "categoryId" }
 }

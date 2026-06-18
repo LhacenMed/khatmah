@@ -587,4 +587,5 @@
     <string name="qadaa_from_which_group">From which group?</string>
     <string name="qadaa_day_unit">day</string>
     <string name="qadaa_confirm">Confirm</string>
+    <string name="tap_back_again_to_exit">Tap Back again to exit</string>
 </resources>

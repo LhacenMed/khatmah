@@ -11,9 +11,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import android.os.Bundle
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.prayer.data.HigherLatMode
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.feature.prayer.ui.components.PrayerTimesPreviewBar
@@ -21,7 +21,7 @@ import com.lhacenmed.khatmah.feature.prayer.ui.components.PrayerTimesPreviewBar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HigherLatScreen() {
-    val nav      = LocalNavController.current
+    val nav      = LocalNavigator.current
     val context  = LocalContext.current
     val settings by PrayerSettings.flow.collectAsState()
 
@@ -30,7 +30,7 @@ fun HigherLatScreen() {
             TopAppBar(
                 title          = { Text(stringResource(R.string.prayer_settings_higher_lat)) },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
+                    IconButton(onClick = { nav.back() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.navigate_up))
                     }
                 },
@@ -74,7 +74,9 @@ fun HigherLatScreen() {
     }
 }
 
-object HigherLatPage : AppPage() {
-    override val route = "prayer_higher_lat"
-    @Composable override fun Content(back: NavBackStackEntry) = HigherLatScreen()
+class HigherLatActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { HigherLatScreen() }
+    }
 }

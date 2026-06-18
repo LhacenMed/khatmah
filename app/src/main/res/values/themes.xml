@@ -5,4 +5,9 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
+
+    <!-- Compact bottom-navigation label text (AntennaPod's exact value). -->
+    <style name="TextBottomNav" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textSize">11sp</item>
+    </style>
 </resources>

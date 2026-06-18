@@ -14,10 +14,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.nav.ShellRoutes
+import android.os.Bundle
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.Dest
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSwitch
@@ -28,7 +28,7 @@ import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrayerSettingsScreen() {
-    val nav       = LocalNavController.current
+    val nav       = LocalNavigator.current
     val context   = LocalContext.current
     val scrollBeh = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val settings  by PrayerSettings.flow.collectAsState()
@@ -45,7 +45,7 @@ fun PrayerSettingsScreen() {
             LargeTopAppBar(
                 title          = { Text(stringResource(R.string.prayer_settings_title)) },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
+                    IconButton(onClick = { nav.back() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.navigate_up))
                     }
                 },
@@ -64,7 +64,7 @@ fun PrayerSettingsScreen() {
 
             PreferenceItem(
                 title   = stringResource(R.string.prayer_settings_qibla),
-                onClick = { nav.navigate("qibla") },
+                onClick = { nav.go(Dest.Qibla) },
                 trailingIcon = {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                 },
@@ -75,7 +75,7 @@ fun PrayerSettingsScreen() {
 
             PreferenceItem(
                 title   = stringResource(R.string.prayer_settings_adhan_reminders),
-                onClick = { nav.navigate("adhan_reminders") },
+                onClick = { nav.go(Dest.AdhanReminders) },
                 trailingIcon = {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                 },
@@ -102,7 +102,7 @@ fun PrayerSettingsScreen() {
             // Auto-detect Location
             PreferenceItem(
                 title   = stringResource(R.string.prayer_settings_auto_location),
-                onClick = { nav.navigate(ShellRoutes.ONBOARDING_LOCATION) },
+                onClick = { nav.go(Dest.OnboardingLocation) },
                 trailingIcon = {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                 },
@@ -112,7 +112,7 @@ fun PrayerSettingsScreen() {
             PreferenceItem(
                 title   = stringResource(R.string.prayer_settings_manual_location),
                 onClick = {
-                    nav.navigate(ShellRoutes.ONBOARDING_COUNTRY_SELECT.replace("{fromSettings}", "true"))
+                    nav.go(Dest.CountrySelect(fromSettings = true))
                 },
                 trailingIcon = {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
@@ -146,7 +146,7 @@ fun PrayerSettingsScreen() {
                 title       = stringResource(R.string.prayer_settings_calc_method),
                 description = effective.method.displayName,
                 enabled     = !settings.autoSettings,
-                onClick     = { nav.navigate("prayer_calc_method") },
+                onClick     = { nav.go(Dest.CalcMethod) },
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -164,7 +164,7 @@ fun PrayerSettingsScreen() {
                     else R.string.juristic_shafi
                 ),
                 enabled     = !settings.autoSettings,
-                onClick     = { nav.navigate("prayer_juristic") },
+                onClick     = { nav.go(Dest.Juristic) },
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -185,7 +185,7 @@ fun PrayerSettingsScreen() {
                     }
                 ),
                 enabled     = !settings.autoSettings,
-                onClick     = { nav.navigate("prayer_dst") },
+                onClick     = { nav.go(Dest.Dst) },
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -201,7 +201,7 @@ fun PrayerSettingsScreen() {
                 description = if (settings.corrections.isAllZero) stringResource(R.string.corrections_all_default)
                 else stringResource(R.string.corrections_customized),
                 enabled     = !settings.autoSettings,
-                onClick     = { nav.navigate("prayer_manual_corrections") },
+                onClick     = { nav.go(Dest.ManualCorrections) },
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -223,7 +223,7 @@ fun PrayerSettingsScreen() {
                     }
                 ),
                 enabled     = !settings.autoSettings,
-                onClick     = { nav.navigate("prayer_higher_lat") },
+                onClick     = { nav.go(Dest.HigherLat) },
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -238,7 +238,9 @@ fun PrayerSettingsScreen() {
     }
 }
 
-object PrayerSettingsPage : AppPage() {
-    override val route = "prayer_settings"
-    @Composable override fun Content(back: NavBackStackEntry) = PrayerSettingsScreen()
+class PrayerSettingsActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { PrayerSettingsScreen() }
+    }
 }

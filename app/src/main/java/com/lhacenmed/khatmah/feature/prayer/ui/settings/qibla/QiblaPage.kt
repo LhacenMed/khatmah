@@ -39,9 +39,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lhacenmed.khatmah.R
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import android.os.Bundle
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import kotlin.math.*
 import androidx.core.graphics.withRotation
@@ -100,7 +100,7 @@ private fun Double.toDms(): String {
 @Composable
 fun QiblaScreen() {
     val context  = LocalContext.current
-    val nav      = LocalNavController.current
+    val nav      = LocalNavigator.current
     val location = remember { OnboardingPrefs.location(context) }
 
     val qiblaBearing = remember(location) {
@@ -182,7 +182,7 @@ fun QiblaScreen() {
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
+                    IconButton(onClick = { nav.back() }) {
                         Icon(
                             imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.navigate_up),
@@ -760,7 +760,9 @@ private fun CompassDial(
     }
 }
 
-object QiblaPage : AppPage() {
-    override val route = "qibla"
-    @Composable override fun Content(back: NavBackStackEntry) = QiblaScreen()
+class QiblaActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { QiblaScreen() }
+    }
 }

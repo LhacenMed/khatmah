@@ -25,17 +25,16 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import android.os.Bundle
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.theme.HafsFamily
 import com.lhacenmed.khatmah.core.ui.theme.WarshFamily
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 import com.lhacenmed.khatmah.feature.quran.data.QuranRepository
 import com.lhacenmed.khatmah.feature.quran.data.SearchResult
-import com.lhacenmed.khatmah.feature.quran.ui.reader.KEY_JUMP_AYA
-import com.lhacenmed.khatmah.feature.quran.ui.reader.KEY_JUMP_SURA
+import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranJump
 import com.lhacenmed.khatmah.feature.quran.ui.reader.toArNums
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -100,7 +99,7 @@ class QuranSearchViewModel(app: Application) : AndroidViewModel(app) {
 fun QuranSearchScreen() {
     val vm:   QuranSearchViewModel = viewModel()
     val state by vm.state.collectAsState()
-    val nav   = LocalNavController.current
+    val nav   = LocalNavigator.current
     val focus = remember { FocusRequester() }
     val selectedPrint by MushafPrefs.selected.collectAsState()
     val textFamily = if (selectedPrint.riwaya == Riwaya.HAFS) HafsFamily else WarshFamily
@@ -112,7 +111,7 @@ fun QuranSearchScreen() {
             SearchBar(
                 query          = state.query,
                 onQueryChange  = vm::onQueryChange,
-                onBack         = { nav.popBackStack() },
+                onBack         = { nav.back() },
                 focusRequester = focus,
             )
         },
@@ -122,11 +121,8 @@ fun QuranSearchScreen() {
             modifier   = Modifier.padding(innerPadding),
             textFamily = textFamily,
             onSelected = { result ->
-                nav.previousBackStackEntry?.savedStateHandle?.run {
-                    set(KEY_JUMP_SURA, result.suraNum)
-                    set(KEY_JUMP_AYA,  result.ayaNum)
-                }
-                nav.popBackStack()
+                QuranJump.request(result.suraNum, result.ayaNum)
+                nav.back()
             },
         )
     }
@@ -269,7 +265,9 @@ private fun SearchResultRow(result: SearchResult, textFamily: FontFamily, onClic
     )
 }
 
-object QuranSearchPage : AppPage() {
-    override val route = "quran_search"
-    @Composable override fun Content(back: NavBackStackEntry) = QuranSearchScreen()
+class QuranSearchActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { QuranSearchScreen() }
+    }
 }

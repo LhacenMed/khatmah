@@ -22,9 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import android.os.Bundle
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahResult
 import com.lhacenmed.khatmah.feature.khatmah.data.SessionDisplay
@@ -32,7 +32,7 @@ import com.lhacenmed.khatmah.feature.khatmah.data.SessionDisplay
 @Composable
 fun NewKhatmahScreen() {
     val context = LocalContext.current
-    val nav     = LocalNavController.current
+    val nav     = LocalNavigator.current
     val vm: NewKhatmahViewModel = viewModel(factory = NewKhatmahViewModel.Factory(context))
     val state   by vm.state.collectAsState()
 
@@ -43,7 +43,7 @@ fun NewKhatmahScreen() {
             AppTopBar(
                 title      = stringResource(R.string.new_khatmah_title),
                 isTopLevel = false,
-                onBack     = { if (state.step == 2) vm.goBack() else nav.popBackStack() },
+                onBack     = { if (state.step == 2) vm.goBack() else nav.back() },
             )
         },
     ) { padding ->
@@ -55,7 +55,7 @@ fun NewKhatmahScreen() {
 
     // Show success dialog once khatmah is persisted
     state.savedResult?.let { result ->
-        KhatmahSuccessDialog(result = result, onDone = { nav.popBackStack() })
+        KhatmahSuccessDialog(result = result, onDone = { nav.back() })
     }
 }
 
@@ -368,7 +368,9 @@ private fun DurationStepper(onIncrement: () -> Unit, onDecrement: () -> Unit) {
     }
 }
 
-object NewKhatmahPage : AppPage() {
-    override val route = "new_khatmah"
-    @Composable override fun Content(back: NavBackStackEntry) = NewKhatmahScreen()
+class NewKhatmahActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { NewKhatmahScreen() }
+    }
 }

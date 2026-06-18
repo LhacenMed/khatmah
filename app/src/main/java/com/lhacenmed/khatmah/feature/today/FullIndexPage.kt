@@ -36,10 +36,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavBackStackEntry
+import android.os.Bundle
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.feature.mushaf.data.DivType
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
@@ -47,7 +47,7 @@ import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
 import com.lhacenmed.khatmah.feature.mushaf.data.db.PageStartEntity
 import com.lhacenmed.khatmah.feature.quran.data.QuranRepository
 import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
-import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranReaderPage
+import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.shared.util.RecentSurahsPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -116,7 +116,7 @@ class FullIndexViewModel(context: Context) : ViewModel() {
 
 @Composable
 private fun FullIndexScreen() {
-    val nav     = LocalNavController.current
+    val nav     = LocalNavigator.current
     val context = LocalContext.current
     val vm: FullIndexViewModel = viewModel(factory = FullIndexViewModel.Factory(context))
 
@@ -139,7 +139,7 @@ private fun FullIndexScreen() {
             AppTopBar(
                 title      = stringResource(R.string.full_index_title),
                 isTopLevel = false,
-                onBack     = { nav.popBackStack() },
+                onBack     = { nav.back() },
             )
         },
     ) { padding ->
@@ -163,11 +163,11 @@ private fun FullIndexScreen() {
                 when (page) {
                     0 -> SurahsContent(surahs, surahPageMap) { suraNum ->
                         RecentSurahsPrefs.record(context, suraNum)
-                        nav.navigate(QuranReaderPage.routeFor(suraNum = suraNum))
+                        nav.go(Dest.QuranReader(suraNum = suraNum))
                     }
                     else -> AjzaContent(juzList) { suraNum ->
                         RecentSurahsPrefs.record(context, suraNum)
-                        nav.navigate(QuranReaderPage.routeFor(suraNum = suraNum))
+                        nav.go(Dest.QuranReader(suraNum = suraNum))
                     }
                 }
             }
@@ -283,7 +283,9 @@ private fun toArNums(n: Int): String =
 
 // ── Page registration ─────────────────────────────────────────────────────────
 
-object FullIndexPage : AppPage() {
-    override val route = "full_index"
-    @Composable override fun Content(back: NavBackStackEntry) = FullIndexScreen()
+class FullIndexActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { FullIndexScreen() }
+    }
 }

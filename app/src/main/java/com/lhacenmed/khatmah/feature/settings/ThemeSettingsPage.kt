@@ -1,6 +1,7 @@
 package com.lhacenmed.khatmah.feature.settings
 
 import android.os.Build
+import android.os.Bundle
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.animation.core.animateDpAsState
@@ -43,9 +44,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.LocalNavController
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.Dest
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.IconButton
 import com.lhacenmed.khatmah.core.ui.components.LargeTopAppBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
@@ -56,15 +57,24 @@ import com.lhacenmed.khatmah.core.ui.theme.ThemeColor
 import com.lhacenmed.khatmah.core.ui.theme.colorPreferences
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 
-/**
- * Appearance settings page.
- */
+// ── Activity host ─────────────────────────────────────────────────────────────
+
+/** Appearance settings page. */
+@RequiresApi(Build.VERSION_CODES.O)
+class ThemeSettingsActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { ThemeSettingsScreen() }
+    }
+}
+
+// ── Screen ────────────────────────────────────────────────────────────────────
+
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
-object ThemeSettingsPage : AppPage() {
-    override val route = "theme_settings"
-    @Composable override fun Content(back: NavBackStackEntry) {
-    val nav            = LocalNavController.current
+@Composable
+private fun ThemeSettingsScreen() {
+    val nav            = LocalNavigator.current
     val context        = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
@@ -83,7 +93,7 @@ object ThemeSettingsPage : AppPage() {
                 title          = { Text(stringResource(R.string.theme_settings)) },
                 navigationIcon = {
                     IconButton(
-                        onClick           = { nav.popBackStack() },
+                        onClick           = { nav.back() },
                         tooltipText       = stringResource(R.string.navigate_up),
                         anchorExtraBottom = tooltipAnchorBottom,
                     ) {
@@ -114,7 +124,7 @@ object ThemeSettingsPage : AppPage() {
                         else                                       -> R.string.theme_dark
                     }
                 ),
-                onClick = { nav.navigate("dark_theme") },
+                onClick = { nav.go(Dest.DarkTheme) },
                 trailingIcon = {
                     Icon(
                         imageVector        = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -152,7 +162,6 @@ object ThemeSettingsPage : AppPage() {
             }
         }
     }
-}
 }
 
 @Composable

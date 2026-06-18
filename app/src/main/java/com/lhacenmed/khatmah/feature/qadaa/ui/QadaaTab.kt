@@ -20,7 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.AppTab
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.nav.Dest
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.IconButton
@@ -36,7 +37,7 @@ fun QadaaScreen(outerPadding: PaddingValues = PaddingValues()) {
     val activity = LocalActivity.current as ComponentActivity
     val vm: QadaaViewModel = viewModel(activity)
     val state by vm.uiState.collectAsState()
-    val nav = LocalNavController.current
+    val nav = LocalNavigator.current
     val listState = rememberLazyListState()
     val scrollToTop = LocalScrollToTop.current
 
@@ -102,7 +103,7 @@ fun QadaaScreen(outerPadding: PaddingValues = PaddingValues()) {
                     fontWeight = FontWeight.SemiBold,
                     modifier   = Modifier.weight(1f),
                 )
-                TextButton(onClick = { nav.navigate("qadaa_history") }) {
+                TextButton(onClick = { nav.go(Dest.QadaaHistory) }) {
                     Text(stringResource(R.string.qadaa_see_all))
                 }
             }

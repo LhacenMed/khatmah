@@ -17,10 +17,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavBackStackEntry
+import android.os.Bundle
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.feature.qadaa.data.*
 import kotlinx.coroutines.flow.*
@@ -82,7 +82,7 @@ internal class QadaaHistoryViewModel(app: Application) : AndroidViewModel(app) {
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun QadaaHistoryScreen() {
-    val nav   = LocalNavController.current
+    val nav   = LocalNavigator.current
     val vm: QadaaHistoryViewModel = viewModel()
     val state by vm.uiState.collectAsState()
     val dateFmt = remember { DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy") }
@@ -93,7 +93,7 @@ fun QadaaHistoryScreen() {
             AppTopBar(
                 title      = stringResource(R.string.qadaa_history),
                 isTopLevel = false,
-                onBack     = { nav.popBackStack() },
+                onBack     = { nav.back() },
             )
         },
     ) { padding ->
@@ -265,7 +265,9 @@ private fun SummaryStatCard(value: String, label: String, color: Color, modifier
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
-object QadaaHistoryPage : AppPage() {
-    override val route = "qadaa_history"
-    @Composable override fun Content(back: NavBackStackEntry) = QadaaHistoryScreen()
+class QadaaHistoryActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { QadaaHistoryScreen() }
+    }
 }

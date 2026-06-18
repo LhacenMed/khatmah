@@ -20,9 +20,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import android.os.Bundle
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.feature.khatmah.ui.components.ReminderTimeItem
 import com.lhacenmed.khatmah.shared.reminders.ReminderConfig
@@ -36,7 +36,7 @@ import com.lhacenmed.khatmah.shared.reminders.ReminderScheduler
  */
 @Composable
 fun DailyAlarmScreen() {
-    val nav     = LocalNavController.current
+    val nav     = LocalNavigator.current
     val context = LocalContext.current
 
     val reminders by ReminderPrefs.flow.collectAsState()
@@ -56,7 +56,7 @@ fun DailyAlarmScreen() {
             AppTopBar(
                 title      = stringResource(R.string.more_daily_alarm),
                 isTopLevel = false,
-                onBack     = { nav.popBackStack() },
+                onBack     = { nav.back() },
             )
         },
     ) { padding ->
@@ -88,7 +88,9 @@ fun DailyAlarmScreen() {
     }
 }
 
-object DailyAlarmPage : AppPage() {
-    override val route = "daily_alarm"
-    @Composable override fun Content(back: NavBackStackEntry) = DailyAlarmScreen()
+class DailyAlarmActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { DailyAlarmScreen() }
+    }
 }

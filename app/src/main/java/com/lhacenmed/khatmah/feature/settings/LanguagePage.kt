@@ -1,5 +1,6 @@
 package com.lhacenmed.khatmah.feature.settings
 
+import android.os.Bundle
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -26,9 +27,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.LocalNavController
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.Dest
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.IconButton
 import com.lhacenmed.khatmah.core.ui.components.LargeTopAppBar
 import com.lhacenmed.khatmah.core.ui.components.SingleChoiceItem
@@ -42,16 +43,22 @@ private val LANGUAGES = listOf(
     LangOption("ar", R.string.language_arabic),
 )
 
-/**
- * Language settings sub-page.
- * Owns its Scaffold + LargeTopAppBar; animates as a complete screen alongside the main shell.
- * Append LanguagePage to the pages list in AppEntry to register it.
- */
+// ── Activity host ─────────────────────────────────────────────────────────────
+
+/** Language settings sub-page. Owns its Scaffold + LargeTopAppBar. */
+class LanguageActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { LanguageScreen() }
+    }
+}
+
+// ── Screen ────────────────────────────────────────────────────────────────────
+
 @OptIn(ExperimentalMaterial3Api::class)
-object LanguagePage : AppPage() {
-    override val route = "language"
-    @Composable override fun Content(back: NavBackStackEntry) {
-    val nav = LocalNavController.current
+@Composable
+private fun LanguageScreen() {
+    val nav = LocalNavigator.current
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
@@ -69,7 +76,7 @@ object LanguagePage : AppPage() {
                 title = { Text(stringResource(R.string.language_settings)) },
                 navigationIcon = {
                     IconButton(
-                        onClick = { nav.popBackStack() },
+                        onClick = { nav.back() },
                         tooltipText = stringResource(R.string.navigate_up),
                         anchorExtraBottom = tooltipAnchorBottom,
                     ) {
@@ -103,12 +110,11 @@ object LanguagePage : AppPage() {
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
             }
             HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
-            TextButton(onClick = { nav.navigate("about") }) {
+            TextButton(onClick = { nav.go(Dest.About) }) {
                 Text(stringResource(R.string.about_page))
             }
         }
     }
-}
 }
 
 /**

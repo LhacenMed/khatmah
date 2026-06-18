@@ -16,9 +16,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.PathParser
 import androidx.core.graphics.withTranslation
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import android.os.Bundle
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.quran.ui.reader.ParsedVector
 import com.lhacenmed.khatmah.feature.quran.ui.reader.VectorXmlParser
 import java.io.File
@@ -30,7 +30,7 @@ import java.io.File
 @Composable
 fun DebugWarshScreen() {
     val context = LocalContext.current
-    val nav     = LocalNavController.current
+    val nav     = LocalNavigator.current
 
     // Parse once; null = file missing or parse error
     var errorMsg by remember { mutableStateOf<String?>(null) }
@@ -52,7 +52,7 @@ fun DebugWarshScreen() {
             TopAppBar(
                 title = { Text("Debug Warsh 001") },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
+                    IconButton(onClick = { nav.back() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -116,7 +116,9 @@ fun VectorFileCanvas(vector: ParsedVector, modifier: Modifier = Modifier) {
     }
 }
 
-object DebugWarshPage : AppPage() {
-    override val route = "debug_warsh"
-    @Composable override fun Content(back: NavBackStackEntry) = DebugWarshScreen()
+class DebugWarshActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setAppContent { DebugWarshScreen() }
+    }
 }

@@ -31,11 +31,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import android.os.Bundle
+import com.lhacenmed.khatmah.core.BaseComposeActivity
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.OptionSelectBottomSheet
 import com.lhacenmed.khatmah.core.ui.components.SheetOption
 import com.lhacenmed.khatmah.feature.audio.AyaAudioManager
@@ -97,7 +95,7 @@ fun QuranSessionReaderScreen(startPage: Int, endPage: Int) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SessionImagePager(startPage: Int, endPage: Int) {
-    val nav        = LocalNavController.current
+    val nav        = LocalNavigator.current
     val scope      = rememberCoroutineScope()
     val pageCount  = endPage - startPage + 1
     val pagerState = rememberPagerState(0) { pageCount }
@@ -135,7 +133,7 @@ private fun SessionImagePager(startPage: Int, endPage: Int) {
         ) {
             ImageTopBar(
                 pageNum  = startPage + pagerState.settledPage,
-                onBack   = { nav.popBackStack() },
+                onBack   = { nav.back() },
                 onSearch = {},
             )
         }
@@ -160,7 +158,7 @@ private fun SessionImagePager(startPage: Int, endPage: Int) {
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun SessionXmlPager(startPage: Int, endPage: Int) {
-    val nav        = LocalNavController.current
+    val nav        = LocalNavigator.current
     val context    = LocalContext.current
     val scope      = rememberCoroutineScope()
     val repo       = remember { WarshXmlRepository(context) }
@@ -248,7 +246,7 @@ private fun SessionXmlPager(startPage: Int, endPage: Int) {
         ) {
             ImageTopBar(
                 pageNum  = startPage + pagerState.settledPage,
-                onBack   = { nav.popBackStack() },
+                onBack   = { nav.back() },
                 onSearch = {},
             )
         }
@@ -352,16 +350,16 @@ private fun SessionMushhafPage(pageNum: Int, isDark: Boolean, modifier: Modifier
     }
 }
 
-object QuranSessionReaderPage : AppPage() {
-    override val route = "quran_session_reader?startPage={startPage}&endPage={endPage}"
-    override val arguments = listOf(
-        navArgument("startPage") { type = NavType.IntType },
-        navArgument("endPage")   { type = NavType.IntType },
-    )
-    fun routeFor(startPage: Int, endPage: Int) = "quran_session_reader?startPage=$startPage&endPage=$endPage"
-    @Composable override fun Content(back: NavBackStackEntry) {
-        val startPage = back.arguments?.getInt("startPage") ?: 1
-        val endPage   = back.arguments?.getInt("endPage") ?: 1
-        QuranSessionReaderScreen(startPage, endPage)
+class QuranSessionReaderActivity : BaseComposeActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val startPage = intent.getIntExtra(EXTRA_START_PAGE, 1)
+        val endPage   = intent.getIntExtra(EXTRA_END_PAGE, 1)
+        setAppContent { QuranSessionReaderScreen(startPage, endPage) }
+    }
+
+    companion object {
+        const val EXTRA_START_PAGE = "startPage"
+        const val EXTRA_END_PAGE   = "endPage"
     }
 }
