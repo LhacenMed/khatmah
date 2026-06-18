@@ -17,12 +17,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
+import com.lhacenmed.khatmah.core.nav.TabAction
+import com.lhacenmed.khatmah.core.nav.toIntent
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.IconButton
 import com.lhacenmed.khatmah.feature.qadaa.data.FastDebt
@@ -412,11 +415,23 @@ private fun FastDebtRow(fast: FastDebt, onMarkDone: () -> Unit) {
 
 // ── Tab entry point ───────────────────────────────────────────────────────────
 
-@RequiresApi(Build.VERSION_CODES.O)
 object QadaaTab : AppTab(
     iconRes  = R.drawable.ic_list,
-    labelRes = R.string.more_qadaa,
-    order    = 3,
+    titleRes = R.string.more_qadaa,
+    route    = "qadaa",
 ) {
+    override val actions = listOf(
+        TabAction(R.drawable.ic_history, R.string.qadaa_history) {
+            it.startActivity(Dest.QadaaHistory.toIntent(it))
+        },
+        TabAction(R.drawable.ic_add, R.string.qadaa_add_prayers_title) {
+            // QadaaViewModel is O+; the tab only renders on O+, but guard for lint.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ViewModelProvider(it)[QadaaViewModel::class.java].requestAddPrayers()
+            }
+        },
+    )
+
+    @RequiresApi(Build.VERSION_CODES.O)
     @Composable override fun Content(padding: PaddingValues) = QadaaScreen(padding)
 }

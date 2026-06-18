@@ -26,6 +26,8 @@ import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.core.nav.AppTab
+import com.lhacenmed.khatmah.core.nav.TabAction
+import com.lhacenmed.khatmah.core.nav.toIntent
 import com.lhacenmed.khatmah.feature.adhkar.ui.components.AdhkarCard
 
 private const val SMOOTH_SCROLL_THRESHOLD = 4
@@ -33,10 +35,16 @@ private const val SMOOTH_SCROLL_THRESHOLD = 4
 // ── Tab registration ──────────────────────────────────────────────────────────
 
 object AdhkarTab : AppTab(
-    iconRes = R.drawable.ic_adhkar,
-    labelRes = R.string.adhkar,
-    order = 1,
+    iconRes  = R.drawable.ic_adhkar,
+    titleRes = R.string.adhkar,
+    route    = "adhkar",
 ) {
+    override val actions = listOf(
+        TabAction(R.drawable.ic_add, R.string.add_adhkar) {
+            it.startActivity(Dest.AdhkarEditor().toIntent(it))
+        },
+    )
+
     @Composable override fun Content(padding: PaddingValues) = AdhkarScreen(padding)
 }
 

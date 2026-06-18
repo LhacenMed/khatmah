@@ -59,8 +59,8 @@ private const val SMOOTH_SCROLL_THRESHOLD = 4
 
 object MoreTab : AppTab(
     iconRes  = R.drawable.ic_profile,
-    labelRes = R.string.more,
-    order    = 4,
+    titleRes = R.string.more,
+    route    = "more",
 ) {
     @Composable override fun Content(padding: PaddingValues) = MoreScreen(padding)
 }

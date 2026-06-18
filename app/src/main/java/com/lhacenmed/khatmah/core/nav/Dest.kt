@@ -1,66 +1,153 @@
 package com.lhacenmed.khatmah.core.nav
 
+import android.app.Activity
+import android.content.Intent
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarDetailActivity
+import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarEditorActivity
+import com.lhacenmed.khatmah.feature.debug.DbBrowserActivity
+import com.lhacenmed.khatmah.feature.debug.FileBrowserActivity
+import com.lhacenmed.khatmah.feature.demo.DemoDetailScreen
+import com.lhacenmed.khatmah.feature.khatmah.ui.DailyAlarmActivity
+import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahActivity
+import com.lhacenmed.khatmah.feature.mushaf.ui.PrintSelectActivity
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsActivity
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.CalcMethodActivity
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.DstActivity
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.HigherLatActivity
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.JuristicActivity
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.ManualCorrectionsActivity
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.qibla.QiblaActivity
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.AdhanRemindersActivity
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.AdhanSoundSelectionActivity
+import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaHistoryActivity
+import com.lhacenmed.khatmah.feature.quran.ui.debug.DebugWarshActivity
+import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranReaderActivity
+import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranSessionReaderActivity
+import com.lhacenmed.khatmah.feature.quran.ui.search.QuranSearchActivity
+import com.lhacenmed.khatmah.feature.settings.AboutActivity
+import com.lhacenmed.khatmah.feature.settings.DarkThemeActivity
+import com.lhacenmed.khatmah.feature.settings.LanguageActivity
+import com.lhacenmed.khatmah.feature.settings.ThemeSettingsActivity
+import com.lhacenmed.khatmah.feature.today.FullIndexActivity
+import com.lhacenmed.khatmah.feature.trips.ui.TripRequestsActivity
+import com.lhacenmed.khatmah.onboarding.OnboardingActivity
 
 /**
  * Type-safe catalogue of every full-screen destination.
  *
- * Each [Dest] is a pure description of *where to go* (plus its arguments) — it carries
- * no Activity reference. The active [AppNavigator] (provided by the host Activity) maps
- * a [Dest] to a concrete `startActivity(Intent…)`, so screens depend only on this
- * contract, never on each other's Activity classes.
+ * Each [Dest] is self-describing: it names the Activity that renders it ([target]) and
+ * attaches its own arguments as intent extras ([extras]). The active [AppNavigator]
+ * turns any [Dest] into a `startActivity(Intent…)` generically — so adding a destination
+ * is just a new entry here plus one manifest line; no central `when` to keep in sync.
  *
- * Replaces the old stringly-typed routes (`nav.navigate("prayer_settings")`) and the
- * `AppRegistry`/NavHost registration. Adding a destination = add a [Dest] entry, a
- * `BaseComposeActivity` subclass, and one manifest line.
+ * Call sites stay type-safe and unchanged: `nav.go(Dest.QuranReader(suraNum = 5))`.
  */
-sealed interface Dest {
+sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializable {
+
+    /**
+     * Compose content for screens rendered by the single, already-declared
+     * [com.lhacenmed.khatmah.core.ScreenHostActivity] — they need NO Activity class and
+     * NO manifest entry. Screens still on their own Activity leave this null and rely on
+     * [target] instead. (The host owns back/predictive-back exactly as a real Activity.)
+     */
+    open fun screen(): (@Composable () -> Unit)? = null
+
+    /** Attach this destination's typed arguments as intent extras (legacy [target] path). */
+    open fun extras(intent: Intent) {}
 
     // ── Today / Khatmah ─────────────────────────────────────────────────────────
-    data object NewKhatmah : Dest
-    data object DailyAlarm : Dest
-    data object FullIndex : Dest
-    data class QuranReader(val suraNum: Int = 0, val ayaNum: Int = 0) : Dest
-    data class QuranSessionReader(val startPage: Int, val endPage: Int) : Dest
-    data object QuranSearch : Dest
+    data object NewKhatmah : Dest(NewKhatmahActivity::class.java)
+    data object DailyAlarm : Dest(DailyAlarmActivity::class.java)
+    data object FullIndex : Dest(FullIndexActivity::class.java)
+    data class QuranReader(val suraNum: Int = 0, val ayaNum: Int = 0) :
+        Dest(QuranReaderActivity::class.java) {
+        override fun extras(intent: Intent) {
+            intent.putExtra(QuranReaderActivity.EXTRA_SURA, suraNum)
+            intent.putExtra(QuranReaderActivity.EXTRA_AYA, ayaNum)
+        }
+    }
+    data class QuranSessionReader(val startPage: Int, val endPage: Int) :
+        Dest(QuranSessionReaderActivity::class.java) {
+        override fun extras(intent: Intent) {
+            intent.putExtra(QuranSessionReaderActivity.EXTRA_START_PAGE, startPage)
+            intent.putExtra(QuranSessionReaderActivity.EXTRA_END_PAGE, endPage)
+        }
+    }
+    data object QuranSearch : Dest(QuranSearchActivity::class.java)
 
     // ── Mushaf ──────────────────────────────────────────────────────────────────
-    data object MushafPrints : Dest
+    data object MushafPrints : Dest(PrintSelectActivity::class.java)
 
     // ── Settings ────────────────────────────────────────────────────────────────
-    data object ThemeSettings : Dest
-    data object DarkTheme : Dest
-    data object Language : Dest
-    data object About : Dest
+    data object ThemeSettings : Dest(ThemeSettingsActivity::class.java)
+    data object DarkTheme : Dest(DarkThemeActivity::class.java)
+    data object Language : Dest(LanguageActivity::class.java)
+    data object About : Dest(AboutActivity::class.java)
 
     // ── Prayer settings ─────────────────────────────────────────────────────────
-    data object PrayerSettings : Dest
-    data object CalcMethod : Dest
-    data object Juristic : Dest
-    data object Dst : Dest
-    data object ManualCorrections : Dest
-    data object HigherLat : Dest
-    data object AdhanReminders : Dest
-    data class AdhanSoundSelection(val prayerId: Int) : Dest
-    data object Qibla : Dest
+    data object PrayerSettings : Dest(PrayerSettingsActivity::class.java)
+    data object CalcMethod : Dest(CalcMethodActivity::class.java)
+    data object Juristic : Dest(JuristicActivity::class.java)
+    data object Dst : Dest(DstActivity::class.java)
+    data object ManualCorrections : Dest(ManualCorrectionsActivity::class.java)
+    data object HigherLat : Dest(HigherLatActivity::class.java)
+    data object AdhanReminders : Dest(AdhanRemindersActivity::class.java)
+    data class AdhanSoundSelection(val prayerId: Int) :
+        Dest(AdhanSoundSelectionActivity::class.java) {
+        override fun extras(intent: Intent) {
+            intent.putExtra(AdhanSoundSelectionActivity.EXTRA_PRAYER_ID, prayerId)
+        }
+    }
+    data object Qibla : Dest(QiblaActivity::class.java)
 
-    // ── Adhkar ────────────────────────────────────────────────────────────────────
-    data class AdhkarDetail(val categoryId: String) : Dest
-    data class AdhkarEditor(val categoryId: String? = null) : Dest
+    // ── Adhkar / Qadaa ──────────────────────────────────────────────────────────
+    data class AdhkarDetail(val categoryId: String) :
+        Dest(AdhkarDetailActivity::class.java) {
+        override fun extras(intent: Intent) {
+            intent.putExtra(AdhkarDetailActivity.EXTRA_CATEGORY_ID, categoryId)
+        }
+    }
+    data class AdhkarEditor(val categoryId: String? = null) :
+        Dest(AdhkarEditorActivity::class.java) {
+        override fun extras(intent: Intent) {
+            categoryId?.let { intent.putExtra(AdhkarEditorActivity.EXTRA_CATEGORY_ID, it) }
+        }
+    }
+    data object QadaaHistory : Dest(QadaaHistoryActivity::class.java)
 
-    // ── Qadaa ─────────────────────────────────────────────────────────────────────
-    data object QadaaHistory : Dest
+    // ── Onboarding (self-contained wizard; deep-linked to a start step) ───────────
+    data object OnboardingLocation : Dest(OnboardingActivity::class.java) {
+        override fun extras(intent: Intent) {
+            intent.putExtra(OnboardingActivity.EXTRA_START_ROUTE, ShellRoutes.ONBOARDING_LOCATION)
+        }
+    }
+    data class CountrySelect(val fromSettings: Boolean = false) :
+        Dest(OnboardingActivity::class.java) {
+        override fun extras(intent: Intent) {
+            intent.putExtra(OnboardingActivity.EXTRA_START_ROUTE, ShellRoutes.countrySelect(fromSettings))
+        }
+    }
+    data class CitySelect(val country: String, val iso2: String, val fromSettings: Boolean = false) :
+        Dest(OnboardingActivity::class.java) {
+        override fun extras(intent: Intent) {
+            intent.putExtra(OnboardingActivity.EXTRA_START_ROUTE, ShellRoutes.citySelect(country, iso2, fromSettings))
+        }
+    }
 
-    // ── Onboarding (Location/Country/City are also reachable from Prayer settings) ─
-    data object OnboardingLocation : Dest
-    data class CountrySelect(val fromSettings: Boolean = false) : Dest
-    data class CitySelect(val country: String, val iso2: String, val fromSettings: Boolean = false) : Dest
+    // ── Demo (temporary example) ──────────────────────────────────────────────────
+    // Host-model screen: no Activity class, no manifest entry — just this entry plus the
+    // DemoDetailScreen composable. That is the whole 2-step flow for a new screen.
+    data object DemoDetail : Dest() {
+        override fun screen(): @Composable () -> Unit = { DemoDetailScreen() }
+    }
 
     // ── Debug ───────────────────────────────────────────────────────────────────
-    data object DbBrowser : Dest
-    data object FileBrowser : Dest
-    data object TripRequests : Dest
-    data object DebugWarsh : Dest
+    data object DbBrowser : Dest(DbBrowserActivity::class.java)
+    data object FileBrowser : Dest(FileBrowserActivity::class.java)
+    data object TripRequests : Dest(TripRequestsActivity::class.java)
+    data object DebugWarsh : Dest(DebugWarshActivity::class.java)
 }
 
 /**

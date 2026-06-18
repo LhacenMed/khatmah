@@ -40,6 +40,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.core.nav.AppTabs
 import com.lhacenmed.khatmah.core.nav.IntentNavigator
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
@@ -48,18 +49,9 @@ import com.lhacenmed.khatmah.core.ui.theme.isAppInDarkTheme
 import com.lhacenmed.khatmah.core.ui.theme.resolveColorScheme
 import com.lhacenmed.khatmah.databinding.ActivityMainBinding
 import android.widget.Toast
-import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarEditorActivity
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarViewModel
-import com.lhacenmed.khatmah.feature.more.MoreTab
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
-import com.lhacenmed.khatmah.feature.prayer.ui.PrayersTab
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsActivity
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.qibla.QiblaActivity
-import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaHistoryActivity
-import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaTab
-import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaViewModel
-import com.lhacenmed.khatmah.feature.today.TodayTab
 import com.lhacenmed.khatmah.feature.today.TodayViewModel
 import com.lhacenmed.khatmah.onboarding.OnboardingActivity
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
@@ -88,15 +80,17 @@ class MainActivity : AppCompatActivity() {
     private var selectedTab by mutableIntStateOf(0)
 
     /** Per-tab scroll-to-top signal, emitted when the active tab is reselected. */
-    private val scrollFlows = Array(5) { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
+    private val scrollFlows = List(AppTabs.size) { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
+
+    /** Index of the Adhkar tab — selection mode (the contextual toolbar) is its feature. */
+    private val adhkarTabIndex = AppTabs.indexOf(AdhkarTab)
 
     /** Current toolbar menu-icon tint, derived from the active colour scheme. */
     private var chromeIconColor = 0
 
-    // Activity-scoped — shared with the tab bodies (same instance via viewModel(activity))
-    // so the toolbar can drive Adhkar selection mode and Qadaa actions.
+    // Activity-scoped — shared with the Adhkar tab body (same instance via viewModel(activity))
+    // so the toolbar can drive its selection mode.
     private val adhkarVm: AdhkarViewModel by viewModels()
-    private val qadaaVm: QadaaViewModel by viewModels()
 
     /** Enabled only while the Adhkar tab is in selection mode; back then exits selection. */
     private val selectionBackCallback = object : OnBackPressedCallback(false) {
@@ -113,7 +107,7 @@ class MainActivity : AppCompatActivity() {
     private val tabBackCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             when {
-                selectedTab != 0  -> binding.bottomNav.selectedItemId = R.id.nav_today
+                selectedTab != 0  -> binding.bottomNav.selectedItemId = 1 // home tab (index 0 + 1)
                 backToExitPending -> finish()
                 else              -> {
                     backToExitPending = true
@@ -125,7 +119,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val adhkarSelecting: Boolean
-        get() = selectedTab == 1 && adhkarVm.uiState.value.selectionMode
+        get() = selectedTab == adhkarTabIndex && adhkarVm.uiState.value.selectionMode
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -162,8 +156,9 @@ class MainActivity : AppCompatActivity() {
         selectedTab = savedInstanceState?.getInt(KEY_SELECTED_TAB) ?: 0
 
         applyInsets()
+        buildBottomNav()
         wireBottomNav()
-        binding.bottomNav.selectedItemId = tabItemId(selectedTab)
+        binding.bottomNav.selectedItemId = selectedTab + 1
         // Deep links apply only on a fresh launch — never override the restored tab on recreate.
         if (savedInstanceState == null) handleLaunchIntent(intent)
         observeSettingsForWidget()
@@ -180,7 +175,7 @@ class MainActivity : AppCompatActivity() {
                 val scheme       = MaterialTheme.colorScheme
                 val adhkarState  by adhkarVm.uiState.collectAsState()
                 val tab          = selectedTab
-                val selecting    = tab == 1 && adhkarState.selectionMode
+                val selecting    = tab == adhkarTabIndex && adhkarState.selectionMode
 
                 // Keep the native chrome in lock-step with the Compose scheme + tab state.
                 LaunchedEffect(scheme, tab, selecting, adhkarState.selectedIds.size) {
@@ -188,7 +183,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    val pagerState = rememberPagerState(initialPage = tab) { 5 }
+                    val pagerState = rememberPagerState(initialPage = tab) { AppTabs.size }
                     // Tab taps drive the pager; the jump is instant (no swipe, no reload).
                     LaunchedEffect(tab) {
                         if (pagerState.currentPage != tab) pagerState.scrollToPage(tab)
@@ -197,20 +192,14 @@ class MainActivity : AppCompatActivity() {
                         state                   = pagerState,
                         modifier                = Modifier.fillMaxSize(),
                         userScrollEnabled       = false,
-                        beyondViewportPageCount = 4, // keep all five tabs composed
+                        beyondViewportPageCount = AppTabs.size - 1, // keep every tab composed
                         key                     = { it },
                     ) { page ->
                         CompositionLocalProvider(
                             LocalNavigator provides navigator,
                             LocalScrollToTop provides scrollFlows[page],
                         ) {
-                            when (page) {
-                                0    -> TodayTab.Content(PaddingValues(0.dp))
-                                1    -> AdhkarTab.Content(PaddingValues(0.dp))
-                                2    -> PrayersTab.Content(PaddingValues(0.dp))
-                                3    -> QadaaTab.Content(PaddingValues(0.dp))
-                                else -> MoreTab.Content(PaddingValues(0.dp))
-                            }
+                            AppTabs[page].Content(PaddingValues(0.dp))
                         }
                     }
                 }
@@ -235,12 +224,12 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch { PrayerWidget().updateAll(this@MainActivity) }
     }
 
-    private fun tabItemId(tab: Int) = when (tab) {
-        0    -> R.id.nav_today
-        1    -> R.id.nav_adhkar
-        2    -> R.id.nav_prayers
-        3    -> R.id.nav_qadaa
-        else -> R.id.nav_more
+    /** Builds the bottom-nav items from [AppTabs]; item id = tab index + 1 (avoids id 0). */
+    private fun buildBottomNav() {
+        val menu = binding.bottomNav.menu
+        AppTabs.forEachIndexed { index, tab ->
+            menu.add(Menu.NONE, index + 1, index, tab.titleRes).setIcon(tab.iconRes)
+        }
     }
 
     // ── Native chrome ─────────────────────────────────────────────────────────
@@ -269,14 +258,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun wireBottomNav() {
         binding.bottomNav.setOnItemSelectedListener { item ->
-            val next = when (item.itemId) {
-                R.id.nav_today   -> 0
-                R.id.nav_adhkar  -> 1
-                R.id.nav_prayers -> 2
-                R.id.nav_qadaa   -> 3
-                R.id.nav_more    -> 4
-                else             -> return@setOnItemSelectedListener false
-            }
+            val next = item.itemId - 1 // ids are tab index + 1
             if (next == selectedTab) {
                 scrollFlows[next].tryEmit(Unit)
             } else {
@@ -295,16 +277,11 @@ class MainActivity : AppCompatActivity() {
     private fun applyChrome(scheme: ColorScheme, selecting: Boolean) {
         val bar = supportActionBar ?: return
 
-        bar.title = when {
-            selecting          -> getString(R.string.n_selected, adhkarVm.uiState.value.selectedIds.size)
-            selectedTab == 0   -> getString(R.string.today)
-            selectedTab == 1   -> getString(R.string.adhkar)
-            selectedTab == 2   -> getString(R.string.prayers_screen_title)
-            selectedTab == 3   -> getString(R.string.more_qadaa)
-            else               -> getString(R.string.more)
-        }
-        bar.subtitle = if (!selecting && selectedTab == 2)
-            OnboardingPrefs.location(this)?.cityName?.takeIf { it.isNotBlank() } else null
+        val tabSpec = AppTabs[selectedTab]
+        bar.title = if (selecting)
+            getString(R.string.n_selected, adhkarVm.uiState.value.selectedIds.size)
+        else getString(tabSpec.toolbarTitleRes)
+        bar.subtitle = if (!selecting) tabSpec.subtitle(this) else null
         bar.setDisplayHomeAsUpEnabled(selecting)
         selectionBackCallback.isEnabled = selecting
 
@@ -341,35 +318,46 @@ class MainActivity : AppCompatActivity() {
 
     // ── Per-tab toolbar actions ───────────────────────────────────────────────
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.tab_actions, menu)
-        return true
-    }
+    // Toolbar actions are built dynamically in onPrepareOptionsMenu (from the active tab,
+    // or the Adhkar selection-mode contextual bar) — there is no static menu XML.
+    override fun onCreateOptionsMenu(menu: Menu): Boolean = true
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        val selecting = adhkarSelecting
-        menu.findItem(R.id.action_adhkar_add)?.isVisible = selectedTab == 1 && !selecting
-        menu.findItem(R.id.action_adhkar_select_all)?.isVisible = selecting
-        menu.findItem(R.id.action_adhkar_delete)?.isVisible = selecting
-        menu.findItem(R.id.action_qibla)?.isVisible = selectedTab == 2
-        menu.findItem(R.id.action_prayer_settings)?.isVisible = selectedTab == 2
-        menu.findItem(R.id.action_qadaa_history)?.isVisible = selectedTab == 3
-        menu.findItem(R.id.action_qadaa_add)?.isVisible = selectedTab == 3
+        menu.clear()
+        if (adhkarSelecting) {
+            // Contextual action bar for Adhkar selection mode.
+            menu.add(Menu.NONE, ID_SELECT_ALL, 0, R.string.select_all)
+                .setIcon(R.drawable.ic_done_all)
+                .setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            menu.add(Menu.NONE, ID_DELETE, 1, R.string.delete)
+                .setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_WITH_TEXT)
+        } else {
+            // Item id = action index within the active tab's action list.
+            AppTabs[selectedTab].actions.forEachIndexed { index, action ->
+                menu.add(Menu.NONE, index, index, action.titleRes)
+                    .setIcon(action.iconRes)
+                    .setShowAsActionFlags(
+                        if (action.showAsText)
+                            MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_WITH_TEXT
+                        else MenuItem.SHOW_AS_ACTION_ALWAYS,
+                    )
+            }
+        }
         // Tint visible icons to match the scheme-derived chrome colour.
         for (i in 0 until menu.size()) menu.getItem(i).icon?.setTint(chromeIconColor)
         return super.onPrepareOptionsMenu(menu)
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
-        android.R.id.home             -> { adhkarVm.exitSelectionMode(); true }
-        R.id.action_adhkar_add        -> { startActivity(Intent(this, AdhkarEditorActivity::class.java)); true }
-        R.id.action_adhkar_select_all -> { adhkarVm.toggleSelectAll(); true }
-        R.id.action_adhkar_delete     -> { adhkarVm.deleteSelected(); true }
-        R.id.action_qibla             -> { startActivity(Intent(this, QiblaActivity::class.java)); true }
-        R.id.action_prayer_settings   -> { startActivity(Intent(this, PrayerSettingsActivity::class.java)); true }
-        R.id.action_qadaa_history     -> { startActivity(Intent(this, QadaaHistoryActivity::class.java)); true }
-        R.id.action_qadaa_add         -> { qadaaVm.requestAddPrayers(); true }
-        else                          -> super.onOptionsItemSelected(item)
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            android.R.id.home -> { adhkarVm.exitSelectionMode(); return true }
+            ID_SELECT_ALL     -> { adhkarVm.toggleSelectAll(); return true }
+            ID_DELETE         -> { adhkarVm.deleteSelected(); return true }
+        }
+        val action = AppTabs[selectedTab].actions.getOrNull(item.itemId)
+            ?: return super.onOptionsItemSelected(item)
+        action.onClick(this)
+        return true
     }
 
     // ── Widget / reminder deep links ──────────────────────────────────────────
@@ -382,14 +370,8 @@ class MainActivity : AppCompatActivity() {
             "com.lhacenmed.khatmah.REMINDER" -> intent.getStringExtra("route")
             else                             -> null
         }
-        val itemId = when (route) {
-            "today"   -> R.id.nav_today
-            "adhkar"  -> R.id.nav_adhkar
-            "prayers" -> R.id.nav_prayers
-            "more"    -> R.id.nav_more
-            else      -> null
-        } ?: return
-        binding.bottomNav.selectedItemId = itemId
+        val index = AppTabs.indexOfFirst { it.route == route }
+        if (index >= 0) binding.bottomNav.selectedItemId = index + 1
     }
 
     /** Push a widget update on every settings save while at least STARTED. */
@@ -406,5 +388,10 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val KEY_SELECTED_TAB = "selected_tab"
         private const val EXIT_CONFIRM_WINDOW_MS = 2000L
+
+        // Contextual (Adhkar selection) menu item ids; offset to avoid clashing with the
+        // per-tab action indices (0, 1, …) used for normal toolbar actions.
+        private const val ID_SELECT_ALL = 1001
+        private const val ID_DELETE = 1002
     }
 }

@@ -43,6 +43,10 @@
         <!-- One-time onboarding wizard (self-contained NavHost). -->
         <activity android:name=".onboarding.OnboardingActivity" android:exported="false" />
 
+        <!-- Single host for Dest.screen() destinations. Declared once; every host-model
+             screen reuses it, so new screens never need a manifest entry. -->
+        <activity android:name=".core.ScreenHostActivity" android:exported="false" />
+
         <!-- Detail screens. Each is its own Activity so the platform owns back/predictive-back. -->
         <activity android:name=".feature.settings.AboutActivity" android:exported="false" />
         <activity android:name=".feature.settings.ThemeSettingsActivity" android:exported="false" />

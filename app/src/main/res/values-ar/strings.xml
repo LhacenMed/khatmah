@@ -622,4 +622,10 @@
     <string name="qadaa_day_unit">يوم</string>
     <string name="qadaa_confirm">تأكيد</string>
     <string name="tap_back_again_to_exit">اضغط رجوع مرة أخرى للخروج</string>
+
+    <!-- Demo tab (temporary example) -->
+    <string name="demo_tab">تجريبي</string>
+    <string name="demo_open">فتح التفاصيل</string>
+    <string name="demo_detail">تفاصيل تجريبية</string>
+    <string name="demo_detail_body">وصلت إلى هنا من تبويب التجريبي 🎉</string>
 </resources>

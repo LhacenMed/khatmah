@@ -39,8 +39,7 @@
         app:itemPaddingBottom="0dp"
         app:itemTextAppearanceActive="@style/TextBottomNav"
         app:itemTextAppearanceInactive="@style/TextBottomNav"
-        app:labelVisibilityMode="labeled"
-        app:menu="@menu/bottom_nav" />
+        app:labelVisibilityMode="labeled" />
 
     <!-- Fills the gesture/navigation-bar area beneath the bar; height set from insets in code. -->
     <View

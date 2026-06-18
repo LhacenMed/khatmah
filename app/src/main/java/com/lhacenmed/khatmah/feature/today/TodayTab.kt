@@ -61,8 +61,8 @@ private const val QUICK_SURAH_COUNT = 3
 
 object TodayTab : AppTab(
     iconRes  = R.drawable.ic_book,
-    labelRes = R.string.today,
-    order    = 0,
+    titleRes = R.string.today,
+    route    = "today",
 ) {
     @Composable override fun Content(padding: PaddingValues) = TodayScreen(padding)
 }
