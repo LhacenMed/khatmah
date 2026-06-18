@@ -25,8 +25,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.LocalNavigator
-import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanConfig
@@ -44,11 +42,10 @@ private val PRE_ALERT_OPTIONS = listOf(0, 5, 10, 15, 20, 25, 30)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AdhanSoundSelectionScreen(prayerId: Int) {
-    val nav     = LocalNavigator.current
     val context = LocalContext.current
     val configs by AdhanPrefs.flow.collectAsState()
     val customSounds by AdhanPrefs.customSoundsFlow.collectAsState()
-    val config   = configs.getOrElse(prayerId) { AdhanConfig() }
+    val config = configs.getOrElse(prayerId) { AdhanConfig() }
 
     // Discover available asset sounds once.
     val assetSounds: List<AdhanSound.Asset> = remember {
@@ -57,7 +54,7 @@ fun AdhanSoundSelectionScreen(prayerId: Int) {
 
     val prayerNames = listOf(
         R.string.prayer_fajr, R.string.prayer_sunrise, R.string.prayer_dhuhr,
-        R.string.prayer_asr,  R.string.prayer_maghrib, R.string.prayer_isha,
+        R.string.prayer_asr, R.string.prayer_maghrib, R.string.prayer_isha,
     )
     val prayerName = stringResource(prayerNames.getOrElse(prayerId) { R.string.prayers })
 
@@ -118,109 +115,100 @@ fun AdhanSoundSelectionScreen(prayerId: Int) {
 
     // ── UI ────────────────────────────────────────────────────────────────────
 
-    Scaffold(
-        topBar = {
-            AppTopBar(
-                title      = stringResource(R.string.adhan_alarm_title_format, prayerName),
-                isTopLevel = false,
-                onBack     = { mediaPlayer?.release(); nav.back() },
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState()),
-        ) {
-            // ── Pre-alert section ─────────────────────────────────────────────
-            PreferenceSubtitle(text = stringResource(R.string.adhan_alarm_before_section))
+    // Body only — the dynamic title + back come from ScreenHostActivity (see Dest.AdhanSoundSelection).
+    // (Back releases the MediaPlayer via the DisposableEffect's onDispose above.)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+    ) {
+        // ── Pre-alert section ─────────────────────────────────────────────
+        PreferenceSubtitle(text = stringResource(R.string.adhan_alarm_before_section))
 
-            PreferenceItem(
-                title = stringResource(R.string.adhan_alert_before),
-                enabled = config.isEnabled,
-                onClick = { if (config.isEnabled) showPreDialog = true },
-                trailingIcon = {
-                    Text(
-                        text = preAlertLabel(config.preAlertMinutes),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.applyOpacity(config.isEnabled)
-                    )
+        PreferenceItem(
+            title = stringResource(R.string.adhan_alert_before),
+            enabled = config.isEnabled,
+            onClick = { if (config.isEnabled) showPreDialog = true },
+            trailingIcon = {
+                Text(
+                    text = preAlertLabel(config.preAlertMinutes),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.applyOpacity(config.isEnabled)
+                )
+            }
+        )
+
+        HorizontalDivider()
+
+        // ── Built-in sound section ────────────────────────────────────────
+        PreferenceSubtitle(text = stringResource(R.string.adhan_sound_section_format, prayerName))
+
+        FixedSoundItem(
+            label = stringResource(R.string.adhan_sound_stop),
+            icon = Icons.Outlined.NotificationsOff,
+            selected = config.sound is AdhanSound.Off,
+            onClick = { saveSound(AdhanSound.Off) },
+        )
+        FixedSoundItem(
+            label = stringResource(R.string.adhan_sound_silent),
+            icon = Icons.AutoMirrored.Outlined.VolumeOff,
+            selected = config.sound is AdhanSound.Silent,
+            onClick = { saveSound(AdhanSound.Silent) },
+        )
+        FixedSoundItem(
+            label = stringResource(R.string.adhan_sound_device),
+            icon = Icons.Outlined.Notifications,
+            selected = config.sound is AdhanSound.Device,
+            onClick = { saveSound(AdhanSound.Device) },
+            onPreview = {
+                mediaPlayer?.release()
+                val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                mediaPlayer = MediaPlayer().apply {
+                    setDataSource(context, uri)
+                    prepare()
+                    start()
                 }
+            },
+        )
+
+        // Asset sounds — autopopulated from assets/adhan/
+        assetSounds.forEach { assetSound ->
+            AssetSoundItem(
+                filename = assetSound.filename,
+                displayName = AdhanSoundFiles.getDisplayName(assetSound.filename),
+                selected = config.sound is AdhanSound.Asset &&
+                        config.sound.filename == assetSound.filename,
+                onSelect = { saveSound(assetSound) },
+                onPreview = { previewAsset(assetSound.filename) },
             )
-
-            HorizontalDivider()
-
-            // ── Built-in sound section ────────────────────────────────────────
-            PreferenceSubtitle(text = stringResource(R.string.adhan_sound_section_format, prayerName))
-
-            FixedSoundItem(
-                label    = stringResource(R.string.adhan_sound_stop),
-                icon     = Icons.Outlined.NotificationsOff,
-                selected = config.sound is AdhanSound.Off,
-                onClick  = { saveSound(AdhanSound.Off) },
-            )
-            FixedSoundItem(
-                label    = stringResource(R.string.adhan_sound_silent),
-                icon     = Icons.AutoMirrored.Outlined.VolumeOff,
-                selected = config.sound is AdhanSound.Silent,
-                onClick  = { saveSound(AdhanSound.Silent) },
-            )
-            FixedSoundItem(
-                label     = stringResource(R.string.adhan_sound_device),
-                icon      = Icons.Outlined.Notifications,
-                selected  = config.sound is AdhanSound.Device,
-                onClick   = { saveSound(AdhanSound.Device) },
-                onPreview = {
-                    mediaPlayer?.release()
-                    val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                    mediaPlayer = MediaPlayer().apply {
-                        setDataSource(context, uri)
-                        prepare()
-                        start()
-                    }
-                },
-            )
-
-            // Asset sounds — autopopulated from assets/adhan/
-            assetSounds.forEach { assetSound ->
-                AssetSoundItem(
-                    filename  = assetSound.filename,
-                    displayName = AdhanSoundFiles.getDisplayName(assetSound.filename),
-                    selected  = config.sound is AdhanSound.Asset &&
-                            config.sound.filename == assetSound.filename,
-                    onSelect  = { saveSound(assetSound) },
-                    onPreview = { previewAsset(assetSound.filename) },
-                )
-            }
-
-            HorizontalDivider()
-
-            // ── Custom file section ───────────────────────────────────────────
-            PreferenceSubtitle(text = stringResource(R.string.adhan_sound_custom_section))
-
-            // Show all previously picked custom sounds
-            customSounds.forEach { custom ->
-                CustomSoundItem(
-                    displayName = custom.displayName,
-                    selected    = config.sound is AdhanSound.Custom && config.sound.uri == custom.uri,
-                    onSelect    = { saveSound(custom) },
-                    onPreview   = { previewCustom(custom.uri) },
-                )
-            }
-
-            BrowseItem { filePicker.launch(arrayOf("audio/*")) }
-
-            Spacer(Modifier.height(16.dp))
         }
+
+        HorizontalDivider()
+
+        // ── Custom file section ───────────────────────────────────────────
+        PreferenceSubtitle(text = stringResource(R.string.adhan_sound_custom_section))
+
+        // Show all previously picked custom sounds
+        customSounds.forEach { custom ->
+            CustomSoundItem(
+                displayName = custom.displayName,
+                selected = config.sound is AdhanSound.Custom && config.sound.uri == custom.uri,
+                onSelect = { saveSound(custom) },
+                onPreview = { previewCustom(custom.uri) },
+            )
+        }
+
+        BrowseItem { filePicker.launch(arrayOf("audio/*")) }
+
+        Spacer(Modifier.height(16.dp))
     }
 
     // ── Pre-alert dialog ──────────────────────────────────────────────────────
     if (showPreDialog) {
         PreAlertDialog(
             currentMinutes = config.preAlertMinutes,
-            onConfirm      = { mins -> savePreAlert(mins); showPreDialog = false },
-            onDismiss      = { showPreDialog = false },
+            onConfirm = { mins -> savePreAlert(mins); showPreDialog = false },
+            onDismiss = { showPreDialog = false },
         )
     }
 }
@@ -236,10 +224,10 @@ private fun android.content.Context.resolveAudioName(uri: Uri): String =
 
 /** Saves a sound without touching preAlertMinutes — avoids duplicating scheduler call. */
 private fun saveSound(
-    context:  android.content.Context,
+    context: android.content.Context,
     prayerId: Int,
-    config:   AdhanConfig,
-    sound:    AdhanSound,
+    config: AdhanConfig,
+    sound: AdhanSound,
 ) {
     AdhanPrefs.save(context, prayerId, config.copy(sound = sound))
 }
@@ -248,10 +236,10 @@ private fun saveSound(
 
 @Composable
 private fun FixedSoundItem(
-    label:     String,
-    icon:      ImageVector,
-    selected:  Boolean,
-    onClick:   () -> Unit,
+    label: String,
+    icon: ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit,
     onPreview: (() -> Unit)? = null,
 ) {
     PreferenceItem(
@@ -289,7 +277,7 @@ private fun FixedSoundItem(
         trailingIcon = {
             RadioButton(
                 selected = selected,
-                onClick  = null,
+                onClick = null,
                 modifier = Modifier.padding(end = 8.dp)
             )
         }
@@ -298,10 +286,10 @@ private fun FixedSoundItem(
 
 @Composable
 private fun AssetSoundItem(
-    filename:  String,
+    filename: String,
     displayName: String,
-    selected:  Boolean,
-    onSelect:  () -> Unit,
+    selected: Boolean,
+    onSelect: () -> Unit,
     onPreview: () -> Unit,
 ) {
     PreferenceItem(
@@ -328,7 +316,7 @@ private fun AssetSoundItem(
         trailingIcon = {
             RadioButton(
                 selected = selected,
-                onClick  = null,
+                onClick = null,
                 modifier = Modifier.padding(end = 8.dp)
             )
         }
@@ -338,9 +326,9 @@ private fun AssetSoundItem(
 @Composable
 private fun CustomSoundItem(
     displayName: String,
-    selected:    Boolean,
-    onSelect:    () -> Unit,
-    onPreview:   () -> Unit,
+    selected: Boolean,
+    onSelect: () -> Unit,
+    onPreview: () -> Unit,
 ) {
     PreferenceItem(
         title = displayName,
@@ -366,7 +354,7 @@ private fun CustomSoundItem(
         trailingIcon = {
             RadioButton(
                 selected = selected,
-                onClick  = null,
+                onClick = null,
                 modifier = Modifier.padding(end = 8.dp)
             )
         }
@@ -385,19 +373,19 @@ private fun BrowseItem(onClick: () -> Unit) {
 @Composable
 private fun PreAlertDialog(
     currentMinutes: Int,
-    onConfirm:      (Int) -> Unit,
-    onDismiss:      () -> Unit,
+    onConfirm: (Int) -> Unit,
+    onDismiss: () -> Unit,
 ) {
     var selected by remember { mutableIntStateOf(currentMinutes) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.adhan_alert_before)) },
-        text  = {
+        text = {
             Column {
                 PRE_ALERT_OPTIONS.forEach { mins ->
                     Row(
-                        modifier          = Modifier
+                        modifier = Modifier
                             .fillMaxWidth()
                             .clickable { selected = mins }
                             .padding(vertical = 4.dp),
@@ -425,6 +413,6 @@ private fun PreAlertDialog(
 
 @Composable
 private fun preAlertLabel(minutes: Int): String = when (minutes) {
-    0    -> stringResource(R.string.adhan_alert_before_off)
+    0 -> stringResource(R.string.adhan_alert_before_off)
     else -> stringResource(R.string.adhan_alert_before_minutes, minutes)
 }

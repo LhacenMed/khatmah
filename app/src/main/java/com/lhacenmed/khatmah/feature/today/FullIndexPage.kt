@@ -15,7 +15,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.PrimaryTabRow
@@ -38,7 +37,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
-import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.feature.mushaf.data.DivType
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
@@ -132,41 +130,32 @@ internal fun FullIndexScreen() {
         if (pagerState.currentPage != selectedTab) selectedTab = pagerState.currentPage
     }
 
-    Scaffold(
-        topBar = {
-            AppTopBar(
-                title      = stringResource(R.string.full_index_title),
-                isTopLevel = false,
-                onBack     = { nav.back() },
+    // Body only — the title + back arrow come from ScreenHostActivity (see Dest.FullIndex.titleRes).
+    Column(Modifier.fillMaxSize()) {
+        PrimaryTabRow(selectedTabIndex = selectedTab) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick  = { selectedTab = 0 },
+                text     = { Text(stringResource(R.string.full_index_tab_surahs)) },
             )
-        },
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            PrimaryTabRow(selectedTabIndex = selectedTab) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick  = { selectedTab = 0 },
-                    text     = { Text(stringResource(R.string.full_index_tab_surahs)) },
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick  = { selectedTab = 1 },
-                    text     = { Text(stringResource(R.string.full_index_tab_ajza)) },
-                )
-            }
-            HorizontalPager(
-                state    = pagerState,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-            ) { page ->
-                when (page) {
-                    0 -> SurahsContent(surahs, surahPageMap) { suraNum ->
-                        RecentSurahsPrefs.record(context, suraNum)
-                        nav.go(Dest.QuranReader(suraNum = suraNum))
-                    }
-                    else -> AjzaContent(juzList) { suraNum ->
-                        RecentSurahsPrefs.record(context, suraNum)
-                        nav.go(Dest.QuranReader(suraNum = suraNum))
-                    }
+            Tab(
+                selected = selectedTab == 1,
+                onClick  = { selectedTab = 1 },
+                text     = { Text(stringResource(R.string.full_index_tab_ajza)) },
+            )
+        }
+        HorizontalPager(
+            state    = pagerState,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        ) { page ->
+            when (page) {
+                0 -> SurahsContent(surahs, surahPageMap) { suraNum ->
+                    RecentSurahsPrefs.record(context, suraNum)
+                    nav.go(Dest.QuranReader(suraNum = suraNum))
+                }
+                else -> AjzaContent(juzList) { suraNum ->
+                    RecentSurahsPrefs.record(context, suraNum)
+                    nav.go(Dest.QuranReader(suraNum = suraNum))
                 }
             }
         }

@@ -18,8 +18,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.LocalNavigator
-import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.feature.qadaa.data.*
 import kotlinx.coroutines.flow.*
 import java.time.Instant
@@ -80,70 +78,60 @@ internal class QadaaHistoryViewModel(app: Application) : AndroidViewModel(app) {
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun QadaaHistoryScreen() {
-    val nav   = LocalNavigator.current
     val vm: QadaaHistoryViewModel = viewModel()
     val state by vm.uiState.collectAsState()
     val dateFmt = remember { DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy") }
     val timeFmt = remember { DateTimeFormatter.ofPattern("h:mm a") }
 
-    Scaffold(
-        topBar = {
-            AppTopBar(
-                title      = stringResource(R.string.qadaa_history),
-                isTopLevel = false,
-                onBack     = { nav.back() },
-            )
-        },
-    ) { padding ->
-        LazyColumn(
-            contentPadding      = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier            = Modifier.fillMaxSize().padding(padding),
-        ) {
-            // Filter chips
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LogFilter.entries.forEach { f ->
-                        FilterChip(
-                            selected = state.filter == f,
-                            onClick  = { vm.setFilter(f) },
-                            label    = { Text(stringResource(f.labelRes)) },
-                        )
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-            }
-
-            if (state.grouped.isEmpty()) {
-                item {
-                    Text(
-                        stringResource(R.string.qadaa_history_empty),
-                        style    = MaterialTheme.typography.bodyMedium,
-                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 24.dp),
+    // Body only — the title + back arrow come from ScreenHostActivity (see Dest.QadaaHistory.titleRes).
+    LazyColumn(
+        contentPadding      = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier            = Modifier.fillMaxSize(),
+    ) {
+        // Filter chips
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LogFilter.entries.forEach { f ->
+                    FilterChip(
+                        selected = state.filter == f,
+                        onClick  = { vm.setFilter(f) },
+                        label    = { Text(stringResource(f.labelRes)) },
                     )
                 }
             }
+            Spacer(Modifier.height(8.dp))
+        }
 
-            state.grouped.forEach { (date, items) ->
-                item(key = date.toString()) {
-                    Text(
-                        date.format(dateFmt),
-                        style    = MaterialTheme.typography.labelMedium,
-                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 12.dp, bottom = 6.dp),
-                    )
-                }
-                items(items, key = { "log_${it.id}" }) { item ->
-                    LogItemCard(item = item, timeFmt = timeFmt)
-                }
-            }
-
-            // All time summary
+        if (state.grouped.isEmpty()) {
             item {
-                Spacer(Modifier.height(16.dp))
-                AllTimeSummaryCard(state)
+                Text(
+                    stringResource(R.string.qadaa_history_empty),
+                    style    = MaterialTheme.typography.bodyMedium,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 24.dp),
+                )
             }
+        }
+
+        state.grouped.forEach { (date, items) ->
+            item(key = date.toString()) {
+                Text(
+                    date.format(dateFmt),
+                    style    = MaterialTheme.typography.labelMedium,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 12.dp, bottom = 6.dp),
+                )
+            }
+            items(items, key = { "log_${it.id}" }) { item ->
+                LogItemCard(item = item, timeFmt = timeFmt)
+            }
+        }
+
+        // All time summary
+        item {
+            Spacer(Modifier.height(16.dp))
+            AllTimeSummaryCard(state)
         }
     }
 }

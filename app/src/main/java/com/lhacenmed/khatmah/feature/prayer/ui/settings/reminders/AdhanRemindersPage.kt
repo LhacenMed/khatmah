@@ -19,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
-import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 import com.lhacenmed.khatmah.core.ui.theme.applyOpacity
@@ -41,67 +40,57 @@ fun AdhanRemindersScreen() {
         R.string.prayer_isha,
     )
 
-    Scaffold(
-        topBar = {
-            AppTopBar(
-                title      = stringResource(R.string.adhan_reminders_title),
-                isTopLevel = false,
-                onBack     = { nav.back() },
+    // Body only — the title + back arrow come from ScreenHostActivity (see Dest.AdhanReminders.titleRes).
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+    ) {
+        PreferenceSubtitle(text = stringResource(R.string.adhan_reminders_section_title))
+
+        prayerNames.forEachIndexed { index, nameRes ->
+            val config = configs.getOrNull(index) ?: return@forEachIndexed
+            val isOn = config.isEnabled
+            val subtitle = soundSubtitle(config.sound)
+
+            PreferenceItem(
+                title = stringResource(nameRes),
+                onClick = { nav.go(Dest.AdhanSoundSelection(index)) },
+                leadingIcon = {
+                    val icon = when {
+                        !isOn -> Icons.Outlined.NotificationsOff
+                        config.sound is AdhanSound.Silent -> Icons.AutoMirrored.Outlined.VolumeOff
+                        else -> Icons.Filled.Notifications
+                    }
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(start = 8.dp, end = 16.dp)
+                            .size(24.dp),
+                        tint = if (isOn && config.sound !is AdhanSound.Silent) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    )
+                },
+                trailingIcon = {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.applyOpacity(isOn)
+                    )
+                },
             )
         }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState()),
-        ) {
-            PreferenceSubtitle(text = stringResource(R.string.adhan_reminders_section_title))
 
-            prayerNames.forEachIndexed { index, nameRes ->
-                val config = configs.getOrNull(index) ?: return@forEachIndexed
-                val isOn = config.isEnabled
-                val subtitle = soundSubtitle(config.sound)
+        Spacer(Modifier.height(8.dp))
+        HorizontalDivider()
 
-                PreferenceItem(
-                    title = stringResource(nameRes),
-                    onClick = { nav.go(Dest.AdhanSoundSelection(index)) },
-                    leadingIcon = {
-                        val icon = when {
-                            !isOn -> Icons.Outlined.NotificationsOff
-                            config.sound is AdhanSound.Silent -> Icons.AutoMirrored.Outlined.VolumeOff
-                            else -> Icons.Filled.Notifications
-                        }
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .padding(start = 8.dp, end = 16.dp)
-                                .size(24.dp),
-                            tint = if (isOn && config.sound !is AdhanSound.Silent) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        )
-                    },
-                    trailingIcon = {
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.applyOpacity(isOn)
-                        )
-                    },
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-
-            Text(
-                text = stringResource(R.string.adhan_reminders_warning),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(16.dp),
-            )
-        }
+        Text(
+            text = stringResource(R.string.adhan_reminders_warning),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(16.dp),
+        )
     }
 }
 

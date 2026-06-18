@@ -292,7 +292,8 @@ class MainActivity : AppCompatActivity() {
         window.setBackgroundDrawable(ColorDrawable(scheme.surface.toArgb()))
 
         // ── Toolbar colours ──
-        val toolbarBg = if (selecting) scheme.primaryContainer else scheme.surface
+        // surfaceContainer (same as the bottom nav) so the chrome stands out from the surface body.
+        val toolbarBg = if (selecting) scheme.primaryContainer else scheme.surfaceContainer
         val onToolbar = if (selecting) scheme.onPrimaryContainer else scheme.onSurface
         chromeIconColor = (if (selecting) scheme.onPrimaryContainer else scheme.onSurfaceVariant).toArgb()
         binding.toolbar.setBackgroundColor(toolbarBg.toArgb())

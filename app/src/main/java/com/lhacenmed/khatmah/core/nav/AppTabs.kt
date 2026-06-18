@@ -4,7 +4,7 @@ import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.demo.DemoTab
 import com.lhacenmed.khatmah.feature.more.MoreTab
 import com.lhacenmed.khatmah.feature.prayer.ui.PrayersTab
-// import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaTab   // temporarily replaced by DemoTab
+import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaTab
 import com.lhacenmed.khatmah.feature.today.TodayTab
 
 /**
@@ -19,7 +19,7 @@ val AppTabs: List<AppTab> = listOf(
     TodayTab,
     AdhkarTab,
     PrayersTab,
-    // QadaaTab,   // temporarily replaced by DemoTab
-    DemoTab,
+    QadaaTab,
+//    DemoTab,
     MoreTab,
 )
