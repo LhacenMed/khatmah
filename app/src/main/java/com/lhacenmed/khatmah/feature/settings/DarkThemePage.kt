@@ -1,6 +1,5 @@
 package com.lhacenmed.khatmah.feature.settings
 
-import android.os.Bundle
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,7 +25,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.IconButton
 import com.lhacenmed.khatmah.core.ui.components.LargeTopAppBar
@@ -35,20 +33,12 @@ import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSwitch
 import com.lhacenmed.khatmah.shared.util.ThemeManager
 
-// ── Activity host ─────────────────────────────────────────────────────────────
-
-class DarkThemeActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { DarkThemeScreen() }
-    }
-}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DarkThemeScreen() {
+internal fun DarkThemeScreen() {
     val nav = LocalNavigator.current
     val context = LocalContext.current
     val scrollBehavior =

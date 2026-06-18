@@ -31,8 +31,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import android.os.Bundle
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.OptionSelectBottomSheet
 import com.lhacenmed.khatmah.core.ui.components.SheetOption
@@ -347,19 +345,5 @@ private fun SessionMushhafPage(pageNum: Int, isDark: Boolean, modifier: Modifier
         )
     } else {
         Box(modifier, Alignment.Center) { CircularProgressIndicator() }
-    }
-}
-
-class QuranSessionReaderActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val startPage = intent.getIntExtra(EXTRA_START_PAGE, 1)
-        val endPage   = intent.getIntExtra(EXTRA_END_PAGE, 1)
-        setAppContent { QuranSessionReaderScreen(startPage, endPage) }
-    }
-
-    companion object {
-        const val EXTRA_START_PAGE = "startPage"
-        const val EXTRA_END_PAGE   = "endPage"
     }
 }

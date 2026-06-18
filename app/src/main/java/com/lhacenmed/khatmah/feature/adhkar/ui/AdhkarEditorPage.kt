@@ -69,10 +69,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import android.os.Bundle
 import coil.compose.AsyncImage
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.ColorPickerDialog
 import com.lhacenmed.khatmah.core.ui.components.LargeTopAppBar
@@ -491,15 +489,4 @@ private fun AdhkarEditorContent(
             item(key = "bottom_spacer") { Spacer(Modifier.height(16.dp)) }
         }
     }
-}
-
-// ── Navigation destination ────────────────────────────────────────────────────
-
-class AdhkarEditorActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { AdhkarEditorScreen(intent.getStringExtra(EXTRA_CATEGORY_ID)) }
-    }
-
-    companion object { const val EXTRA_CATEGORY_ID = "categoryId" }
 }

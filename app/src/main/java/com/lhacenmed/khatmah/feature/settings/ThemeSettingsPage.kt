@@ -1,7 +1,6 @@
 package com.lhacenmed.khatmah.feature.settings
 
 import android.os.Build
-import android.os.Bundle
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.animation.core.animateDpAsState
@@ -44,7 +43,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.IconButton
@@ -57,23 +55,15 @@ import com.lhacenmed.khatmah.core.ui.theme.ThemeColor
 import com.lhacenmed.khatmah.core.ui.theme.colorPreferences
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 
-// ── Activity host ─────────────────────────────────────────────────────────────
 
 /** Appearance settings page. */
-@RequiresApi(Build.VERSION_CODES.O)
-class ThemeSettingsActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { ThemeSettingsScreen() }
-    }
-}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ThemeSettingsScreen() {
+internal fun ThemeSettingsScreen() {
     val nav            = LocalNavigator.current
     val context        = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())

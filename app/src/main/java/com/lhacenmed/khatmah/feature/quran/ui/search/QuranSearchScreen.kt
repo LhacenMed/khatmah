@@ -25,8 +25,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import android.os.Bundle
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.theme.HafsFamily
 import com.lhacenmed.khatmah.core.ui.theme.WarshFamily
@@ -263,11 +261,4 @@ private fun SearchResultRow(result: SearchResult, textFamily: FontFamily, onClic
             )
         },
     )
-}
-
-class QuranSearchActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { QuranSearchScreen() }
-    }
 }

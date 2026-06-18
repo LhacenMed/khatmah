@@ -22,8 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
-import android.os.Bundle
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahResult
@@ -365,12 +363,5 @@ private fun DurationStepper(onIncrement: () -> Unit, onDecrement: () -> Unit) {
                 Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(18.dp))
             }
         }
-    }
-}
-
-class NewKhatmahActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { NewKhatmahScreen() }
     }
 }

@@ -1,6 +1,5 @@
 package com.lhacenmed.khatmah.feature.settings
 
-import android.os.Bundle
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -27,7 +26,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.IconButton
@@ -43,21 +41,12 @@ private val LANGUAGES = listOf(
     LangOption("ar", R.string.language_arabic),
 )
 
-// ── Activity host ─────────────────────────────────────────────────────────────
-
-/** Language settings sub-page. Owns its Scaffold + LargeTopAppBar. */
-class LanguageActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { LanguageScreen() }
-    }
-}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LanguageScreen() {
+internal fun LanguageScreen() {
     val nav = LocalNavigator.current
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())

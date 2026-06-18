@@ -68,9 +68,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
-import android.os.Bundle
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
@@ -530,14 +528,5 @@ private fun ActionButton(
                 }
             }
         }
-    }
-}
-
-// ── Navigation destination ────────────────────────────────────────────────────
-
-class PrintSelectActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { PrintSelectScreen() }
     }
 }

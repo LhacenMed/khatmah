@@ -17,9 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import android.os.Bundle
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.feature.qadaa.data.*
@@ -261,13 +259,5 @@ private fun SummaryStatCard(value: String, label: String, color: Color, modifier
             Text(label, style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-    }
-}
-
-@RequiresApi(Build.VERSION_CODES.O)
-class QadaaHistoryActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { QadaaHistoryScreen() }
     }
 }

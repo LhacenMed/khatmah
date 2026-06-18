@@ -26,8 +26,6 @@ import android.widget.ImageButton
 import androidx.activity.compose.BackHandler
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
-import android.os.Bundle
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.createRippleDrawable
@@ -310,11 +308,4 @@ private fun FileBrowserRenameDialog(
         confirmButton    = { TextButton(onClick = onRename) { Text("Rename") } },
         dismissButton    = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
-}
-
-class FileBrowserActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { FileBrowserScreen() }
-    }
 }

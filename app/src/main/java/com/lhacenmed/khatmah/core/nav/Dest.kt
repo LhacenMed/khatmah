@@ -2,122 +2,157 @@ package com.lhacenmed.khatmah.core.nav
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
-import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarDetailActivity
-import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarEditorActivity
-import com.lhacenmed.khatmah.feature.debug.DbBrowserActivity
-import com.lhacenmed.khatmah.feature.debug.FileBrowserActivity
+import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarDetailScreen
+import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarEditorScreen
+import com.lhacenmed.khatmah.feature.debug.DbBrowserScreen
+import com.lhacenmed.khatmah.feature.debug.FileBrowserScreen
 import com.lhacenmed.khatmah.feature.demo.DemoDetailScreen
-import com.lhacenmed.khatmah.feature.khatmah.ui.DailyAlarmActivity
-import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahActivity
-import com.lhacenmed.khatmah.feature.mushaf.ui.PrintSelectActivity
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsActivity
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.CalcMethodActivity
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.DstActivity
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.HigherLatActivity
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.JuristicActivity
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.ManualCorrectionsActivity
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.qibla.QiblaActivity
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.AdhanRemindersActivity
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.AdhanSoundSelectionActivity
-import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaHistoryActivity
-import com.lhacenmed.khatmah.feature.quran.ui.debug.DebugWarshActivity
-import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranReaderActivity
-import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranSessionReaderActivity
-import com.lhacenmed.khatmah.feature.quran.ui.search.QuranSearchActivity
-import com.lhacenmed.khatmah.feature.settings.AboutActivity
-import com.lhacenmed.khatmah.feature.settings.DarkThemeActivity
-import com.lhacenmed.khatmah.feature.settings.LanguageActivity
-import com.lhacenmed.khatmah.feature.settings.ThemeSettingsActivity
-import com.lhacenmed.khatmah.feature.today.FullIndexActivity
-import com.lhacenmed.khatmah.feature.trips.ui.TripRequestsActivity
+import com.lhacenmed.khatmah.feature.khatmah.ui.DailyAlarmScreen
+import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahScreen
+import com.lhacenmed.khatmah.feature.mushaf.ui.PrintSelectScreen
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsScreen
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.CalcMethodScreen
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.DstScreen
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.HigherLatScreen
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.JuristicScreen
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.ManualCorrectionsScreen
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.qibla.QiblaScreen
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.AdhanRemindersScreen
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.AdhanSoundSelectionScreen
+import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaHistoryScreen
+import com.lhacenmed.khatmah.feature.quran.ui.debug.DebugWarshScreen
+import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranReaderScreen
+import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranSessionReaderScreen
+import com.lhacenmed.khatmah.feature.quran.ui.search.QuranSearchScreen
+import com.lhacenmed.khatmah.feature.settings.AboutScreen
+import com.lhacenmed.khatmah.feature.settings.DarkThemeScreen
+import com.lhacenmed.khatmah.feature.settings.LanguageScreen
+import com.lhacenmed.khatmah.feature.settings.ThemeSettingsScreen
+import com.lhacenmed.khatmah.feature.today.FullIndexScreen
+import com.lhacenmed.khatmah.feature.trips.ui.TripRequestsScreen
 import com.lhacenmed.khatmah.onboarding.OnboardingActivity
 
 /**
  * Type-safe catalogue of every full-screen destination.
  *
- * Each [Dest] is self-describing: it names the Activity that renders it ([target]) and
- * attaches its own arguments as intent extras ([extras]). The active [AppNavigator]
- * turns any [Dest] into a `startActivity(Intent…)` generically — so adding a destination
- * is just a new entry here plus one manifest line; no central `when` to keep in sync.
+ * Most destinations are **host-model**: they override [screen] with their composable and are
+ * rendered by the single, already-declared [com.lhacenmed.khatmah.core.ScreenHostActivity] —
+ * so adding one is just an entry here plus its composable, with NO Activity class and NO
+ * manifest line. The exception is onboarding, which targets a real [OnboardingActivity]
+ * (a self-contained NavHost wizard) via [target] + [extras].
  *
  * Call sites stay type-safe and unchanged: `nav.go(Dest.QuranReader(suraNum = 5))`.
  */
 sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializable {
 
     /**
-     * Compose content for screens rendered by the single, already-declared
-     * [com.lhacenmed.khatmah.core.ScreenHostActivity] — they need NO Activity class and
-     * NO manifest entry. Screens still on their own Activity leave this null and rely on
-     * [target] instead. (The host owns back/predictive-back exactly as a real Activity.)
+     * Compose content for host-model screens. Rendered by [com.lhacenmed.khatmah.core.ScreenHostActivity];
+     * such screens need no Activity class and no manifest entry. Legacy screens (onboarding)
+     * leave this null and use [target] instead.
      */
     open fun screen(): (@Composable () -> Unit)? = null
 
-    /** Attach this destination's typed arguments as intent extras (legacy [target] path). */
+    /** Attach typed arguments as intent extras (legacy [target] path, or a ViewModel's SavedStateHandle). */
     open fun extras(intent: Intent) {}
 
     // ── Today / Khatmah ─────────────────────────────────────────────────────────
-    data object NewKhatmah : Dest(NewKhatmahActivity::class.java)
-    data object DailyAlarm : Dest(DailyAlarmActivity::class.java)
-    data object FullIndex : Dest(FullIndexActivity::class.java)
-    data class QuranReader(val suraNum: Int = 0, val ayaNum: Int = 0) :
-        Dest(QuranReaderActivity::class.java) {
+    data object NewKhatmah : Dest() {
+        override fun screen() = @Composable { NewKhatmahScreen() }
+    }
+    data object DailyAlarm : Dest() {
+        override fun screen() = @Composable { DailyAlarmScreen() }
+    }
+    data object FullIndex : Dest() {
+        override fun screen() = @Composable { FullIndexScreen() }
+    }
+    data class QuranReader(val suraNum: Int = 0, val ayaNum: Int = 0) : Dest() {
+        override fun screen() = @Composable { QuranReaderScreen() }
+        // suraNum/ayaNum reach QuranViewModel through the host's SavedStateHandle.
         override fun extras(intent: Intent) {
-            intent.putExtra(QuranReaderActivity.EXTRA_SURA, suraNum)
-            intent.putExtra(QuranReaderActivity.EXTRA_AYA, ayaNum)
+            intent.putExtra(EXTRA_SURA, suraNum)
+            intent.putExtra(EXTRA_AYA, ayaNum)
+        }
+        companion object {
+            const val EXTRA_SURA = "suraNum"
+            const val EXTRA_AYA = "ayaNum"
         }
     }
-    data class QuranSessionReader(val startPage: Int, val endPage: Int) :
-        Dest(QuranSessionReaderActivity::class.java) {
-        override fun extras(intent: Intent) {
-            intent.putExtra(QuranSessionReaderActivity.EXTRA_START_PAGE, startPage)
-            intent.putExtra(QuranSessionReaderActivity.EXTRA_END_PAGE, endPage)
-        }
+    data class QuranSessionReader(val startPage: Int, val endPage: Int) : Dest() {
+        override fun screen() = @Composable { QuranSessionReaderScreen(startPage, endPage) }
     }
-    data object QuranSearch : Dest(QuranSearchActivity::class.java)
+    data object QuranSearch : Dest() {
+        override fun screen() = @Composable { QuranSearchScreen() }
+    }
 
     // ── Mushaf ──────────────────────────────────────────────────────────────────
-    data object MushafPrints : Dest(PrintSelectActivity::class.java)
+    data object MushafPrints : Dest() {
+        override fun screen() = @Composable { PrintSelectScreen() }
+    }
 
     // ── Settings ────────────────────────────────────────────────────────────────
-    data object ThemeSettings : Dest(ThemeSettingsActivity::class.java)
-    data object DarkTheme : Dest(DarkThemeActivity::class.java)
-    data object Language : Dest(LanguageActivity::class.java)
-    data object About : Dest(AboutActivity::class.java)
+    data object ThemeSettings : Dest() {
+        override fun screen() = @Composable {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ThemeSettingsScreen()
+        }
+    }
+    data object DarkTheme : Dest() {
+        override fun screen() = @Composable { DarkThemeScreen() }
+    }
+    data object Language : Dest() {
+        override fun screen() = @Composable { LanguageScreen() }
+    }
+    data object About : Dest() {
+        override fun screen() = @Composable { AboutScreen() }
+    }
 
     // ── Prayer settings ─────────────────────────────────────────────────────────
-    data object PrayerSettings : Dest(PrayerSettingsActivity::class.java)
-    data object CalcMethod : Dest(CalcMethodActivity::class.java)
-    data object Juristic : Dest(JuristicActivity::class.java)
-    data object Dst : Dest(DstActivity::class.java)
-    data object ManualCorrections : Dest(ManualCorrectionsActivity::class.java)
-    data object HigherLat : Dest(HigherLatActivity::class.java)
-    data object AdhanReminders : Dest(AdhanRemindersActivity::class.java)
-    data class AdhanSoundSelection(val prayerId: Int) :
-        Dest(AdhanSoundSelectionActivity::class.java) {
-        override fun extras(intent: Intent) {
-            intent.putExtra(AdhanSoundSelectionActivity.EXTRA_PRAYER_ID, prayerId)
+    data object PrayerSettings : Dest() {
+        override fun screen() = @Composable { PrayerSettingsScreen() }
+    }
+    data object CalcMethod : Dest() {
+        override fun screen() = @Composable { CalcMethodScreen() }
+    }
+    data object Juristic : Dest() {
+        override fun screen() = @Composable { JuristicScreen() }
+    }
+    data object Dst : Dest() {
+        override fun screen() = @Composable { DstScreen() }
+    }
+    data object ManualCorrections : Dest() {
+        override fun screen() = @Composable { ManualCorrectionsScreen() }
+    }
+    data object HigherLat : Dest() {
+        override fun screen() = @Composable { HigherLatScreen() }
+    }
+    data object AdhanReminders : Dest() {
+        override fun screen() = @Composable { AdhanRemindersScreen() }
+    }
+    data class AdhanSoundSelection(val prayerId: Int) : Dest() {
+        override fun screen() = @Composable {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) AdhanSoundSelectionScreen(prayerId)
         }
     }
-    data object Qibla : Dest(QiblaActivity::class.java)
+    data object Qibla : Dest() {
+        override fun screen() = @Composable { QiblaScreen() }
+    }
 
     // ── Adhkar / Qadaa ──────────────────────────────────────────────────────────
-    data class AdhkarDetail(val categoryId: String) :
-        Dest(AdhkarDetailActivity::class.java) {
-        override fun extras(intent: Intent) {
-            intent.putExtra(AdhkarDetailActivity.EXTRA_CATEGORY_ID, categoryId)
+    data class AdhkarDetail(val categoryId: String) : Dest() {
+        override fun screen() = @Composable { AdhkarDetailScreen(categoryId) }
+    }
+    data class AdhkarEditor(val categoryId: String? = null) : Dest() {
+        override fun screen() = @Composable { AdhkarEditorScreen(categoryId) }
+    }
+    data object QadaaHistory : Dest() {
+        override fun screen() = @Composable {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) QadaaHistoryScreen()
         }
     }
-    data class AdhkarEditor(val categoryId: String? = null) :
-        Dest(AdhkarEditorActivity::class.java) {
-        override fun extras(intent: Intent) {
-            categoryId?.let { intent.putExtra(AdhkarEditorActivity.EXTRA_CATEGORY_ID, it) }
-        }
-    }
-    data object QadaaHistory : Dest(QadaaHistoryActivity::class.java)
 
-    // ── Onboarding (self-contained wizard; deep-linked to a start step) ───────────
+    // ── Onboarding (legacy: targets the OnboardingActivity NavHost wizard) ─────────
     data object OnboardingLocation : Dest(OnboardingActivity::class.java) {
         override fun extras(intent: Intent) {
             intent.putExtra(OnboardingActivity.EXTRA_START_ROUTE, ShellRoutes.ONBOARDING_LOCATION)
@@ -137,17 +172,25 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
     }
 
     // ── Demo (temporary example) ──────────────────────────────────────────────────
-    // Host-model screen: no Activity class, no manifest entry — just this entry plus the
-    // DemoDetailScreen composable. That is the whole 2-step flow for a new screen.
     data object DemoDetail : Dest() {
-        override fun screen(): @Composable () -> Unit = { DemoDetailScreen() }
+        override fun screen() = @Composable { DemoDetailScreen() }
     }
 
     // ── Debug ───────────────────────────────────────────────────────────────────
-    data object DbBrowser : Dest(DbBrowserActivity::class.java)
-    data object FileBrowser : Dest(FileBrowserActivity::class.java)
-    data object TripRequests : Dest(TripRequestsActivity::class.java)
-    data object DebugWarsh : Dest(DebugWarshActivity::class.java)
+    data object DbBrowser : Dest() {
+        override fun screen() = @Composable { DbBrowserScreen() }
+    }
+    data object FileBrowser : Dest() {
+        override fun screen() = @Composable {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) FileBrowserScreen()
+        }
+    }
+    data object TripRequests : Dest() {
+        override fun screen() = @Composable { TripRequestsScreen() }
+    }
+    data object DebugWarsh : Dest() {
+        override fun screen() = @Composable { DebugWarshScreen() }
+    }
 }
 
 /**

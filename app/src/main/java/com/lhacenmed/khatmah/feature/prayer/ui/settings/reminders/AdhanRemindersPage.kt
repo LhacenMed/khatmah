@@ -17,8 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
-import android.os.Bundle
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
@@ -114,11 +112,4 @@ private fun soundSubtitle(sound: AdhanSound): String = when (sound) {
     is AdhanSound.Device -> stringResource(R.string.adhan_sound_device)
     is AdhanSound.Asset  -> AdhanSoundFiles.getDisplayName(sound.filename)
     is AdhanSound.Custom -> sound.displayName
-}
-
-class AdhanRemindersActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { AdhanRemindersScreen() }
-    }
 }

@@ -36,9 +36,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import android.os.Bundle
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.feature.mushaf.data.DivType
@@ -115,7 +113,7 @@ class FullIndexViewModel(context: Context) : ViewModel() {
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun FullIndexScreen() {
+internal fun FullIndexScreen() {
     val nav     = LocalNavigator.current
     val context = LocalContext.current
     val vm: FullIndexViewModel = viewModel(factory = FullIndexViewModel.Factory(context))
@@ -280,12 +278,3 @@ private fun pageFor(pageStarts: List<PageStartEntity>, sura: Int, aya: Int): Int
 
 private fun toArNums(n: Int): String =
     n.toString().map { "٠١٢٣٤٥٦٧٨٩"[it - '0'] }.joinToString("")
-
-// ── Page registration ─────────────────────────────────────────────────────────
-
-class FullIndexActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { FullIndexScreen() }
-    }
-}

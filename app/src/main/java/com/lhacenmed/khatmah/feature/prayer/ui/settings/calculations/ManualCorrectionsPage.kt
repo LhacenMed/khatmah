@@ -14,8 +14,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
-import android.os.Bundle
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.prayer.data.ManualCorrections
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
@@ -168,11 +166,4 @@ private fun CorrectionRow(
         thickness = 0.5.dp,
         color     = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
     )
-}
-
-class ManualCorrectionsActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { ManualCorrectionsScreen() }
-    }
 }

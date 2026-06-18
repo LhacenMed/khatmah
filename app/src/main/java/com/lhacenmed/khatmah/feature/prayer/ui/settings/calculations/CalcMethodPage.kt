@@ -13,8 +13,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
-import android.os.Bundle
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.prayer.data.CalcMethod
 import com.lhacenmed.khatmah.feature.prayer.data.IshaMode
@@ -91,11 +89,4 @@ private fun ishaSubtitle(method: CalcMethod): String {
         is IshaMode.FixedMinutes -> stringResource(R.string.calc_method_isha_mins, m.minutes)
     }
     return stringResource(R.string.calc_method_subtitle, method.fajrAngle, ishaStr)
-}
-
-class CalcMethodActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { CalcMethodScreen() }
-    }
 }

@@ -15,8 +15,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
-import android.os.Bundle
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.IconButton
@@ -151,10 +149,3 @@ private fun formatDate(iso: String): String = runCatching {
     val formatter = SimpleDateFormat("d MMM yyyy, HH:mm", Locale.getDefault())
     formatter.format(parser.parse(iso)!!)
 }.getOrElse { iso }
-
-class TripRequestsActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { TripRequestsScreen() }
-    }
-}

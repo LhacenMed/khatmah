@@ -37,10 +37,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import android.os.Bundle
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.adhkar.data.Dhikr
@@ -423,16 +421,4 @@ fun AdhkarDetailScreen(categoryId: String) {
             }
         }
     }
-}
-
-// ── Navigation destination ────────────────────────────────────────────────────
-
-class AdhkarDetailActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val categoryId = intent.getStringExtra(EXTRA_CATEGORY_ID).orEmpty()
-        setAppContent { AdhkarDetailScreen(categoryId = categoryId) }
-    }
-
-    companion object { const val EXTRA_CATEGORY_ID = "categoryId" }
 }

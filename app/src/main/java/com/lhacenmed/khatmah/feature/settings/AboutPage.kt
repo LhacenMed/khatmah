@@ -1,6 +1,5 @@
 package com.lhacenmed.khatmah.feature.settings
 
-import android.os.Bundle
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,27 +23,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.IconButton
 import com.lhacenmed.khatmah.core.ui.components.LargeTopAppBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 
-// ── Activity host ─────────────────────────────────────────────────────────────
-
-class AboutActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { AboutScreen() }
-    }
-}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AboutScreen() {
+internal fun AboutScreen() {
     val nav = LocalNavigator.current
     val context = LocalContext.current
     val scrollBehavior =

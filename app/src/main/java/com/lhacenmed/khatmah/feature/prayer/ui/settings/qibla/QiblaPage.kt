@@ -39,8 +39,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lhacenmed.khatmah.R
-import android.os.Bundle
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import kotlin.math.*
@@ -757,12 +755,5 @@ private fun CompassDial(
             addPath(blobPath)
         }
         nc.drawPath(combinedPath, starPaint)
-    }
-}
-
-class QiblaActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { QiblaScreen() }
     }
 }

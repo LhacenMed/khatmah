@@ -16,8 +16,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.PathParser
 import androidx.core.graphics.withTranslation
-import android.os.Bundle
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.quran.ui.reader.ParsedVector
 import com.lhacenmed.khatmah.feature.quran.ui.reader.VectorXmlParser
@@ -113,12 +111,5 @@ fun VectorFileCanvas(vector: ParsedVector, modifier: Modifier = Modifier) {
 
             }
         }
-    }
-}
-
-class DebugWarshActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setAppContent { DebugWarshScreen() }
     }
 }

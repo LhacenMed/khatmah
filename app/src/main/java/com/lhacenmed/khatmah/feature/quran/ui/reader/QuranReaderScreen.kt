@@ -43,8 +43,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import android.os.Bundle
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.OptionSelectBottomSheet
@@ -651,19 +649,5 @@ private fun QuranXmlPager(
 private fun LoadingBox() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
-    }
-}
-
-class QuranReaderActivity : BaseComposeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        // suraNum/ayaNum arrive as intent extras; ComponentActivity seeds them into
-        // QuranViewModel's default SavedStateHandle, where the VM reads them by key.
-        setAppContent { QuranReaderScreen() }
-    }
-
-    companion object {
-        const val EXTRA_SURA = "suraNum"
-        const val EXTRA_AYA  = "ayaNum"
     }
 }

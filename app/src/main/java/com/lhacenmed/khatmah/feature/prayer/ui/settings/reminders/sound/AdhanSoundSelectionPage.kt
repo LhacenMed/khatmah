@@ -25,8 +25,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
-import android.os.Bundle
-import com.lhacenmed.khatmah.core.BaseComposeActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
@@ -429,15 +427,4 @@ private fun PreAlertDialog(
 private fun preAlertLabel(minutes: Int): String = when (minutes) {
     0    -> stringResource(R.string.adhan_alert_before_off)
     else -> stringResource(R.string.adhan_alert_before_minutes, minutes)
-}
-
-class AdhanSoundSelectionActivity : BaseComposeActivity() {
-    @RequiresApi(Build.VERSION_CODES.O)
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val prayerId = intent.getIntExtra(EXTRA_PRAYER_ID, 0)
-        setAppContent { AdhanSoundSelectionScreen(prayerId) }
-    }
-
-    companion object { const val EXTRA_PRAYER_ID = "prayerId" }
 }
