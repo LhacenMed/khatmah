@@ -190,6 +190,17 @@ class BookPageView @JvmOverloads constructor(
 
         drawStackedEdge(canvas, w, h)
 
+        val sel = selectedAya
+        // Pre-compute highlight color once per draw (avoid repeated object creation per word).
+        if (sel != null) {
+            highlightPaint.color = Color.argb(
+                0x33,
+                Color.red(accentArgb),
+                Color.green(accentArgb),
+                Color.blue(accentArgb),
+            )
+        }
+
         for (line in layout) {
             line.container?.let { ctr ->
                 canvas.drawText(CONTAINER_CHAR, ctr.x, ctr.baseline, ctr.paint)
@@ -200,22 +211,39 @@ class BookPageView @JvmOverloads constructor(
                     canvas.drawText(c.ayaStr, c.ayaCx, c.numY, c.numPaint)
                 }
             }
-            for (word in line.words) {
-                val sel = selectedAya
-                val key = word.verseKey
-                if (sel != null && key != null) {
+
+            // Draw one highlight rect per line (not per word) so highlights on multi-word
+            // and multi-line verses never overlap each other. The rect is anchored to the
+            // slot's lineTop/lineHeight — independent of raw font ascent/descent — so the
+            // band is always tight and consistent across all line types.
+            if (sel != null) {
+                var spanLeft = Float.MAX_VALUE
+                var spanRight = Float.MIN_VALUE
+                for (word in line.words) {
+                    val key = word.verseKey ?: continue
                     val parts = key.split(":")
                     if (parts.size == 2 &&
                         parts[0].toIntOrNull() == sel.first &&
                         parts[1].toIntOrNull() == sel.second
                     ) {
-                        highlightPaint.color =
-                            Color.argb(0x33, Color.red(accentArgb), Color.green(accentArgb), Color.blue(accentArgb))
-                        val top    = word.baseline + word.paint.ascent() - 4f
-                        val bottom = word.baseline + word.paint.descent() + 4f
-                        canvas.drawRect(word.x, top, word.x + word.width, bottom, highlightPaint)
+                        if (word.x < spanLeft) spanLeft = word.x
+                        val right = word.x + word.width
+                        if (right > spanRight) spanRight = right
                     }
                 }
+                if (spanLeft < spanRight) {
+                    val vInset = line.lineHeight * HIGHLIGHT_V_INSET
+                    canvas.drawRect(
+                        spanLeft,
+                        line.lineTop + vInset,
+                        spanRight,
+                        line.lineTop + line.lineHeight - vInset,
+                        highlightPaint,
+                    )
+                }
+            }
+
+            for (word in line.words) {
                 canvas.drawText(word.char, word.x, word.baseline, word.paint)
             }
         }
@@ -358,5 +386,9 @@ class BookPageView @JvmOverloads constructor(
         // Page-info overlay text colour (Quran Android's overlayColor).
         private const val OVERLAY_DAY = 0xFF686E7D.toInt()
         private const val OVERLAY_NIGHT = 0xFF848A91.toInt()
+
+        // Verse highlight band: fraction of the line slot height inset from top and bottom.
+        // 0.08 = 8% → compact band that hugs the glyphs without bleeding into adjacent lines.
+        private const val HIGHLIGHT_V_INSET = 0.02f
     }
 }

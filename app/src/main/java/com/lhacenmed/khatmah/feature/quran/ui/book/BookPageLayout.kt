@@ -98,6 +98,10 @@ internal class SurahCircles(
 internal data class LineRender(
     val words: List<WordRender>,
     val container: ContainerRender? = null,
+    /** Slot top y-coordinate in view pixels — used for highlight geometry. */
+    val lineTop: Float = 0f,
+    /** Slot height in view pixels — used for highlight geometry. */
+    val lineHeight: Float = 0f,
 )
 
 // ── Layout computation ────────────────────────────────────────────────────────
@@ -265,6 +269,8 @@ internal fun computeLayout(
                 WordRender(word.char, x - ww, baseline, ww, paint, word.verseKey).also { x -= ww }
             },
             container = container,
+            lineTop = slotTop,
+            lineHeight = slotH,
         )
     }
 }
