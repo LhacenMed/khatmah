@@ -167,6 +167,7 @@ class AdhkarRepository(private val context: Context) {
         } finally {
             db.endTransaction()
         }
+        AdhkarChangeNotifier.notifyChange()
     }
 
     /**
@@ -206,6 +207,7 @@ class AdhkarRepository(private val context: Context) {
         } finally {
             db.endTransaction()
         }
+        AdhkarChangeNotifier.notifyChange()
     }
 
     /**
@@ -240,6 +242,7 @@ class AdhkarRepository(private val context: Context) {
         } finally {
             db.endTransaction()
         }
+        AdhkarChangeNotifier.notifyChange()
     }
 
     /**
@@ -263,6 +266,7 @@ class AdhkarRepository(private val context: Context) {
         if (ids.isEmpty()) return@withContext
         val placeholders = ids.joinToString(",") { "?" }
         db.execSQL("DELETE FROM categories WHERE id IN ($placeholders)", ids.toTypedArray())
+        AdhkarChangeNotifier.notifyChange()
     }
 
     // ── Dhikr ─────────────────────────────────────────────────────────────────

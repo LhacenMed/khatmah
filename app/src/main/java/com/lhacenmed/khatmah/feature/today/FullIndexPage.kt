@@ -15,7 +15,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.PrimaryTabRow
@@ -36,18 +35,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavBackStackEntry
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.ui.components.AppTopBar
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.mushaf.data.DivType
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
+import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
 import com.lhacenmed.khatmah.feature.mushaf.data.db.PageStartEntity
+import com.lhacenmed.khatmah.feature.quran.data.HafsQcf4Repository
 import com.lhacenmed.khatmah.feature.quran.data.QuranRepository
 import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
-import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranReaderPage
+import com.lhacenmed.khatmah.feature.quran.data.WarshQcf4Repository
+import com.lhacenmed.khatmah.feature.quran.ui.book.isQcf4
+import com.lhacenmed.khatmah.feature.quran.ui.book.readerDestAt
 import com.lhacenmed.khatmah.shared.util.RecentSurahsPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,27 +82,59 @@ class FullIndexViewModel(context: Context) : ViewModel() {
 
     init {
         val appContext = context.applicationContext
+        // Rebuild whenever the selected print changes — Warsh and Hafs differ in surah pages and
+        // juz' starts, and each QCF4 print paginates independently, so the index always matches the
+        // reader it opens. StateFlow only emits on change, so this fires once per real switch.
         viewModelScope.launch {
-            val riwayaKey = MushafPrefs.selected.value.riwaya.dbKey
-            withContext(Dispatchers.IO) {
-                val dao        = MushafDb.get(appContext).dao()
-                val all        = QuranRepository(appContext).surahList(riwayaKey)
-                val pageStarts = dao.allPageStarts(riwayaKey)
-                val divisions  = dao.divisions(riwayaKey, DivType.JUZ)
-                val nameMap    = dao.surahs(riwayaKey).associate { it.num to it.name }
+            MushafPrefs.selected.collect { print -> loadIndex(appContext, print) }
+        }
+    }
 
-                _surahs.value       = all
-                _surahPageMap.value = all.associate { s -> s.num to pageFor(pageStarts, s.num, 1) }
-                _juzList.value      = divisions.map { d ->
-                    JuzInfo(
-                        num           = d.num,
-                        startSuraNum  = d.sura,
-                        startSuraName = nameMap[d.sura].orEmpty(),
-                        startAya      = d.aya,
-                        page          = pageFor(pageStarts, d.sura, d.aya),
-                    )
-                }
+    private suspend fun loadIndex(appContext: Context, print: MushafPrint) =
+        withContext(Dispatchers.IO) {
+            val riwayaKey  = print.riwaya.dbKey
+            val dao        = MushafDb.get(appContext).dao()
+            val all        = QuranRepository(appContext).surahList(riwayaKey)
+            val pageStarts = dao.allPageStarts(riwayaKey)
+            val divisions  = dao.divisions(riwayaKey, DivType.JUZ)
+            val nameMap    = dao.surahs(riwayaKey).associate { it.num to it.name }
+
+            // Resolve pages from the same pagination the reader uses (see [pageResolver]).
+            val pageOf = pageResolver(appContext, print, pageStarts)
+
+            _surahs.value       = all
+            _surahPageMap.value = all.associate { s -> s.num to pageOf(s.num, 1) }
+            _juzList.value      = divisions.map { d ->
+                JuzInfo(
+                    num           = d.num,
+                    startSuraNum  = d.sura,
+                    startSuraName = nameMap[d.sura].orEmpty(),
+                    startAya      = d.aya,
+                    page          = pageOf(d.sura, d.aya),
+                )
             }
+        }
+
+    /**
+     * Page lookup for an aya, matching the reader the [print] opens in. QCF4 prints render their own
+     * downloaded layout (e.g. Warsh QCF4 is paginated independently of the generic 604-page Warsh),
+     * so their surah/juz' pages come from the QCF4 verse→page index; other prints use
+     * `mushaf_page_start`. Falls back to page starts when the QCF4 index isn't populated yet.
+     */
+    private suspend fun pageResolver(
+        appContext: Context,
+        print: MushafPrint,
+        pageStarts: List<PageStartEntity>,
+    ): (sura: Int, aya: Int) -> Int {
+        val byStart: (Int, Int) -> Int = { sura, aya -> pageFor(pageStarts, sura, aya) }
+        if (!print.isQcf4) return byStart
+
+        val source = if (print.riwaya == Riwaya.WARSH) WarshQcf4Repository.get(appContext)
+                     else HafsQcf4Repository.get(appContext)
+        val ayaPage = runCatching { source.ayaPageIndex() }.getOrDefault(emptyMap())
+        if (ayaPage.isEmpty()) return byStart
+        return { sura, aya ->
+            ayaPage[(sura.toLong() shl 32) or aya.toLong()]?.plus(1) ?: byStart(sura, aya)
         }
     }
 
@@ -115,8 +148,8 @@ class FullIndexViewModel(context: Context) : ViewModel() {
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun FullIndexScreen() {
-    val nav     = LocalNavController.current
+internal fun FullIndexScreen() {
+    val nav     = LocalNavigator.current
     val context = LocalContext.current
     val vm: FullIndexViewModel = viewModel(factory = FullIndexViewModel.Factory(context))
 
@@ -134,41 +167,34 @@ private fun FullIndexScreen() {
         if (pagerState.currentPage != selectedTab) selectedTab = pagerState.currentPage
     }
 
-    Scaffold(
-        topBar = {
-            AppTopBar(
-                title      = stringResource(R.string.full_index_title),
-                isTopLevel = false,
-                onBack     = { nav.popBackStack() },
+    // Body only — the title + back arrow come from ScreenHostActivity (see Dest.FullIndex.titleRes).
+    Column(Modifier.fillMaxSize()) {
+        PrimaryTabRow(selectedTabIndex = selectedTab) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick  = { selectedTab = 0 },
+                text     = { Text(stringResource(R.string.full_index_tab_surahs)) },
             )
-        },
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            PrimaryTabRow(selectedTabIndex = selectedTab) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick  = { selectedTab = 0 },
-                    text     = { Text(stringResource(R.string.full_index_tab_surahs)) },
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick  = { selectedTab = 1 },
-                    text     = { Text(stringResource(R.string.full_index_tab_ajza)) },
-                )
-            }
-            HorizontalPager(
-                state    = pagerState,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-            ) { page ->
-                when (page) {
-                    0 -> SurahsContent(surahs, surahPageMap) { suraNum ->
-                        RecentSurahsPrefs.record(context, suraNum)
-                        nav.navigate(QuranReaderPage.routeFor(suraNum = suraNum))
-                    }
-                    else -> AjzaContent(juzList) { suraNum ->
-                        RecentSurahsPrefs.record(context, suraNum)
-                        nav.navigate(QuranReaderPage.routeFor(suraNum = suraNum))
-                    }
+            Tab(
+                selected = selectedTab == 1,
+                onClick  = { selectedTab = 1 },
+                text     = { Text(stringResource(R.string.full_index_tab_ajza)) },
+            )
+        }
+        HorizontalPager(
+            state    = pagerState,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        ) { page ->
+            when (page) {
+                0 -> SurahsContent(surahs, surahPageMap) { suraNum ->
+                    RecentSurahsPrefs.record(context, suraNum)
+                    nav.go(readerDestAt(surahPageMap[suraNum] ?: 1, suraNum))
+                }
+                // A juz' opens at its own start page (it can begin mid-surah), targeting the
+                // exact sura/aya so the Compose reader lands there too — not the surah's first page.
+                else -> AjzaContent(juzList) { juz ->
+                    RecentSurahsPrefs.record(context, juz.startSuraNum)
+                    nav.go(readerDestAt(juz.page, juz.startSuraNum, juz.startAya))
                 }
             }
         }
@@ -213,7 +239,7 @@ private fun SurahsContent(
 }
 
 @Composable
-private fun AjzaContent(juzList: List<JuzInfo>, onJuzClick: (suraNum: Int) -> Unit) {
+private fun AjzaContent(juzList: List<JuzInfo>, onJuzClick: (JuzInfo) -> Unit) {
     if (juzList.isEmpty()) {
         Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
         return
@@ -221,7 +247,7 @@ private fun AjzaContent(juzList: List<JuzInfo>, onJuzClick: (suraNum: Int) -> Un
     LazyColumn(Modifier.fillMaxSize()) {
         itemsIndexed(juzList, key = { _, j -> j.num }) { i, juz ->
             ListItem(
-                modifier          = Modifier.clickable { onJuzClick(juz.startSuraNum) },
+                modifier          = Modifier.clickable { onJuzClick(juz) },
                 headlineContent   = {
                     Text(
                         text       = stringResource(R.string.full_index_juz, juz.num),
@@ -280,10 +306,3 @@ private fun pageFor(pageStarts: List<PageStartEntity>, sura: Int, aya: Int): Int
 
 private fun toArNums(n: Int): String =
     n.toString().map { "٠١٢٣٤٥٦٧٨٩"[it - '0'] }.joinToString("")
-
-// ── Page registration ─────────────────────────────────────────────────────────
-
-object FullIndexPage : AppPage() {
-    override val route = "full_index"
-    @Composable override fun Content(back: NavBackStackEntry) = FullIndexScreen()
-}

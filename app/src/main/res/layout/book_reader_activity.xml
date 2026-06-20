@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Book reader shell — the QCF4 port of Quran Android's quran_page_activity.xml.
+     ViewPager fills the screen; the toolbar overlays the top and is toggled with
+     the immersive system bars on tap. -->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:keepScreenOn="true">
+
+    <androidx.viewpager.widget.ViewPager
+        android:id="@+id/book_pager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <FrameLayout
+        android:id="@+id/toolbar_area"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:elevation="4dp">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:titleTextAppearance="@style/CompactToolbarTitleText"
+            app:subtitleTextAppearance="@style/CompactToolbarSubtitleText" />
+    </FrameLayout>
+
+    <!-- Bottom page-jump bar — slides in/out with the toolbar. -->
+    <FrameLayout
+        android:id="@+id/bottom_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="?attr/colorSurfaceContainer"
+        android:elevation="4dp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="24dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Audio player — hidden until a verse is long-pressed (above the slider). -->
+            <include layout="@layout/book_audio_bar" />
+
+            <!-- RTL: page 1 sits at the right end, higher pages to the left (mushaf direction). -->
+            <SeekBar
+                android:id="@+id/book_slider"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layoutDirection="rtl" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Drag popup: page number + sura/juz, shown only while scrubbing the slider. -->
+    <TextView
+        android:id="@+id/page_popup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:background="@drawable/book_popup_bg"
+        android:gravity="center"
+        android:lineSpacingExtra="4dp"
+        android:minWidth="140dp"
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="12dp"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:visibility="gone" />
+</FrameLayout>

@@ -25,9 +25,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import android.content.Context
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.AppTab
+import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
+import com.lhacenmed.khatmah.core.nav.TabAction
+import com.lhacenmed.khatmah.core.nav.toIntent
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerRepository
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerTime
 import com.lhacenmed.khatmah.feature.prayer.data.toAmPm
@@ -45,9 +49,24 @@ import java.util.Locale
 
 object PrayersTab : AppTab(
     iconRes  = R.drawable.ic_mosque,
-    labelRes = R.string.prayers,
-    order    = 2,
+    titleRes = R.string.prayers,
+    route    = "prayers",
 ) {
+    // Bar label is "Prayers"; the toolbar shows the fuller screen title.
+    override val toolbarTitleRes = R.string.prayers_screen_title
+
+    override val actions = listOf(
+        TabAction(R.drawable.ic_kaaba, R.string.prayers_qibla) {
+            it.startActivity(Dest.Qibla.toIntent(it))
+        },
+        TabAction(R.drawable.ic_mosque, R.string.prayers_settings) {
+            it.startActivity(Dest.PrayerSettings.toIntent(it))
+        },
+    )
+
+    override fun subtitle(context: Context): String? =
+        OnboardingPrefs.location(context)?.cityName?.takeIf { it.isNotBlank() }
+
     @Composable override fun Content(padding: PaddingValues) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             PrayersScreenContent(padding)

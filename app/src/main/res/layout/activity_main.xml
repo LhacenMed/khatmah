@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Native edge-to-edge tab host. MaterialToolbar + BottomNavigationView provide the
+  chrome with native gestures, tooltips and transitions. Insets are applied in code
+  (toolbar top, bottom nav bottom) so the Compose content draws edge-to-edge. Tab
+  bodies are Compose, swapped in place inside the single ComposeView.
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="?attr/actionBarSize"
+        android:background="?attr/colorSurface"
+        app:titleTextAppearance="@style/CompactToolbarTitleText"
+        app:subtitleTextAppearance="@style/CompactToolbarSubtitleText" />
+
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/compose_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Compact bar (AntennaPod's exact config): the item paddings are what stack icon-on-top /
+         label-at-bottom inside the short 64dp height. itemIconSize is capped to 22dp because our
+         nav icons are full-bleed 48dp drawables (AntennaPod's are padded 24dp), so they'd
+         otherwise bleed into the label. System-nav inset handled by bottom_padding below. -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_nav"
+        android:layout_width="match_parent"
+        android:layout_height="70dp"
+        android:background="?attr/colorSurface"
+        app:itemPaddingTop="10dp"
+        app:itemPaddingBottom="8dp"
+        app:itemTextAppearanceActive="@style/TextBottomNav"
+        app:itemTextAppearanceInactive="@style/TextBottomNav"
+        app:labelVisibilityMode="labeled"
+        app:paddingBottomSystemWindowInsets="false" />
+
+    <!-- Fills the gesture/navigation-bar area beneath the bar; height set from insets in code. -->
+    <View
+        android:id="@+id/bottom_padding"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="?attr/colorSurfaceContainer" />
+</LinearLayout>

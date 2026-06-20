@@ -22,40 +22,29 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.ui.components.AppTopBar
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahResult
 import com.lhacenmed.khatmah.feature.khatmah.data.SessionDisplay
 
 @Composable
 fun NewKhatmahScreen() {
     val context = LocalContext.current
-    val nav     = LocalNavController.current
+    val nav     = LocalNavigator.current
     val vm: NewKhatmahViewModel = viewModel(factory = NewKhatmahViewModel.Factory(context))
     val state   by vm.state.collectAsState()
 
+    // Step 2's back returns to step 1; the host routes the toolbar up arrow through this too.
     BackHandler(enabled = state.step == 2) { vm.goBack() }
 
-    Scaffold(
-        topBar = {
-            AppTopBar(
-                title      = stringResource(R.string.new_khatmah_title),
-                isTopLevel = false,
-                onBack     = { if (state.step == 2) vm.goBack() else nav.popBackStack() },
-            )
-        },
-    ) { padding ->
-        when (state.step) {
-            1    -> Step1(state, vm, padding)
-            else -> Step2(state, vm, padding)
-        }
+    // Body only — the title + back arrow come from ScreenHostActivity (see Dest.NewKhatmah.titleRes).
+    when (state.step) {
+        1    -> Step1(state, vm, PaddingValues(0.dp))
+        else -> Step2(state, vm, PaddingValues(0.dp))
     }
 
     // Show success dialog once khatmah is persisted
     state.savedResult?.let { result ->
-        KhatmahSuccessDialog(result = result, onDone = { nav.popBackStack() })
+        KhatmahSuccessDialog(result = result, onDone = { nav.back() })
     }
 }
 
@@ -366,9 +355,4 @@ private fun DurationStepper(onIncrement: () -> Unit, onDecrement: () -> Unit) {
             }
         }
     }
-}
-
-object NewKhatmahPage : AppPage() {
-    override val route = "new_khatmah"
-    @Composable override fun Content(back: NavBackStackEntry) = NewKhatmahScreen()
 }

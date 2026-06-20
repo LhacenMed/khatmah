@@ -116,7 +116,7 @@ class WarshQcf4Repository private constructor(private val ctx: Context) : Qcf4Pa
         Qcf4Page(pageNum, font, lines)
     }
 
-    suspend fun ayaPageIndex(): Map<Long, Int> = withContext(Dispatchers.IO) {
+    override suspend fun ayaPageIndex(): Map<Long, Int> = withContext(Dispatchers.IO) {
         dao.versePages(RIWAYA).associate { vp ->
             (vp.sura.toLong() shl 32 or vp.aya.toLong()) to (vp.pageNum - 1)
         }

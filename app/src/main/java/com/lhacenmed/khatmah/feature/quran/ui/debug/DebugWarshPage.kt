@@ -4,8 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,9 +14,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.PathParser
 import androidx.core.graphics.withTranslation
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.feature.quran.ui.reader.ParsedVector
 import com.lhacenmed.khatmah.feature.quran.ui.reader.VectorXmlParser
 import java.io.File
@@ -26,11 +21,9 @@ import java.io.File
 /**
  * Debug page — renders a Warsh XML vector from internal storage via Canvas.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DebugWarshScreen() {
     val context = LocalContext.current
-    val nav     = LocalNavController.current
 
     // Parse once; null = file missing or parse error
     var errorMsg by remember { mutableStateOf<String?>(null) }
@@ -47,35 +40,23 @@ fun DebugWarshScreen() {
         }.getOrNull()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Debug Warsh 001") },
-                navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                }
+    // Body only — the title + back arrow come from ScreenHostActivity (see Dest.DebugWarsh.titleRes).
+    Box(
+        modifier         = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        if (vector != null) {
+            VectorFileCanvas(
+                vector   = vector,
+                modifier = Modifier.fillMaxSize()
             )
-        }
-    ) { padding ->
-        Box(
-            modifier         = Modifier.fillMaxSize().padding(padding),
-            contentAlignment = Alignment.Center
-        ) {
-            if (vector != null) {
-                VectorFileCanvas(
-                    vector   = vector,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                Text(
-                    text     = errorMsg ?: "Unknown error",
-                    style    = MaterialTheme.typography.bodySmall,
-                    color    = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
+        } else {
+            Text(
+                text     = errorMsg ?: "Unknown error",
+                style    = MaterialTheme.typography.bodySmall,
+                color    = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(16.dp)
+            )
         }
     }
 }
@@ -114,9 +95,4 @@ fun VectorFileCanvas(vector: ParsedVector, modifier: Modifier = Modifier) {
             }
         }
     }
-}
-
-object DebugWarshPage : AppPage() {
-    override val route = "debug_warsh"
-    @Composable override fun Content(back: NavBackStackEntry) = DebugWarshScreen()
 }

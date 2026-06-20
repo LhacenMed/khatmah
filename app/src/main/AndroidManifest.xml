@@ -40,6 +40,29 @@
             </intent-filter>
         </activity>
 
+        <!-- One-time onboarding wizard (self-contained NavHost). -->
+        <activity android:name=".onboarding.OnboardingActivity" android:exported="false" />
+
+        <!-- Single host for every Dest.screen() destination. Declared once; all host-model
+             screens reuse it, so new screens never need a manifest entry. -->
+        <activity android:name=".core.ScreenHostActivity" android:exported="false" />
+
+        <!-- Native (View-based) QCF4 book reader — Quran Android's PagerActivity port. -->
+        <activity
+            android:name=".feature.quran.ui.book.BookReaderActivity"
+            android:exported="false" />
+
+        <!-- Reader settings — Quran Android's QuranPreferenceActivity analog. -->
+        <activity
+            android:name=".feature.quran.ui.book.BookReaderSettingsActivity"
+            android:exported="false" />
+
+        <!-- Reader search — the QuranSearchScreen port; keyboard resizes the results list. -->
+        <activity
+            android:name=".feature.quran.ui.book.BookSearchActivity"
+            android:windowSoftInputMode="adjustResize"
+            android:exported="false" />
+
         <receiver
             android:name=".widget.PrayerWidgetReceiver"
             android:exported="true"

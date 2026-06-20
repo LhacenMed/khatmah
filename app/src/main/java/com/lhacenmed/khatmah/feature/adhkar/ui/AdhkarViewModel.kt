@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lhacenmed.khatmah.feature.adhkar.data.AdhkarCategory
+import com.lhacenmed.khatmah.feature.adhkar.data.AdhkarChangeNotifier
 import com.lhacenmed.khatmah.feature.adhkar.data.BuiltInDefaults
 import com.lhacenmed.khatmah.feature.adhkar.data.AdhkarRepository
 import com.lhacenmed.khatmah.feature.adhkar.data.Dhikr
@@ -59,16 +60,21 @@ class AdhkarViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch {
             repo.seedIfEmpty()
-            reload()
+            // Re-fetch on every adhkar-store change — whether this VM made it or another
+            // activity's VM did — so the tab, detail, and editor stay in sync without manual
+            // reloads. The StateFlow's current value also drives the initial load.
+            AdhkarChangeNotifier.changes.collect { refresh() }
         }
     }
 
+    private suspend fun refresh() {
+        val list = repo.getCategories()
+        _uiState.update { it.copy(categories = list, isLoading = false, version = it.version + 1) }
+    }
+
+    /** Forces a re-fetch (e.g. on locale change so built-in titles re-resolve). */
     fun reload() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val list = repo.getCategories()
-            _uiState.update { it.copy(categories = list, isLoading = false, version = it.version + 1) }
-        }
+        viewModelScope.launch { refresh() }
     }
 
     // ── Selection mode ────────────────────────────────────────────────────────
@@ -97,7 +103,6 @@ class AdhkarViewModel(app: Application) : AndroidViewModel(app) {
             repo.deleteCategories(ids)
             ids.forEach { dhikrCache.remove(it) }   // invalidate
             _uiState.update { it.copy(selectionMode = false, selectedIds = emptySet()) }
-            reload()
         }
     }
 
@@ -107,7 +112,6 @@ class AdhkarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val sortOrder = _uiState.value.categories.size
             repo.insertCategory(category, dhikrList, sortOrder)
-            reload()
         }
     }
 
@@ -117,7 +121,6 @@ class AdhkarViewModel(app: Application) : AndroidViewModel(app) {
             // Update cache immediately so any return visit reads fresh data without a DB round-trip.
             dhikrCache[category.id] = dhikrList
             repo.updateCategory(category, dhikrList)
-            reload()
         }
     }
 
@@ -129,7 +132,6 @@ class AdhkarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             repo.resetCategoryToDefaults(categoryId)
             dhikrCache.remove(categoryId)   // invalidate
-            reload()
         }
     }
 

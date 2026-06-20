@@ -46,7 +46,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -68,11 +67,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavBackStackEntry
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafRegistry
@@ -107,45 +102,33 @@ fun PrintSelectScreen() {
     val vm: PrintSelectViewModel = viewModel()
     val selected by vm.selected.collectAsState()
     val states   by vm.downloadStates.collectAsState()
-    val nav      = LocalNavController.current
 
-    Scaffold(
-        topBar = {
-            AppTopBar(
-                title      = stringResource(R.string.mushaf_print_title),
-                isTopLevel = false,
-                onBack     = { nav.navigateUp() },
-            )
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier       = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(bottom = 24.dp),
-        ) {
-            Riwaya.entries.forEach { riwaya ->
-                val prints = MushafRegistry.byRiwaya(riwaya)
-                if (prints.isEmpty()) return@forEach
+    // Body only — the title + back arrow come from ScreenHostActivity (see Dest.MushafPrints.titleRes).
+    LazyColumn(
+        modifier       = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 24.dp),
+    ) {
+        Riwaya.entries.forEach { riwaya ->
+            val prints = MushafRegistry.byRiwaya(riwaya)
+            if (prints.isEmpty()) return@forEach
 
-                item(key = "header_${riwaya.name}") {
-                    PreferenceSubtitle(text = stringResource(riwaya.nameRes))
-                }
+            item(key = "header_${riwaya.name}") {
+                PreferenceSubtitle(text = stringResource(riwaya.nameRes))
+            }
 
-                items(prints, key = { it.id }) { print ->
-                    val state = states[print.id]
-                        ?: if (print.requiresDownload) PrintDownloadState.NotDownloaded
-                        else PrintDownloadState.NotRequired
-                    PrintCardWithLog(
-                        print      = print,
-                        state      = state,
-                        isSelected = print == selected,
-                        onSelect   = { vm.select(print) },
-                        onDownload = { vm.download(print) },
-                        onCancel   = { vm.cancelDownload(print) },
-                        modifier   = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    )
-                }
+            items(prints, key = { it.id }) { print ->
+                val state = states[print.id]
+                    ?: if (print.requiresDownload) PrintDownloadState.NotDownloaded
+                    else PrintDownloadState.NotRequired
+                PrintCardWithLog(
+                    print      = print,
+                    state      = state,
+                    isSelected = print == selected,
+                    onSelect   = { vm.select(print) },
+                    onDownload = { vm.download(print) },
+                    onCancel   = { vm.cancelDownload(print) },
+                    modifier   = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
             }
         }
     }
@@ -531,14 +514,4 @@ private fun ActionButton(
             }
         }
     }
-}
-
-// ── Navigation destination ────────────────────────────────────────────────────
-
-object PrintSelectPage : AppPage() {
-    // "mushaf_prints" = "mushaf_prints" — doesn't match auto-derived "print_select".
-    override val route = "mushaf_prints"
-
-    @Composable
-    override fun Content(back: NavBackStackEntry) = PrintSelectScreen()
 }

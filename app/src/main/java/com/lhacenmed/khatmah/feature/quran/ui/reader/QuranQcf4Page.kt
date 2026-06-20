@@ -35,7 +35,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.OptionSelectBottomSheet
 import com.lhacenmed.khatmah.core.ui.components.SheetOption
 import com.lhacenmed.khatmah.feature.audio.AyaAudioManager
@@ -512,7 +512,7 @@ internal fun QuranQcf4Pager(
     vm:        QuranViewModel,
     onSearch:  () -> Unit,
 ) {
-    val nav        = LocalNavController.current
+    val nav        = LocalNavigator.current
     val context    = LocalContext.current
     val scope      = rememberCoroutineScope()
     val pagerState = rememberPagerState(
@@ -633,7 +633,7 @@ internal fun QuranQcf4Pager(
         ) {
             ImageTopBar(
                 pageNum  = pagerState.settledPage + 1,
-                onBack   = { nav.popBackStack() },
+                onBack   = { nav.back() },
                 onSearch = onSearch,
             )
         }
@@ -689,7 +689,7 @@ internal fun QuranQcf4Pager(
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 internal fun SessionQcf4Pager(startPage: Int, endPage: Int, repo: Qcf4PageSource) {
-    val nav        = LocalNavController.current
+    val nav        = LocalNavigator.current
     val context    = LocalContext.current
     val scope      = rememberCoroutineScope()
     val pageCount  = endPage - startPage + 1
@@ -800,7 +800,7 @@ internal fun SessionQcf4Pager(startPage: Int, endPage: Int, repo: Qcf4PageSource
         ) {
             ImageTopBar(
                 pageNum  = startPage + pagerState.settledPage,
-                onBack   = { nav.popBackStack() },
+                onBack   = { nav.back() },
                 onSearch = {},
             )
         }

@@ -587,4 +587,13 @@
     <string name="qadaa_from_which_group">From which group?</string>
     <string name="qadaa_day_unit">day</string>
     <string name="qadaa_confirm">Confirm</string>
+    <string name="tap_back_again_to_exit">Tap Back again to exit</string>
+
+    <string name="debug_warsh_title">Debug Warsh 001</string>
+
+    <!-- Demo tab (temporary example) -->
+    <string name="demo_tab">Demo</string>
+    <string name="demo_open">Open detail</string>
+    <string name="demo_detail">Demo Detail</string>
+    <string name="demo_detail_body">You navigated here from the Demo tab 🎉</string>
 </resources>

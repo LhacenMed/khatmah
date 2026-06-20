@@ -22,9 +22,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.LocalNavController
+import com.lhacenmed.khatmah.core.nav.Dest
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.core.nav.AppTab
+import com.lhacenmed.khatmah.core.nav.TabAction
+import com.lhacenmed.khatmah.core.nav.toIntent
 import com.lhacenmed.khatmah.feature.adhkar.ui.components.AdhkarCard
 
 private const val SMOOTH_SCROLL_THRESHOLD = 4
@@ -32,10 +35,16 @@ private const val SMOOTH_SCROLL_THRESHOLD = 4
 // ── Tab registration ──────────────────────────────────────────────────────────
 
 object AdhkarTab : AppTab(
-    iconRes = R.drawable.ic_adhkar,
-    labelRes = R.string.adhkar,
-    order = 1,
+    iconRes  = R.drawable.ic_adhkar,
+    titleRes = R.string.adhkar,
+    route    = "adhkar",
 ) {
+    override val actions = listOf(
+        TabAction(R.drawable.ic_add, R.string.add_adhkar) {
+            it.startActivity(Dest.AdhkarEditor().toIntent(it))
+        },
+    )
+
     @Composable override fun Content(padding: PaddingValues) = AdhkarScreen(padding)
 }
 
@@ -44,7 +53,7 @@ object AdhkarTab : AppTab(
 @Composable
 private fun AdhkarScreen(padding: PaddingValues) {
     val activity    = LocalActivity.current as ComponentActivity
-    val nav         = LocalNavController.current
+    val nav         = LocalNavigator.current
     val vm: AdhkarViewModel = viewModel(activity)
     val state: AdhkarUiState by vm.uiState.collectAsState()
     val scrollToTop = LocalScrollToTop.current
@@ -98,7 +107,7 @@ private fun AdhkarScreen(padding: PaddingValues) {
                 selected      = category.id in state.selectedIds,
                 onClick       = {
                     if (state.selectionMode) vm.toggleSelection(category.id)
-                    else nav.navigate(AdhkarDetailPage.routeFor(category.id))
+                    else nav.go(Dest.AdhkarDetail(category.id))
                 },
                 onLongClick   = { vm.enterSelectionMode(category.id) },
             )

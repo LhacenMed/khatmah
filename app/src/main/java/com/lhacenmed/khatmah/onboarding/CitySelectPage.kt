@@ -17,7 +17,6 @@ import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.shared.location.CountriesApi
 import com.lhacenmed.khatmah.shared.location.LocationCache
 import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.nav.ShellRoutes
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import kotlinx.coroutines.launch
 
@@ -25,6 +24,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun CitySelectPage(country: String, iso2: String, fromSettings: Boolean = false) {
     val nav           = LocalNavController.current
+    val exit          = LocalOnboardingExit.current
     val context       = LocalContext.current
     val scope         = rememberCoroutineScope()
     val snackbarState = remember { SnackbarHostState() }
@@ -70,13 +70,7 @@ fun CitySelectPage(country: String, iso2: String, fromSettings: Boolean = false)
             geocoding = false
             if (coords != null) {
                 OnboardingPrefs.complete(context, city, coords.first, coords.second, iso2)
-                if (fromSettings) {
-                    nav.navigate("prayer_settings") {
-                        popUpTo("prayer_settings") { inclusive = true }
-                    }
-                } else {
-                    nav.navigate(ShellRoutes.MAIN) { popUpTo(0) { inclusive = true } }
-                }
+                if (fromSettings) exit.toCaller() else exit.toMainApp()
             } else {
                 snackbarState.showSnackbar(geocodeErrorMsg)
             }

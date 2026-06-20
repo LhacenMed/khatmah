@@ -200,7 +200,9 @@ class QuranViewModel(
             page.segments.any { it is QuranSegment.SuraHeader && it.num == suraNum }
         }.coerceAtLeast(0)
 
-    private companion object {
+    companion object {
+        // PREFS/KEY_PAGE are the shared last-read-page contract, also read/written by the
+        // native book reader (BookReaderActivity) so reading position stays in sync.
         const val PREFS             = "quran_reader"
         const val KEY_PAGE          = "last_page"
         const val MUSHAF_PAGE_COUNT = 604

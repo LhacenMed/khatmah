@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -20,10 +19,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
-import com.lhacenmed.khatmah.core.ui.components.AppTopBar
 import com.lhacenmed.khatmah.feature.khatmah.ui.components.ReminderTimeItem
 import com.lhacenmed.khatmah.shared.reminders.ReminderConfig
 import com.lhacenmed.khatmah.shared.reminders.ReminderPrefs
@@ -36,7 +31,6 @@ import com.lhacenmed.khatmah.shared.reminders.ReminderScheduler
  */
 @Composable
 fun DailyAlarmScreen() {
-    val nav     = LocalNavController.current
     val context = LocalContext.current
 
     val reminders by ReminderPrefs.flow.collectAsState()
@@ -51,44 +45,28 @@ fun DailyAlarmScreen() {
         }
     }
 
-    Scaffold(
-        topBar = {
-            AppTopBar(
-                title      = stringResource(R.string.more_daily_alarm),
-                isTopLevel = false,
-                onBack     = { nav.popBackStack() },
+    // Body only — the title + back arrow come from ScreenHostActivity (see Dest.DailyAlarm.titleRes).
+    LazyColumn(
+        modifier            = Modifier.fillMaxSize(),
+        contentPadding      = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item {
+            Text(
+                text      = stringResource(R.string.daily_alarm_desc),
+                style     = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                modifier  = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
             )
-        },
-    ) { padding ->
-        LazyColumn(
-            modifier            = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding      = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            item {
-                Text(
-                    text      = stringResource(R.string.daily_alarm_desc),
-                    style     = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    modifier  = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                )
-            }
-            items(slots, key = { it.id }) { config ->
-                ReminderTimeItem(
-                    config       = config,
-                    onToggle     = { enabled -> save(config.copy(enabled = enabled)) },
-                    onTimeChange = { h, m   -> save(config.copy(timeHour = h, timeMinute = m)) },
-                )
-            }
+        }
+        items(slots, key = { it.id }) { config ->
+            ReminderTimeItem(
+                config       = config,
+                onToggle     = { enabled -> save(config.copy(enabled = enabled)) },
+                onTimeChange = { h, m   -> save(config.copy(timeHour = h, timeMinute = m)) },
+            )
         }
     }
-}
-
-object DailyAlarmPage : AppPage() {
-    override val route = "daily_alarm"
-    @Composable override fun Content(back: NavBackStackEntry) = DailyAlarmScreen()
 }

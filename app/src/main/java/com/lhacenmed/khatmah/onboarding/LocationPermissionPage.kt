@@ -28,12 +28,13 @@ private enum class LocState { Idle, Locating, Failed, Denied, Disabled }
 @Composable
 fun LocationPermissionPage() {
     val nav     = LocalNavController.current
+    val exit    = LocalOnboardingExit.current
     val context = LocalContext.current
     val scope   = rememberCoroutineScope()
 
     var state by remember { mutableStateOf(LocState.Idle) }
 
-    fun toMain()          = nav.navigate(ShellRoutes.MAIN) { popUpTo(0) { inclusive = true } }
+    fun toMain()          = exit.toMainApp()
     fun toCountrySelect() = nav.navigate(ShellRoutes.ONBOARDING_COUNTRY_SELECT)
 
     fun locateAndSave() {

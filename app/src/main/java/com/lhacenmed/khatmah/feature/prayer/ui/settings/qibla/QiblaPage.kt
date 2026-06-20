@@ -16,8 +16,6 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,9 +37,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lhacenmed.khatmah.R
-import androidx.navigation.NavBackStackEntry
-import com.lhacenmed.khatmah.core.nav.AppPage
-import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import kotlin.math.*
 import androidx.core.graphics.withRotation
@@ -100,7 +95,6 @@ private fun Double.toDms(): String {
 @Composable
 fun QiblaScreen() {
     val context  = LocalContext.current
-    val nav      = LocalNavController.current
     val location = remember { OnboardingPrefs.location(context) }
 
     val qiblaBearing = remember(location) {
@@ -169,34 +163,11 @@ fun QiblaScreen() {
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(stringResource(R.string.prayers_qibla))
-                        val city = location?.cityName.orEmpty()
-                        if (city.isNotBlank()) {
-                            Text(city, style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { nav.popBackStack() }) {
-                        Icon(
-                            imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.navigate_up),
-                        )
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        when {
-            location == null -> NoLocationScreen(padding)
-            !hasReading      -> CalibrationScreen(padding)
-            else             -> CompassScreen(cumulativeAzimuth, qiblaBearing, location, isTilted, devicePitch, deviceRoll, padding)
-        }
+    // Body only — title + city subtitle + back come from ScreenHostActivity (see Dest.Qibla).
+    when {
+        location == null -> NoLocationScreen(PaddingValues(0.dp))
+        !hasReading      -> CalibrationScreen(PaddingValues(0.dp))
+        else             -> CompassScreen(cumulativeAzimuth, qiblaBearing, location, isTilted, devicePitch, deviceRoll, PaddingValues(0.dp))
     }
 }
 
@@ -758,9 +729,4 @@ private fun CompassDial(
         }
         nc.drawPath(combinedPath, starPaint)
     }
-}
-
-object QiblaPage : AppPage() {
-    override val route = "qibla"
-    @Composable override fun Content(back: NavBackStackEntry) = QiblaScreen()
 }
