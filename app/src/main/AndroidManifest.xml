@@ -57,6 +57,12 @@
             android:name=".feature.quran.ui.book.BookReaderSettingsActivity"
             android:exported="false" />
 
+        <!-- Reader search — the QuranSearchScreen port; keyboard resizes the results list. -->
+        <activity
+            android:name=".feature.quran.ui.book.BookSearchActivity"
+            android:windowSoftInputMode="adjustResize"
+            android:exported="false" />
+
         <receiver
             android:name=".widget.PrayerWidgetReceiver"
             android:exported="true"

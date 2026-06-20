@@ -19,6 +19,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.updatePadding
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager.widget.ViewPager
 import com.google.android.material.color.MaterialColors
@@ -77,6 +78,20 @@ class BookReaderActivity : AppCompatActivity() {
 
     private val pageCount: Int by lazy {
         if (repo.riwaya == Riwaya.WARSH) WarshQcf4Repository.PAGE_COUNT else HafsQcf4Repository.PAGE_COUNT
+    }
+
+    // Cached aya→page map (same pagination the reader renders) for jumping to a search hit.
+    private var ayaPageCache: Map<Long, Int>? = null
+
+    // Search runs in its own [BookSearchActivity]; a selected hit comes back as sura/aya to jump to.
+    private val searchLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val data = result.data ?: return@registerForActivityResult
+        if (result.resultCode != RESULT_OK) return@registerForActivityResult
+        val sura = data.getIntExtra(BookSearchActivity.RESULT_SURA, 0)
+        val aya  = data.getIntExtra(BookSearchActivity.RESULT_AYA, 0)
+        if (sura > 0 && aya > 0) jumpToAya(sura, aya)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -220,7 +235,7 @@ class BookReaderActivity : AppCompatActivity() {
             item.isChecked = BookReaderTheme.effectiveNight(this)
             true
         }
-        R.id.menu_search -> true // TODO: search — not implemented yet
+        R.id.menu_search -> { openSearch(); true }
         R.id.menu_settings -> {
             startActivity(Intent(this, BookReaderSettingsActivity::class.java))
             true
@@ -230,6 +245,32 @@ class BookReaderActivity : AppCompatActivity() {
 
     /** Toggles the toolbar and system bars together — the immersive "book" tap. */
     fun toggleChrome() = setChrome(!chromeVisible)
+
+    // ── Search ───────────────────────────────────────────────────────────────────
+
+    /** Launches the search activity, scoped to the open session's pages when in session mode. */
+    private fun openSearch() {
+        val intent = Intent(this, BookSearchActivity::class.java)
+        if (isSession) {
+            intent.putExtra(BookSearchActivity.EXTRA_FIRST_PAGE, firstPage)
+            intent.putExtra(BookSearchActivity.EXTRA_LAST_PAGE, lastPage)
+        }
+        searchLauncher.launch(intent)
+    }
+
+    /** Jumps the pager to the page holding [sura]:[aya], clamped to the active window. */
+    fun jumpToAya(sura: Int, aya: Int) {
+        lifecycleScope.launch {
+            val page = ayaPageMap()[ayaKey(sura, aya)]?.plus(1) ?: return@launch
+            pager.setCurrentItem(positionForPage(page.coerceIn(firstPage, lastPage)), false)
+        }
+    }
+
+    /** Cached aya→page index (0-based) for the active mushaf — the reader's own pagination. */
+    private suspend fun ayaPageMap(): Map<Long, Int> =
+        ayaPageCache ?: repo.ayaPageIndex().also { ayaPageCache = it }
+
+    private fun ayaKey(sura: Int, aya: Int): Long = (sura.toLong() shl 32) or aya.toLong()
 
     /**
      * Slides the toolbar in/out via translationY over [TOOLBAR_ANIM_MS] — the exact

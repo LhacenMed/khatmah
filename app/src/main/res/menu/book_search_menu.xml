@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Book reader search toolbar action: clear the query. Shown only while the field has text;
+     its title doubles as the native long-press tooltip. -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_clear"
+        android:icon="@drawable/ic_close"
+        android:title="مسح"
+        android:visible="false"
+        app:showAsAction="always" />
+</menu>
