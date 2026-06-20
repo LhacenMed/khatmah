@@ -34,19 +34,14 @@
         <item name="fontFamily">@font/noto_kufi_regular</item>
     </style>
 
-    <!-- Native Chrome Typography -->
-    <style name="ToolbarTitleText" parent="App.TextAppearance.TitleLarge" />
-
-    <style name="ToolbarSubtitleText" parent="App.TextAppearance.BodyMedium" />
-
-    <!-- Compact toolbar: chrome showing title + subtitle together (book reader, the Prayers
-         tab in the main host), so the tall Noto Kufi font is sized down to keep both rows
-         inside the action bar height. -->
-    <style name="CompactToolbarTitleText" parent="App.TextAppearance.TitleLarge">
+    <!-- Native chrome typography — one shared size for every top app bar (main tabs, detail hosts,
+         book reader, reader settings) so titles stay consistent. The tall Noto Kufi font is sized
+         down to keep a title + subtitle together inside the action bar height. -->
+    <style name="ToolbarTitleText" parent="App.TextAppearance.TitleLarge">
         <item name="android:textSize">17sp</item>
     </style>
 
-    <style name="CompactToolbarSubtitleText" parent="App.TextAppearance.BodyMedium">
+    <style name="ToolbarSubtitleText" parent="App.TextAppearance.BodyMedium">
         <item name="android:textSize">11sp</item>
     </style>
 
