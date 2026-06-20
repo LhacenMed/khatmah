@@ -39,15 +39,15 @@ import com.lhacenmed.khatmah.core.motion.materialSharedAxisX
 import com.lhacenmed.khatmah.core.motion.materialSharedAxisZ
 import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.Dest
-import com.lhacenmed.khatmah.feature.quran.ui.book.currentReaderDest
-import com.lhacenmed.khatmah.feature.quran.ui.book.readerDestAt
-import com.lhacenmed.khatmah.feature.quran.ui.book.sessionReaderDest
+import com.lhacenmed.khatmah.feature.quran.ui.reader.currentReaderDest
+import com.lhacenmed.khatmah.feature.quran.ui.reader.isQcf4
+import com.lhacenmed.khatmah.feature.quran.ui.reader.readerDestAt
+import com.lhacenmed.khatmah.feature.quran.ui.reader.sessionReaderDest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
 import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
 import com.lhacenmed.khatmah.feature.mushaf.data.db.PageStartEntity
-import com.lhacenmed.khatmah.feature.quran.data.QuranRepository
+import com.lhacenmed.khatmah.feature.quran.data.QuranTextRepository
 import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
 import com.lhacenmed.khatmah.feature.today.components.KhatmahStats
 import com.lhacenmed.khatmah.feature.today.components.NoKhatmahCard
@@ -85,7 +85,7 @@ private fun TodayScreen(padding: PaddingValues) {
     var mismatchState by remember { mutableStateOf<TodayViewModel.UiState.Active?>(null) }
 
     // ── Quick index data ──────────────────────────────────────────────────────
-    val quranRepo    = remember { QuranRepository(context) }
+    val quranRepo    = remember { QuranTextRepository(context) }
     var allSurahs    by remember { mutableStateOf<List<SurahInfo>>(emptyList()) }
     var surahPageMap by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
     // Recency is observed, so a surah read from any screen reorders the Quick Index on return.
@@ -168,7 +168,7 @@ private fun TodayScreen(padding: PaddingValues) {
                             onMarkRead = { vm.markRead(s.session.entity.id) },
                             onRead     = {
                                 when {
-                                    mushaf == MushafPrint.WarshText || mushaf == MushafPrint.HafsText ->
+                                    !mushaf.isQcf4 ->
                                         showDlDialog = true
                                     mushaf.riwaya.dbKey != s.khatmah.riwaya ->
                                         mismatchState = s

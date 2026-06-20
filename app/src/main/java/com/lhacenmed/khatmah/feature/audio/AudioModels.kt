@@ -1,29 +1,50 @@
 package com.lhacenmed.khatmah.feature.audio
 
-// ── Reader manifest (from assets/readers.json) ────────────────────────────────
+import java.io.File
 
-data class ReaderManifest(val readers: List<ReaderInfo>)
+// ── Download state ────────────────────────────────────────────────────────────
 
-data class ReaderInfo(
-    val id:       String,
-    val name:     String,
-    val folderId: String,
+sealed class DownloadState {
+    /** Checking cache / connecting — length unknown yet. */
+    object Connecting : DownloadState()
+    /**
+     * Actively downloading. [progress] is 0f–1f when Content-Length is known;
+     * -1f when the server did not send Content-Length (indeterminate).
+     */
+    data class Downloading(val progress: Float) : DownloadState()
+    /** Both files are ready on disk. */
+    data class Ready(val mp3: File, val transcript: List<TranscriptSegment>) : DownloadState()
+    data class Error(val message: String) : DownloadState()
+}
+
+// ── Player UI state ─────────────────────────────────────────────────────────────
+
+data class AyaAudioState(
+    val suraNum:    Int            = 0,
+    val ayaNum:     Int            = 0,
+    val readerName: String         = "",
+    val isPlaying:  Boolean        = false,
+    /** 0f–1f progress across the full surah audio file. */
+    val progress:   Float          = 0f,
+    val active:     Boolean        = false,
+    val loadState:  AudioLoadState = AudioLoadState.Idle,
 )
 
-// ── Folder index (cached per reader in filesDir) ──────────────────────────────
+sealed class AudioLoadState {
+    object Idle       : AudioLoadState()
+    /** Connecting / waiting for the first byte. Progress bar is indeterminate. */
+    object Connecting : AudioLoadState()
+    /**
+     * Downloading the surah audio.
+     * [progress] is 0f–1f for real progress; -1f means indeterminate
+     * (e.g. Content-Length absent on the response).
+     */
+    data class Downloading(val progress: Float) : AudioLoadState()
+    object Ready                                : AudioLoadState()
+    data class Error(val message: String)       : AudioLoadState()
+}
 
-/**
- * Cached Drive listing for one reader: maps surah number → file IDs.
- * Persisted as JSON at filesDir/audio/{readerId}/index.json.
- */
-data class ReaderIndex(
-    /** surahNum (as string key) → SurahFiles */
-    val surahs: Map<String, SurahFiles>,
-)
-
-data class SurahFiles(val mp3Id: String, val jsonId: String)
-
-// ── Transcript JSON (from Drive) ──────────────────────────────────────────────
+// ── Transcript JSON ───────────────────────────────────────────────────────────
 
 /**
  * One recited segment — maps 1:1 to an aya (or the standalone basmala).

@@ -1,66 +1,24 @@
 package com.lhacenmed.khatmah.feature.mushaf.data
 
 import androidx.annotation.StringRes
-import com.lhacenmed.khatmah.R
+
+/** How a mushaf is rendered. TEXT ships in-app (no download); QCF4 is a downloadable glyph bundle. */
+enum class MushafFormat { TEXT, QCF4 }
 
 /**
- * Represents a selectable Quran mushaf print.
+ * A selectable mushaf print — a (riwaya × format) pair. The catalogue is generated from those two
+ * axes in [MushafRegistry], so the whole system stays riwaya-driven: adding Qaloon is a [Riwaya]
+ * entry plus its strings (and, for QCF4, a `RiwayaConfig` row), with no new print classes.
  *
- * To add a new print: add a [data object] here, register it in [MushafRegistry],
- * handle its download in [PrintSelectViewModel], and add strings.
+ * [id] is the stable preferences key (e.g. "warsh_text", "hafs_qcf4") — unchanged from the former
+ * per-object prints, so existing selections keep resolving.
  */
-sealed class MushafPrint(
-    val id: String,
+data class MushafPrint(
     val riwaya: Riwaya,
+    val format: MushafFormat,
     @StringRes val nameRes: Int,
     @StringRes val descRes: Int,
-    val requiresDownload: Boolean,
 ) {
-    data object WarshText : MushafPrint(
-        id               = "warsh_text",
-        riwaya           = Riwaya.WARSH,
-        nameRes          = R.string.print_warsh_text,
-        descRes          = R.string.print_warsh_text_desc,
-        requiresDownload = false,
-    )
-
-    data object HafsText : MushafPrint(
-        id               = "hafs_text",
-        riwaya           = Riwaya.HAFS,
-        nameRes          = R.string.print_hafs_text,
-        descRes          = R.string.print_hafs_text_desc,
-        requiresDownload = false,
-    )
-
-    data object WarshImages : MushafPrint(
-        id               = "warsh_images",
-        riwaya           = Riwaya.WARSH,
-        nameRes          = R.string.print_warsh_images,
-        descRes          = R.string.print_warsh_images_desc,
-        requiresDownload = true,
-    )
-
-    data object WarshSvg : MushafPrint(
-        id               = "warsh_svg",
-        riwaya           = Riwaya.WARSH,
-        nameRes          = R.string.print_warsh_svg,
-        descRes          = R.string.print_warsh_svg_desc,
-        requiresDownload = true,
-    )
-
-    data object WarshQcf4 : MushafPrint(
-        id               = "warsh_qcf4",
-        riwaya           = Riwaya.WARSH,
-        nameRes          = R.string.print_warsh_qcf4,
-        descRes          = R.string.print_warsh_qcf4_desc,
-        requiresDownload = true,
-    )
-
-    data object HafsQcf4 : MushafPrint(
-        id               = "hafs_qcf4",
-        riwaya           = Riwaya.HAFS,
-        nameRes          = R.string.print_hafs_qcf4,
-        descRes          = R.string.print_hafs_qcf4_desc,
-        requiresDownload = true,
-    )
+    val id: String get() = "${riwaya.dbKey}_${format.name.lowercase()}"
+    val requiresDownload: Boolean get() = format == MushafFormat.QCF4
 }

@@ -27,11 +27,7 @@ import com.lhacenmed.khatmah.feature.prayer.ui.settings.qibla.QiblaScreen
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.AdhanRemindersScreen
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.AdhanSoundSelectionScreen
 import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaHistoryScreen
-import com.lhacenmed.khatmah.feature.quran.ui.debug.DebugWarshScreen
-import com.lhacenmed.khatmah.feature.quran.ui.book.BookReaderActivity
-import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranReaderScreen
-import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranSessionReaderScreen
-import com.lhacenmed.khatmah.feature.quran.ui.search.QuranSearchScreen
+import com.lhacenmed.khatmah.feature.quran.ui.reader.ReaderActivity
 import com.lhacenmed.khatmah.feature.settings.AboutScreen
 import com.lhacenmed.khatmah.feature.settings.DarkThemeScreen
 import com.lhacenmed.khatmah.feature.settings.LanguageScreen
@@ -49,7 +45,7 @@ import com.lhacenmed.khatmah.onboarding.OnboardingActivity
  * manifest line. The exception is onboarding, which targets a real [OnboardingActivity]
  * (a self-contained NavHost wizard) via [target] + [extras].
  *
- * Call sites stay type-safe and unchanged: `nav.go(Dest.QuranReader(suraNum = 5))`.
+ * Call sites stay type-safe and unchanged: `nav.go(Dest.Reader(suraNum = 5))`.
  */
 sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializable {
 
@@ -93,45 +89,31 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
         override val titleRes get() = R.string.full_index_title
         override fun screen() = @Composable { FullIndexScreen() }
     }
-    data class QuranReader(val suraNum: Int = 0, val ayaNum: Int = 0) : Dest() {
-        override fun screen() = @Composable { QuranReaderScreen() }
-        // suraNum/ayaNum reach QuranViewModel through the host's SavedStateHandle.
-        override fun extras(intent: Intent) {
-            intent.putExtra(EXTRA_SURA, suraNum)
-            intent.putExtra(EXTRA_AYA, ayaNum)
-        }
-        companion object {
-            const val EXTRA_SURA = "suraNum"
-            const val EXTRA_AYA = "ayaNum"
-        }
-    }
-    data class QuranSessionReader(val startPage: Int, val endPage: Int) : Dest() {
-        override fun screen() = @Composable { QuranSessionReaderScreen(startPage, endPage) }
-    }
-    data object QuranSearch : Dest() {
-        override fun screen() = @Composable { QuranSearchScreen() }
-    }
     /**
-     * Native (View-based) QCF4 book reader — targets its own [BookReaderActivity]
-     * (Quran Android's `PagerActivity` analog) rather than the Compose host. [page]
-     * is the 1-based mushaf page to open on; 0 resumes the shared last-read page.
+     * The native (View-based) reader — targets its own [ReaderActivity] rather than the Compose
+     * host. One destination for both modes; the selected print decides text vs QCF4 rendering.
      *
-     * [startPage]..[endPage] (1-based, inclusive) restrict the reader to a single Khatmah
-     * session's pages; both 0 (the default) opens the full mushaf. [sessionId] keys that
-     * session's own remembered last-read page.
+     * [page] (1-based) opens the QCF4 book reader on an exact mushaf page. [suraNum]/[ayaNum]
+     * (1-based) target a verse — used by the text reader (different pagination) and as a fallback;
+     * 0/0 resumes the last-read page. [startPage]..[endPage] (1-based, inclusive) restrict the QCF4
+     * reader to a single Khatmah session's pages; [sessionId] keys that session's remembered page.
      */
-    data class BookReader(
+    data class Reader(
         val page: Int = 0,
+        val suraNum: Int = 0,
+        val ayaNum: Int = 0,
         val startPage: Int = 0,
         val endPage: Int = 0,
         val sessionId: Long = 0,
-    ) : Dest(BookReaderActivity::class.java) {
+    ) : Dest(ReaderActivity::class.java) {
         override fun extras(intent: Intent) {
-            intent.putExtra(BookReaderActivity.EXTRA_PAGE, page)
+            intent.putExtra(ReaderActivity.EXTRA_PAGE, page)
+            intent.putExtra(ReaderActivity.EXTRA_SURA, suraNum)
+            intent.putExtra(ReaderActivity.EXTRA_AYA, ayaNum)
             if (startPage > 0 && endPage > 0) {
-                intent.putExtra(BookReaderActivity.EXTRA_START_PAGE, startPage)
-                intent.putExtra(BookReaderActivity.EXTRA_END_PAGE, endPage)
-                intent.putExtra(BookReaderActivity.EXTRA_SESSION_ID, sessionId)
+                intent.putExtra(ReaderActivity.EXTRA_START_PAGE, startPage)
+                intent.putExtra(ReaderActivity.EXTRA_END_PAGE, endPage)
+                intent.putExtra(ReaderActivity.EXTRA_SESSION_ID, sessionId)
             }
         }
     }
@@ -261,10 +243,6 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
     }
     data object TripRequests : Dest() {
         override fun screen() = @Composable { TripRequestsScreen() }
-    }
-    data object DebugWarsh : Dest() {
-        override val titleRes get() = R.string.debug_warsh_title
-        override fun screen() = @Composable { DebugWarshScreen() }
     }
 }
 

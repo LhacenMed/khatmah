@@ -24,7 +24,7 @@ data class GhReader(val id: String, val name: String)
  * `raw.githubusercontent.com` — the same delivery model as the QCF4 data bundles, but
  * one transcript + one audio file per surah.
  *
- * Unlike [DriveAudioRepository] there is no auth and no folder-index step: every file lives
+ * There is no auth and no folder-index step: every file lives
  * at a deterministic URL built from riwaya + reader id + surah number, so a surah is exactly
  * one small transcript fetch followed by one streamed audio fetch.
  *
@@ -97,8 +97,7 @@ class GithubAudioRepository(private val context: Context) {
     // ── Seek resolver (riwaya-aware) ──────────────────────────────────────────────
 
     /**
-     * Resolves [PlaybackSource] for the selected aya — segment→aya mapping identical to
-     * [DriveAudioRepository.resolvePlayback], but the basmala-detection aya count is taken
+     * Resolves [PlaybackSource] for the selected aya. The basmala-detection aya count is taken
      * from the [riwaya]'s own count table (Warsh and Hafs differ).
      */
     fun resolvePlayback(

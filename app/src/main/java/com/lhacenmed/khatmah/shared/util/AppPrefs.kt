@@ -21,7 +21,7 @@ object AppPrefs {
 
     /**
      * ID of the currently selected Quran audio reader.
-     * Matches [ReaderInfo.id] from assets/readers.json.
+     * Matches [GhReader.id] from assets/recitations.json.
      * Empty string means "use the first reader in the manifest".
      */
     private val _audioReaderId = MutableStateFlow("")

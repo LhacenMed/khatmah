@@ -47,19 +47,19 @@
              screens reuse it, so new screens never need a manifest entry. -->
         <activity android:name=".core.ScreenHostActivity" android:exported="false" />
 
-        <!-- Native (View-based) QCF4 book reader — Quran Android's PagerActivity port. -->
+        <!-- Native (View-based) reader — hosts both the QCF4 book pages and the text pages. -->
         <activity
-            android:name=".feature.quran.ui.book.BookReaderActivity"
+            android:name=".feature.quran.ui.reader.ReaderActivity"
             android:exported="false" />
 
-        <!-- Reader settings — Quran Android's QuranPreferenceActivity analog. -->
+        <!-- Reader display + reading settings. -->
         <activity
-            android:name=".feature.quran.ui.book.BookReaderSettingsActivity"
+            android:name=".feature.quran.ui.reader.ReaderSettingsActivity"
             android:exported="false" />
 
-        <!-- Reader search — the QuranSearchScreen port; keyboard resizes the results list. -->
+        <!-- Reader search; keyboard resizes the results list. -->
         <activity
-            android:name=".feature.quran.ui.book.BookSearchActivity"
+            android:name=".feature.quran.ui.search.ReaderSearchActivity"
             android:windowSoftInputMode="adjustResize"
             android:exported="false" />
 
