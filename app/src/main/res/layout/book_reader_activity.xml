@@ -39,12 +39,21 @@
         android:paddingHorizontal="16dp"
         android:paddingVertical="24dp">
 
-        <!-- RTL: page 1 sits at the right end, higher pages to the left (mushaf direction). -->
-        <SeekBar
-            android:id="@+id/book_slider"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layoutDirection="rtl" />
+            android:orientation="vertical">
+
+            <!-- Audio player — hidden until a verse is long-pressed (above the slider). -->
+            <include layout="@layout/book_audio_bar" />
+
+            <!-- RTL: page 1 sits at the right end, higher pages to the left (mushaf direction). -->
+            <SeekBar
+                android:id="@+id/book_slider"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layoutDirection="rtl" />
+        </LinearLayout>
     </FrameLayout>
 
     <!-- Drag popup: page number + sura/juz, shown only while scrubbing the slider. -->

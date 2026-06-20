@@ -7,6 +7,8 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.ImageButton
+import android.widget.ProgressBar
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
@@ -24,12 +26,18 @@ import androidx.lifecycle.lifecycleScope
 import androidx.viewpager.widget.ViewPager
 import com.google.android.material.color.MaterialColors
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.feature.audio.AudioLoadState
+import com.lhacenmed.khatmah.feature.audio.AyaAudioState
+import com.lhacenmed.khatmah.feature.audio.BookAudioController
+import com.lhacenmed.khatmah.feature.audio.GhReader
+import com.lhacenmed.khatmah.feature.audio.GithubAudioRepository
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 import com.lhacenmed.khatmah.feature.quran.data.HafsQcf4Repository
 import com.lhacenmed.khatmah.feature.quran.data.Qcf4PageSource
 import com.lhacenmed.khatmah.feature.quran.data.WarshQcf4Repository
 import com.lhacenmed.khatmah.feature.quran.ui.QuranViewModel
+import com.lhacenmed.khatmah.feature.quran.ui.reader.toArNums
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -52,6 +60,22 @@ class BookReaderActivity : AppCompatActivity() {
     private lateinit var bottomBar: FrameLayout
     private lateinit var slider: SeekBar
     private lateinit var popup: TextView
+
+    // Audio player bar (above the slider) — hidden until a verse is long-pressed.
+    private lateinit var audioBar: View
+    private lateinit var audioProgress: ProgressBar
+    private lateinit var audioPlay: ImageButton
+    private lateinit var audioTitle: TextView
+    private lateinit var audioSubtitle: TextView
+
+    private val audioController by lazy { BookAudioController(applicationContext) }
+    /** Readers available for the active riwaya; first one is used (single reader for now). */
+    private val readers: List<GhReader> by lazy {
+        GithubAudioRepository(applicationContext).readersFor(repo.riwaya.dbKey)
+    }
+
+    /** Exposes the playback state so each [BookPageFragment] can highlight the playing verse. */
+    val audioState get() = audioController.state
 
     private var chromeVisible = true
     private var metaJob: Job? = null
@@ -109,6 +133,12 @@ class BookReaderActivity : AppCompatActivity() {
         slider = findViewById(R.id.book_slider)
         popup = findViewById(R.id.page_popup)
 
+        audioBar = findViewById(R.id.book_audio_bar)
+        audioProgress = findViewById(R.id.audio_progress)
+        audioPlay = findViewById(R.id.audio_play)
+        audioTitle = findViewById(R.id.audio_title)
+        audioSubtitle = findViewById(R.id.audio_subtitle)
+
         setupToolbar()
         applyTopInset()
         applyBottomInset()
@@ -146,6 +176,7 @@ class BookReaderActivity : AppCompatActivity() {
 
         loadMetaThen(startPage)
         setupBackgroundSync()
+        setupAudioBar()
 
         insetsController.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -355,6 +386,60 @@ class BookReaderActivity : AppCompatActivity() {
             v.updatePadding(bottom = base + bottom)
             insets
         }
+    }
+
+    // ── Audio player ─────────────────────────────────────────────────────────────
+
+    /** Wires the player controls and mirrors playback state into the bar. */
+    private fun setupAudioBar() {
+        audioPlay.setOnClickListener { audioController.togglePlayPause() }
+        findViewById<ImageButton>(R.id.audio_close).setOnClickListener { audioController.stop() }
+        lifecycleScope.launch {
+            audioController.state.collect { renderAudioBar(it) }
+        }
+    }
+
+    /**
+     * Long-press on a verse: resolve the active riwaya's reader and stream that surah, seeking
+     * to the pressed aya. No reader for the riwaya → nothing happens (e.g. Hafs has none yet).
+     */
+    fun onAyaLongPress(sura: Int, aya: Int) {
+        val reader = readers.firstOrNull() ?: return
+        audioController.play(repo.riwaya.dbKey, reader.id, reader.name, sura, aya)
+    }
+
+    /** Reflects [st] into the player bar — visibility, progress, controls and labels. */
+    private fun renderAudioBar(st: AyaAudioState) {
+        if (!st.active) { audioBar.visibility = View.GONE; return }
+        audioBar.visibility = View.VISIBLE
+
+        when (val ls = st.loadState) {
+            AudioLoadState.Connecting, AudioLoadState.Idle -> audioProgress.isIndeterminate = true
+            is AudioLoadState.Downloading ->
+                if (ls.progress < 0f) audioProgress.isIndeterminate = true
+                else { audioProgress.isIndeterminate = false; audioProgress.progress = (ls.progress * 1000).toInt() }
+            AudioLoadState.Ready -> { audioProgress.isIndeterminate = false; audioProgress.progress = (st.progress * 1000).toInt() }
+            is AudioLoadState.Error -> { audioProgress.isIndeterminate = false; audioProgress.progress = 1000 }
+        }
+
+        val ready = st.loadState is AudioLoadState.Ready
+        audioPlay.isEnabled = ready
+        audioPlay.alpha = if (ready) 1f else 0.4f
+        audioPlay.setImageResource(if (st.isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow)
+
+        audioTitle.text = when (val ls = st.loadState) {
+            AudioLoadState.Connecting     -> "جارٍ الاتصال…"
+            is AudioLoadState.Downloading -> if (ls.progress >= 0f) "جارٍ التحميل… ${(ls.progress * 100).toInt()}٪" else "جارٍ التحميل…"
+            is AudioLoadState.Error       -> ls.message
+            else                          -> st.readerName
+        }
+        audioSubtitle.text = if (st.ayaNum > 0) "آية ${toArNums(st.ayaNum)}" else ""
+        audioSubtitle.visibility = if (st.ayaNum > 0) View.VISIBLE else View.GONE
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        audioController.release()
     }
 
     // ── Shared last-read page (same store as the Compose reader) ─────────────────

@@ -73,6 +73,8 @@ internal data class WordRender(
     val baseline: Float,
     val width: Float,
     val paint: Paint,
+    /** "sura:aya" of the verse this word belongs to, or null for headers/markers. */
+    val verseKey: String? = null,
 )
 
 internal data class ContainerRender(
@@ -260,7 +262,7 @@ internal fun computeLayout(
 
         LineRender(
             words = measured.map { (word, paint, ww) ->
-                WordRender(word.char, x - ww, baseline, ww, paint).also { x -= ww }
+                WordRender(word.char, x - ww, baseline, ww, paint, word.verseKey).also { x -= ww }
             },
             container = container,
         )

@@ -52,6 +52,7 @@ class BookPageFragment : Fragment() {
             setBrightness(BookReaderPrefs.textBrightness.value, BookReaderPrefs.backgroundBrightness.value)
             showPageInfo = BookReaderPrefs.showPageInfo.value
             onTap = { (activity as? BookReaderActivity)?.toggleChrome() }
+            onAyaLongPress = { sura, aya -> (activity as? BookReaderActivity)?.onAyaLongPress(sura, aya) }
             alpha = 0f // Start transparent for native smooth fade-in
         }
         pageView = view
@@ -100,6 +101,14 @@ class BookPageFragment : Fragment() {
                     setBrightness(d.text, d.bg)
                     showPageInfo = d.info
                 }
+            }
+        }
+
+        // Highlight the verse currently being played; harmless on pages that don't own it.
+        viewLifecycleOwner.lifecycleScope.launch {
+            (requireActivity() as BookReaderActivity).audioState.collect { st ->
+                pageView?.selectedAya =
+                    if (st.active && st.suraNum > 0) st.suraNum to st.ayaNum else null
             }
         }
     }

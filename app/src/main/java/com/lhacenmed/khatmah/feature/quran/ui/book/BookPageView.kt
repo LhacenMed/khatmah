@@ -9,6 +9,7 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.GestureDetector
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
@@ -23,7 +24,8 @@ import kotlin.math.ln1p
  * The page is painted on the parchment "book" gradient whose binding side flips
  * by page parity (even → right, odd → left), exactly like Quran Android's
  * line-by-line `pageGradient`. A single tap is forwarded via [onTap] so the host
- * activity can toggle its immersive chrome; ayah selection / audio are out of scope.
+ * activity can toggle its immersive chrome; a long-press is resolved to its (sura, aya)
+ * via [onAyaLongPress], and [selectedAya] highlights the playing verse.
  */
 class BookPageView @JvmOverloads constructor(
     context: Context,
@@ -44,6 +46,15 @@ class BookPageView @JvmOverloads constructor(
 
     /** Tap callback for immersive-chrome toggling. */
     var onTap: (() -> Unit)? = null
+
+    /** Long-press callback carrying the (sura, aya) of the pressed word — drives audio playback. */
+    var onAyaLongPress: ((sura: Int, aya: Int) -> Unit)? = null
+
+    /** The currently playing/selected verse to highlight, or null. Only the page that owns it draws. */
+    var selectedAya: Pair<Int, Int>? = null
+        set(value) { if (field != value) { field = value; invalidate() } }
+
+    private val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     // ── Night-mode brightness (0..255), Quran Android semantics ───────────────────
 
@@ -97,7 +108,29 @@ class BookPageView @JvmOverloads constructor(
     private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onSingleTapUp(e: MotionEvent): Boolean { onTap?.invoke(); return true }
         override fun onDown(e: MotionEvent) = true
+        override fun onLongPress(e: MotionEvent) {
+            val cb    = onAyaLongPress ?: return
+            val key   = hitWord(e.x, e.y)?.verseKey ?: return
+            val parts = key.split(":")
+            if (parts.size != 2) return
+            val sura = parts[0].toIntOrNull() ?: return
+            val aya  = parts[1].toIntOrNull() ?: return
+            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            cb(sura, aya)
+        }
     })
+
+    /** Returns the word whose glyph box contains ([x], [y]) in view coordinates, or null. */
+    private fun hitWord(x: Float, y: Float): WordRender? {
+        for (line in layout) {
+            for (word in line.words) {
+                val top    = word.baseline + word.paint.ascent()
+                val bottom = word.baseline + word.paint.descent()
+                if (x in word.x..(word.x + word.width) && y in top..bottom) return word
+            }
+        }
+        return null
+    }
 
     /** Sets the accent (sura headers / ayah markers) colour from the host theme. */
     fun setAccentColor(argb: Int) {
@@ -168,6 +201,21 @@ class BookPageView @JvmOverloads constructor(
                 }
             }
             for (word in line.words) {
+                val sel = selectedAya
+                val key = word.verseKey
+                if (sel != null && key != null) {
+                    val parts = key.split(":")
+                    if (parts.size == 2 &&
+                        parts[0].toIntOrNull() == sel.first &&
+                        parts[1].toIntOrNull() == sel.second
+                    ) {
+                        highlightPaint.color =
+                            Color.argb(0x33, Color.red(accentArgb), Color.green(accentArgb), Color.blue(accentArgb))
+                        val top    = word.baseline + word.paint.ascent() - 4f
+                        val bottom = word.baseline + word.paint.descent() + 4f
+                        canvas.drawRect(word.x, top, word.x + word.width, bottom, highlightPaint)
+                    }
+                }
                 canvas.drawText(word.char, word.x, word.baseline, word.paint)
             }
         }
