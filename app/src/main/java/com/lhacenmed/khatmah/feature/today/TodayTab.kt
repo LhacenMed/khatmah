@@ -87,8 +87,10 @@ private fun TodayScreen(padding: PaddingValues) {
     // ── Quick index data ──────────────────────────────────────────────────────
     val quranRepo    = remember { QuranRepository(context) }
     var allSurahs    by remember { mutableStateOf<List<SurahInfo>>(emptyList()) }
-    var quickSurahs  by remember { mutableStateOf<List<SurahInfo>>(emptyList()) }
     var surahPageMap by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
+    // Recency is observed, so a surah read from any screen reorders the Quick Index on return.
+    val recent       by RecentSurahsPrefs.recent.collectAsState()
+    val quickSurahs  = remember(allSurahs, recent) { resolveQuickSurahs(allSurahs, recent) }
 
     LaunchedEffect(mushaf.riwaya.dbKey) {
         val riwayaKey = mushaf.riwaya.dbKey
@@ -98,7 +100,7 @@ private fun TodayScreen(padding: PaddingValues) {
             MushafDb.get(context).dao().allPageStarts(riwayaKey)
         }
         surahPageMap = all.associate { s -> s.num to surahStartPage(pageStarts, s.num) }
-        quickSurahs  = resolveQuickSurahs(all, RecentSurahsPrefs.get(context))
+        RecentSurahsPrefs.get(context) // seed the recency flow from storage
     }
 
     // ── Dialogs ───────────────────────────────────────────────────────────────
@@ -194,7 +196,6 @@ private fun TodayScreen(padding: PaddingValues) {
                         onContinueReading = { nav.go(currentReaderDest()) },
                         onSurahClick = { suraNum ->
                             RecentSurahsPrefs.record(context, suraNum)
-                            quickSurahs = resolveQuickSurahs(allSurahs, RecentSurahsPrefs.get(context))
                             nav.go(readerDestAt(surahPageMap[suraNum] ?: 1, suraNum))
                         },
                         onFullIndex       = { nav.go(Dest.FullIndex) },
