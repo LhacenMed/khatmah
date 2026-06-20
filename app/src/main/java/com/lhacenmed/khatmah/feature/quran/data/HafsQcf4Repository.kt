@@ -154,7 +154,7 @@ class HafsQcf4Repository private constructor(private val ctx: Context) : Qcf4Pag
      * Returns a map of packed (sura shl 32 or aya) → 0-based page index.
      * Reads from the local database; returns an empty map if not yet populated.
      */
-    suspend fun ayaPageIndex(): Map<Long, Int> = withContext(Dispatchers.IO) {
+    override suspend fun ayaPageIndex(): Map<Long, Int> = withContext(Dispatchers.IO) {
         dao.versePages(RIWAYA).associate { vp ->
             (vp.sura.toLong() shl 32 or vp.aya.toLong()) to (vp.pageNum - 1)
         }

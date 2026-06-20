@@ -118,15 +118,14 @@ class BookReaderActivity : AppCompatActivity() {
         }.coerceIn(firstPage, lastPage)
         pager.setCurrentItem(positionForPage(startPage), false)
         setupSlider(startPage)
+        savePage(startPage) // persist immediately: opening a page is progress even without a swipe
 
         pager.addOnPageChangeListener(object : ViewPager.SimpleOnPageChangeListener() {
             override fun onPageSelected(position: Int) {
                 val page = pageForPosition(position)
                 updateMeta(page)
                 slider.progress = page - firstPage // keep the slider in sync (fromUser = false → ignored)
-                // Persist progress: per-session store in session mode, else the shared last-read page.
-                if (isSession) saveSessionPage(page)
-                else saveLastPage(page - 1) // shared with the Compose reader for continuity
+                savePage(page)
             }
         })
 
@@ -325,6 +324,16 @@ class BookReaderActivity : AppCompatActivity() {
     private fun readLastPage(): Int = readerPrefs.getInt(QuranViewModel.KEY_PAGE, 0)
 
     private fun saveLastPage(index: Int) = readerPrefs.edit { putInt(QuranViewModel.KEY_PAGE, index) }
+
+    /**
+     * Single entry point for persisting reading progress: the per-session store in session mode,
+     * else the shared last-read page (kept in sync with the Compose reader). Used both on open and
+     * on every page change so the two paths can never drift.
+     */
+    private fun savePage(page: Int) {
+        if (isSession) saveSessionPage(page)
+        else saveLastPage(page - 1)
+    }
 
     // ── Per-session last-read page (its own key, defaults to the session's first page) ──
 

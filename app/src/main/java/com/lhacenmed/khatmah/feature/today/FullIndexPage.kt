@@ -39,10 +39,15 @@ import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.mushaf.data.DivType
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
+import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
 import com.lhacenmed.khatmah.feature.mushaf.data.db.PageStartEntity
+import com.lhacenmed.khatmah.feature.quran.data.HafsQcf4Repository
 import com.lhacenmed.khatmah.feature.quran.data.QuranRepository
 import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
+import com.lhacenmed.khatmah.feature.quran.data.WarshQcf4Repository
+import com.lhacenmed.khatmah.feature.quran.ui.book.isQcf4
 import com.lhacenmed.khatmah.feature.quran.ui.book.readerDestAt
 import com.lhacenmed.khatmah.shared.util.RecentSurahsPrefs
 import kotlinx.coroutines.Dispatchers
@@ -77,27 +82,59 @@ class FullIndexViewModel(context: Context) : ViewModel() {
 
     init {
         val appContext = context.applicationContext
+        // Rebuild whenever the selected print changes — Warsh and Hafs differ in surah pages and
+        // juz' starts, and each QCF4 print paginates independently, so the index always matches the
+        // reader it opens. StateFlow only emits on change, so this fires once per real switch.
         viewModelScope.launch {
-            val riwayaKey = MushafPrefs.selected.value.riwaya.dbKey
-            withContext(Dispatchers.IO) {
-                val dao        = MushafDb.get(appContext).dao()
-                val all        = QuranRepository(appContext).surahList(riwayaKey)
-                val pageStarts = dao.allPageStarts(riwayaKey)
-                val divisions  = dao.divisions(riwayaKey, DivType.JUZ)
-                val nameMap    = dao.surahs(riwayaKey).associate { it.num to it.name }
+            MushafPrefs.selected.collect { print -> loadIndex(appContext, print) }
+        }
+    }
 
-                _surahs.value       = all
-                _surahPageMap.value = all.associate { s -> s.num to pageFor(pageStarts, s.num, 1) }
-                _juzList.value      = divisions.map { d ->
-                    JuzInfo(
-                        num           = d.num,
-                        startSuraNum  = d.sura,
-                        startSuraName = nameMap[d.sura].orEmpty(),
-                        startAya      = d.aya,
-                        page          = pageFor(pageStarts, d.sura, d.aya),
-                    )
-                }
+    private suspend fun loadIndex(appContext: Context, print: MushafPrint) =
+        withContext(Dispatchers.IO) {
+            val riwayaKey  = print.riwaya.dbKey
+            val dao        = MushafDb.get(appContext).dao()
+            val all        = QuranRepository(appContext).surahList(riwayaKey)
+            val pageStarts = dao.allPageStarts(riwayaKey)
+            val divisions  = dao.divisions(riwayaKey, DivType.JUZ)
+            val nameMap    = dao.surahs(riwayaKey).associate { it.num to it.name }
+
+            // Resolve pages from the same pagination the reader uses (see [pageResolver]).
+            val pageOf = pageResolver(appContext, print, pageStarts)
+
+            _surahs.value       = all
+            _surahPageMap.value = all.associate { s -> s.num to pageOf(s.num, 1) }
+            _juzList.value      = divisions.map { d ->
+                JuzInfo(
+                    num           = d.num,
+                    startSuraNum  = d.sura,
+                    startSuraName = nameMap[d.sura].orEmpty(),
+                    startAya      = d.aya,
+                    page          = pageOf(d.sura, d.aya),
+                )
             }
+        }
+
+    /**
+     * Page lookup for an aya, matching the reader the [print] opens in. QCF4 prints render their own
+     * downloaded layout (e.g. Warsh QCF4 is paginated independently of the generic 604-page Warsh),
+     * so their surah/juz' pages come from the QCF4 verse→page index; other prints use
+     * `mushaf_page_start`. Falls back to page starts when the QCF4 index isn't populated yet.
+     */
+    private suspend fun pageResolver(
+        appContext: Context,
+        print: MushafPrint,
+        pageStarts: List<PageStartEntity>,
+    ): (sura: Int, aya: Int) -> Int {
+        val byStart: (Int, Int) -> Int = { sura, aya -> pageFor(pageStarts, sura, aya) }
+        if (!print.isQcf4) return byStart
+
+        val source = if (print.riwaya == Riwaya.WARSH) WarshQcf4Repository.get(appContext)
+                     else HafsQcf4Repository.get(appContext)
+        val ayaPage = runCatching { source.ayaPageIndex() }.getOrDefault(emptyMap())
+        if (ayaPage.isEmpty()) return byStart
+        return { sura, aya ->
+            ayaPage[(sura.toLong() shl 32) or aya.toLong()]?.plus(1) ?: byStart(sura, aya)
         }
     }
 
