@@ -19,8 +19,8 @@
         android:layout_height="wrap_content"
         android:minHeight="?attr/actionBarSize"
         android:background="?attr/colorSurface"
-        app:titleTextAppearance="@style/ToolbarTitleText"
-        app:subtitleTextAppearance="@style/ToolbarSubtitleText" />
+        app:titleTextAppearance="@style/CompactToolbarTitleText"
+        app:subtitleTextAppearance="@style/CompactToolbarSubtitleText" />
 
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/compose_view"

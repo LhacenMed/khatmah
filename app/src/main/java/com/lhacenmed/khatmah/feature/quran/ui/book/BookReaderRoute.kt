@@ -22,6 +22,16 @@ fun currentReaderDest(suraNum: Int = 0): Dest =
     else Dest.QuranReader(suraNum = suraNum)
 
 /**
+ * Reader destination that opens at a specific location: the native [Dest.BookReader] at [page]
+ * for QCF4 prints, otherwise the Compose [Dest.QuranReader] targeting [suraNum]/[ayaNum]. Index
+ * entry points (a surah, or a juz' that starts mid-surah) pass the location's page together with
+ * its sura/aya so both readers land on the exact same place.
+ */
+fun readerDestAt(page: Int, suraNum: Int, ayaNum: Int = 1): Dest =
+    if (MushafPrefs.selected.value.isQcf4) Dest.BookReader(page = page)
+    else Dest.QuranReader(suraNum = suraNum, ayaNum = ayaNum)
+
+/**
  * The reader destination for a single Khatmah session ([startPage]..[endPage], 1-based
  * inclusive; [sessionId] keys its remembered progress): the native [Dest.BookReader] windowed to
  * those pages for QCF4 prints, otherwise the Compose [Dest.QuranSessionReader]. Mirrors

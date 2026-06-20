@@ -40,6 +40,7 @@ import com.lhacenmed.khatmah.core.motion.materialSharedAxisZ
 import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.feature.quran.ui.book.currentReaderDest
+import com.lhacenmed.khatmah.feature.quran.ui.book.readerDestAt
 import com.lhacenmed.khatmah.feature.quran.ui.book.sessionReaderDest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
@@ -194,7 +195,7 @@ private fun TodayScreen(padding: PaddingValues) {
                         onSurahClick = { suraNum ->
                             RecentSurahsPrefs.record(context, suraNum)
                             quickSurahs = resolveQuickSurahs(allSurahs, RecentSurahsPrefs.get(context))
-                            nav.go(Dest.QuranReader(suraNum = suraNum))
+                            nav.go(readerDestAt(surahPageMap[suraNum] ?: 1, suraNum))
                         },
                         onFullIndex       = { nav.go(Dest.FullIndex) },
                     )

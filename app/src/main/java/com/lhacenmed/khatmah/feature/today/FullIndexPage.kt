@@ -43,7 +43,7 @@ import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
 import com.lhacenmed.khatmah.feature.mushaf.data.db.PageStartEntity
 import com.lhacenmed.khatmah.feature.quran.data.QuranRepository
 import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
-import com.lhacenmed.khatmah.core.nav.Dest
+import com.lhacenmed.khatmah.feature.quran.ui.book.readerDestAt
 import com.lhacenmed.khatmah.shared.util.RecentSurahsPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -151,11 +151,13 @@ internal fun FullIndexScreen() {
             when (page) {
                 0 -> SurahsContent(surahs, surahPageMap) { suraNum ->
                     RecentSurahsPrefs.record(context, suraNum)
-                    nav.go(Dest.QuranReader(suraNum = suraNum))
+                    nav.go(readerDestAt(surahPageMap[suraNum] ?: 1, suraNum))
                 }
-                else -> AjzaContent(juzList) { suraNum ->
-                    RecentSurahsPrefs.record(context, suraNum)
-                    nav.go(Dest.QuranReader(suraNum = suraNum))
+                // A juz' opens at its own start page (it can begin mid-surah), targeting the
+                // exact sura/aya so the Compose reader lands there too — not the surah's first page.
+                else -> AjzaContent(juzList) { juz ->
+                    RecentSurahsPrefs.record(context, juz.startSuraNum)
+                    nav.go(readerDestAt(juz.page, juz.startSuraNum, juz.startAya))
                 }
             }
         }
@@ -200,7 +202,7 @@ private fun SurahsContent(
 }
 
 @Composable
-private fun AjzaContent(juzList: List<JuzInfo>, onJuzClick: (suraNum: Int) -> Unit) {
+private fun AjzaContent(juzList: List<JuzInfo>, onJuzClick: (JuzInfo) -> Unit) {
     if (juzList.isEmpty()) {
         Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
         return
@@ -208,7 +210,7 @@ private fun AjzaContent(juzList: List<JuzInfo>, onJuzClick: (suraNum: Int) -> Un
     LazyColumn(Modifier.fillMaxSize()) {
         itemsIndexed(juzList, key = { _, j -> j.num }) { i, juz ->
             ListItem(
-                modifier          = Modifier.clickable { onJuzClick(juz.startSuraNum) },
+                modifier          = Modifier.clickable { onJuzClick(juz) },
                 headlineContent   = {
                     Text(
                         text       = stringResource(R.string.full_index_juz, juz.num),

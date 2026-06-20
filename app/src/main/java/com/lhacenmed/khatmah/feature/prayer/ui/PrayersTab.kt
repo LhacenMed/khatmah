@@ -59,7 +59,7 @@ object PrayersTab : AppTab(
         TabAction(R.drawable.ic_kaaba, R.string.prayers_qibla) {
             it.startActivity(Dest.Qibla.toIntent(it))
         },
-        TabAction(R.drawable.ic_settings, R.string.prayers_settings) {
+        TabAction(R.drawable.ic_mosque, R.string.prayers_settings) {
             it.startActivity(Dest.PrayerSettings.toIntent(it))
         },
     )

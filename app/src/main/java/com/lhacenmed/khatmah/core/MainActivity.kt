@@ -3,6 +3,8 @@ package com.lhacenmed.khatmah.core
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.DrawableWrapper
 import android.os.Build
 import android.os.Bundle
 import android.view.Menu
@@ -10,6 +12,7 @@ import android.view.MenuItem
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.annotation.DrawableRes
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
@@ -301,7 +305,7 @@ class MainActivity : AppCompatActivity() {
         // surfaceContainer (same as the bottom nav) so the chrome stands out from the surface body.
         val toolbarBg = if (selecting) scheme.primaryContainer else scheme.surfaceContainer
         val onToolbar = if (selecting) scheme.onPrimaryContainer else scheme.onSurface
-        chromeIconColor = (if (selecting) scheme.onPrimaryContainer else scheme.onSurfaceVariant).toArgb()
+        chromeIconColor = (if (selecting) scheme.onPrimaryContainer else scheme.onSurface).toArgb()
         binding.toolbar.setBackgroundColor(toolbarBg.toArgb())
         binding.toolbar.setTitleTextColor(onToolbar.toArgb())
         binding.toolbar.setSubtitleTextColor(scheme.onSurfaceVariant.toArgb())
@@ -342,7 +346,7 @@ class MainActivity : AppCompatActivity() {
             // Item id = action index within the active tab's action list.
             AppTabs[selectedTab].actions.forEachIndexed { index, action ->
                 menu.add(Menu.NONE, index, index, action.titleRes)
-                    .setIcon(action.iconRes)
+                    .setIcon(actionIcon(action.iconRes))
                     .setShowAsActionFlags(
                         if (action.showAsText)
                             MenuItem.SHOW_AS_ACTION_ALWAYS or MenuItem.SHOW_AS_ACTION_WITH_TEXT
@@ -353,6 +357,26 @@ class MainActivity : AppCompatActivity() {
         // Tint visible icons to match the scheme-derived chrome colour.
         for (i in 0 until menu.size()) menu.getItem(i).icon?.setTint(chromeIconColor)
         return super.onPrepareOptionsMenu(menu)
+    }
+
+    /**
+     * Loads a tab-action drawable normalised to the standard [ACTION_ICON_DP] toolbar size.
+     * Tab icons are authored at varying intrinsic sizes (some 48dp for full-bleed bottom-nav
+     * use), and a menu item renders its icon at the drawable's intrinsic size — so without this
+     * the larger ones look oversized next to the 24dp icons. [SizedDrawable] overrides only the
+     * reported size and delegates drawing and tinting to the vector, so the chrome-colour tint
+     * pass above still recolours it. [mutate] keeps the tint local to this menu item.
+     */
+    private fun actionIcon(@DrawableRes res: Int): Drawable? {
+        val src = ContextCompat.getDrawable(this, res)?.mutate() ?: return null
+        val px  = (ACTION_ICON_DP * resources.displayMetrics.density).toInt()
+        return SizedDrawable(src, px)
+    }
+
+    /** Reports a fixed square intrinsic size; drawing and tinting delegate to [wrapped]. */
+    private class SizedDrawable(wrapped: Drawable, private val sizePx: Int) : DrawableWrapper(wrapped) {
+        override fun getIntrinsicWidth(): Int = sizePx
+        override fun getIntrinsicHeight(): Int = sizePx
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -395,6 +419,7 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val KEY_SELECTED_TAB = "selected_tab"
         private const val EXIT_CONFIRM_WINDOW_MS = 2000L
+        private const val ACTION_ICON_DP = 24f // standard toolbar action-icon size
 
         // Contextual (Adhkar selection) menu item ids; offset to avoid clashing with the
         // per-tab action indices (0, 1, …) used for normal toolbar actions.
