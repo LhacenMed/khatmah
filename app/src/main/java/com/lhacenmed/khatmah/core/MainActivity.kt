@@ -248,6 +248,12 @@ class MainActivity : AppCompatActivity() {
             binding.bottomPadding.updateLayoutParams { height = bars.bottom }
             insets
         }
+
+        // Force BottomNavigationView to ignore insets completely. By default, it aggressively adds
+        // system nav insets to its own paddingBottom. Since its height is fixed at 70dp, adding 
+        // 48dp of padding internally leaves only 22dp for icons/text, completely squishing them.
+        // We already manually handle the system nav bar with the bottomPadding view below it.
+        ViewCompat.setOnApplyWindowInsetsListener(binding.bottomNav) { _, insets -> insets }
     }
 
     /** Platform status-bar height, resolved synchronously (no inset dispatch required). */

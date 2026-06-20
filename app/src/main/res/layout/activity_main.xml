@@ -18,7 +18,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:minHeight="?attr/actionBarSize"
-        android:background="?attr/colorSurface" />
+        android:background="?attr/colorSurface"
+        app:titleTextAppearance="@style/ToolbarTitleText"
+        app:subtitleTextAppearance="@style/ToolbarSubtitleText" />
 
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/compose_view"
@@ -35,11 +37,12 @@
         android:layout_width="match_parent"
         android:layout_height="70dp"
         android:background="?attr/colorSurface"
-        app:itemPaddingTop="6dp"
-        app:itemPaddingBottom="0dp"
+        app:itemPaddingTop="10dp"
+        app:itemPaddingBottom="8dp"
         app:itemTextAppearanceActive="@style/TextBottomNav"
         app:itemTextAppearanceInactive="@style/TextBottomNav"
-        app:labelVisibilityMode="labeled" />
+        app:labelVisibilityMode="labeled"
+        app:paddingBottomSystemWindowInsets="false" />
 
     <!-- Fills the gesture/navigation-bar area beneath the bar; height set from insets in code. -->
     <View

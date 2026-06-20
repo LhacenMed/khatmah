@@ -39,6 +39,7 @@ import com.lhacenmed.khatmah.core.motion.materialSharedAxisX
 import com.lhacenmed.khatmah.core.motion.materialSharedAxisZ
 import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.Dest
+import com.lhacenmed.khatmah.feature.quran.ui.book.currentReaderDest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
@@ -187,7 +188,7 @@ private fun TodayScreen(padding: PaddingValues) {
                     QuickIndexSection(
                         surahs            = quickSurahs,
                         pageFor           = { surahPageMap[it] ?: 1 },
-                        onContinueReading = { nav.go(Dest.QuranReader()) },
+                        onContinueReading = { nav.go(currentReaderDest()) },
                         onSurahClick = { suraNum ->
                             RecentSurahsPrefs.record(context, suraNum)
                             quickSurahs = resolveQuickSurahs(allSurahs, RecentSurahsPrefs.get(context))

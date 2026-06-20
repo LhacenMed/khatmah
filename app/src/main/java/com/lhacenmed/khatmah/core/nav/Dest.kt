@@ -28,6 +28,7 @@ import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.AdhanReminders
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.AdhanSoundSelectionScreen
 import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaHistoryScreen
 import com.lhacenmed.khatmah.feature.quran.ui.debug.DebugWarshScreen
+import com.lhacenmed.khatmah.feature.quran.ui.book.BookReaderActivity
 import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranReaderScreen
 import com.lhacenmed.khatmah.feature.quran.ui.reader.QuranSessionReaderScreen
 import com.lhacenmed.khatmah.feature.quran.ui.search.QuranSearchScreen
@@ -109,6 +110,16 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
     }
     data object QuranSearch : Dest() {
         override fun screen() = @Composable { QuranSearchScreen() }
+    }
+    /**
+     * Native (View-based) QCF4 book reader — targets its own [BookReaderActivity]
+     * (Quran Android's `PagerActivity` analog) rather than the Compose host. [page]
+     * is the 1-based mushaf page to open on; 0 resumes the shared last-read page.
+     */
+    data class BookReader(val page: Int = 0) : Dest(BookReaderActivity::class.java) {
+        override fun extras(intent: Intent) {
+            intent.putExtra(BookReaderActivity.EXTRA_PAGE, page)
+        }
     }
 
     // ── Mushaf ──────────────────────────────────────────────────────────────────

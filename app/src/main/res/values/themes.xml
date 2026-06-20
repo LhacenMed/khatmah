@@ -4,10 +4,43 @@
     <style name="Theme.Khatmah" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- Global native font -->
+        <item name="android:fontFamily">@font/noto_kufi_regular</item>
+        <item name="fontFamily">@font/noto_kufi_regular</item>
+
+        <item name="textAppearanceTitleLarge">@style/App.TextAppearance.TitleLarge</item>
+        <item name="textAppearanceTitleSmall">@style/App.TextAppearance.TitleSmall</item>
+        <item name="textAppearanceBodyLarge">@style/App.TextAppearance.BodyLarge</item>
+        <item name="textAppearanceBodyMedium">@style/App.TextAppearance.BodyMedium</item>
     </style>
 
+    <style name="App.TextAppearance.TitleLarge" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:fontFamily">@font/noto_kufi_medium</item>
+        <item name="fontFamily">@font/noto_kufi_medium</item>
+    </style>
+
+    <style name="App.TextAppearance.TitleSmall" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:fontFamily">@font/noto_kufi_medium</item>
+        <item name="fontFamily">@font/noto_kufi_medium</item>
+    </style>
+
+    <style name="App.TextAppearance.BodyLarge" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:fontFamily">@font/noto_kufi_regular</item>
+        <item name="fontFamily">@font/noto_kufi_regular</item>
+    </style>
+
+    <style name="App.TextAppearance.BodyMedium" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:fontFamily">@font/noto_kufi_regular</item>
+        <item name="fontFamily">@font/noto_kufi_regular</item>
+    </style>
+
+    <!-- Native Chrome Typography -->
+    <style name="ToolbarTitleText" parent="App.TextAppearance.TitleLarge" />
+
+    <style name="ToolbarSubtitleText" parent="App.TextAppearance.BodyMedium" />
+
     <!-- Compact bottom-navigation label text (AntennaPod's exact value). -->
-    <style name="TextBottomNav" parent="TextAppearance.Material3.TitleSmall">
+    <style name="TextBottomNav" parent="App.TextAppearance.TitleSmall">
         <item name="android:textSize">11sp</item>
     </style>
 </resources>
