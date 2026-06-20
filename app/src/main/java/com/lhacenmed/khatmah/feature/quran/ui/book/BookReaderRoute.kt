@@ -20,3 +20,15 @@ val MushafPrint.isQcf4: Boolean
 fun currentReaderDest(suraNum: Int = 0): Dest =
     if (MushafPrefs.selected.value.isQcf4) Dest.BookReader()
     else Dest.QuranReader(suraNum = suraNum)
+
+/**
+ * The reader destination for a single Khatmah session ([startPage]..[endPage], 1-based
+ * inclusive; [sessionId] keys its remembered progress): the native [Dest.BookReader] windowed to
+ * those pages for QCF4 prints, otherwise the Compose [Dest.QuranSessionReader]. Mirrors
+ * [currentReaderDest] so the session card and the continue-reading entry point route by the same
+ * QCF4 rule.
+ */
+fun sessionReaderDest(sessionId: Long, startPage: Int, endPage: Int): Dest =
+    if (MushafPrefs.selected.value.isQcf4)
+        Dest.BookReader(startPage = startPage, endPage = endPage, sessionId = sessionId)
+    else Dest.QuranSessionReader(startPage, endPage)

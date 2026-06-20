@@ -40,6 +40,7 @@ import com.lhacenmed.khatmah.core.motion.materialSharedAxisZ
 import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.feature.quran.ui.book.currentReaderDest
+import com.lhacenmed.khatmah.feature.quran.ui.book.sessionReaderDest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
@@ -170,7 +171,8 @@ private fun TodayScreen(padding: PaddingValues) {
                                         mismatchState = s
                                     else ->
                                         nav.go(
-                                            Dest.QuranSessionReader(
+                                            sessionReaderDest(
+                                                s.session.entity.id,
                                                 s.session.entity.startPage,
                                                 s.session.entity.endPage,
                                             )

@@ -115,10 +115,24 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
      * Native (View-based) QCF4 book reader — targets its own [BookReaderActivity]
      * (Quran Android's `PagerActivity` analog) rather than the Compose host. [page]
      * is the 1-based mushaf page to open on; 0 resumes the shared last-read page.
+     *
+     * [startPage]..[endPage] (1-based, inclusive) restrict the reader to a single Khatmah
+     * session's pages; both 0 (the default) opens the full mushaf. [sessionId] keys that
+     * session's own remembered last-read page.
      */
-    data class BookReader(val page: Int = 0) : Dest(BookReaderActivity::class.java) {
+    data class BookReader(
+        val page: Int = 0,
+        val startPage: Int = 0,
+        val endPage: Int = 0,
+        val sessionId: Long = 0,
+    ) : Dest(BookReaderActivity::class.java) {
         override fun extras(intent: Intent) {
             intent.putExtra(BookReaderActivity.EXTRA_PAGE, page)
+            if (startPage > 0 && endPage > 0) {
+                intent.putExtra(BookReaderActivity.EXTRA_START_PAGE, startPage)
+                intent.putExtra(BookReaderActivity.EXTRA_END_PAGE, endPage)
+                intent.putExtra(BookReaderActivity.EXTRA_SESSION_ID, sessionId)
+            }
         }
     }
 

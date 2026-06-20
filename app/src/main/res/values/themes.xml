@@ -39,6 +39,16 @@
 
     <style name="ToolbarSubtitleText" parent="App.TextAppearance.BodyMedium" />
 
+    <!-- Book reader toolbar: the only chrome showing title + subtitle together, so the tall
+         Noto Kufi font is sized down to keep both rows inside the action bar height. -->
+    <style name="BookReaderToolbarTitleText" parent="App.TextAppearance.TitleLarge">
+        <item name="android:textSize">17sp</item>
+    </style>
+
+    <style name="BookReaderToolbarSubtitleText" parent="App.TextAppearance.BodyMedium">
+        <item name="android:textSize">11sp</item>
+    </style>
+
     <!-- Compact bottom-navigation label text (AntennaPod's exact value). -->
     <style name="TextBottomNav" parent="App.TextAppearance.TitleSmall">
         <item name="android:textSize">11sp</item>

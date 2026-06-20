@@ -10,16 +10,21 @@ import androidx.fragment.app.FragmentStatePagerAdapter
  *
  * The pager itself stays LTR; the right-to-left mushaf feel comes from reversing the
  * position→page mapping exactly like Quran Android's `getPageFromPosition`
- * (`page = numberOfPages - position`). So position 0 is the last page and swiping
+ * (`page = lastPage - position`). So position 0 is the last page and swiping
  * left→right advances to the next (higher-numbered) page.
+ *
+ * [count] pages are shown, mapping down from [lastPage]; a full mushaf passes
+ * `count = pageCount, lastPage = pageCount`, while a Khatmah session passes the
+ * window's size and its highest page so only that range is reachable.
  */
 class BookPagerAdapter(
     fm: FragmentManager,
-    private val pageCount: Int,
+    private val count: Int,
+    private val lastPage: Int,
 ) : FragmentStatePagerAdapter(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
 
-    override fun getCount(): Int = pageCount
+    override fun getCount(): Int = count
 
     override fun getItem(position: Int): Fragment =
-        BookPageFragment.newInstance(pageCount - position)
+        BookPageFragment.newInstance(lastPage - position)
 }

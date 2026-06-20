@@ -56,6 +56,17 @@ class BookReaderActivity : AppCompatActivity() {
     private var metaJob: Job? = null
     private var metaMap: Map<Int, BookMeta> = emptyMap()
 
+    // Reading window: the full mushaf by default, or a single Khatmah session's
+    // [firstPage]..[lastPage] when opened from the session card. Every page/position/slider
+    // mapping is expressed against this window, so full mode is just firstPage = 1.
+    private var firstPage = 1
+    private var lastPage = 0
+
+    // Session reading: when [isSession], progress is remembered per [sessionId] (its own last-read
+    // page), independent of the full-mushaf last-read page — same idea, separate store.
+    private var isSession = false
+    private var sessionId = 0L
+
     private val insetsController: WindowInsetsControllerCompat
         get() = WindowCompat.getInsetsController(window, window.decorView)
 
@@ -87,12 +98,24 @@ class BookReaderActivity : AppCompatActivity() {
         applyTopInset()
         applyBottomInset()
 
+        // A Khatmah session restricts the reader to [firstPage]..[lastPage]; full mushaf otherwise.
+        val sessionStart = intent.getIntExtra(EXTRA_START_PAGE, 0)
+        val sessionEnd = intent.getIntExtra(EXTRA_END_PAGE, 0)
+        isSession = sessionStart in 1..pageCount && sessionEnd in sessionStart..pageCount
+        sessionId = intent.getLongExtra(EXTRA_SESSION_ID, 0L)
+        firstPage = if (isSession) sessionStart else 1
+        lastPage = if (isSession) sessionEnd else pageCount
+
         // Pager stays LTR; the right-to-left mushaf feel comes from the reversed
-        // position↔page mapping (page = pageCount - position), exactly like Quran Android.
-        pager.adapter = BookPagerAdapter(supportFragmentManager, pageCount)
+        // position↔page mapping (page = lastPage - position), exactly like Quran Android.
+        pager.adapter = BookPagerAdapter(supportFragmentManager, lastPage - firstPage + 1, lastPage)
 
         val requested = intent.getIntExtra(EXTRA_PAGE, 0)
-        val startPage = (if (requested > 0) requested else readLastPage() + 1).coerceIn(1, pageCount)
+        val startPage = when {
+            isSession     -> readSessionPage()  // resume this session's own last-read page
+            requested > 0 -> requested
+            else          -> readLastPage() + 1 // resume the shared last-read page
+        }.coerceIn(firstPage, lastPage)
         pager.setCurrentItem(positionForPage(startPage), false)
         setupSlider(startPage)
 
@@ -100,8 +123,10 @@ class BookReaderActivity : AppCompatActivity() {
             override fun onPageSelected(position: Int) {
                 val page = pageForPosition(position)
                 updateMeta(page)
-                slider.progress = page - 1 // keep the slider in sync (fromUser = false → ignored)
-                saveLastPage(page - 1) // shared with the Compose reader for continuity
+                slider.progress = page - firstPage // keep the slider in sync (fromUser = false → ignored)
+                // Persist progress: per-session store in session mode, else the shared last-read page.
+                if (isSession) saveSessionPage(page)
+                else saveLastPage(page - 1) // shared with the Compose reader for continuity
             }
         })
 
@@ -140,7 +165,7 @@ class BookReaderActivity : AppCompatActivity() {
             updateMeta(startPage)
             // If the user scrubbed before metadata loaded, update the popup if it's visible.
             if (popup.isVisible) {
-                showPopupFor(slider.progress + 1)
+                showPopupFor(firstPage + slider.progress)
             }
         }
     }
@@ -156,7 +181,27 @@ class BookReaderActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.book_reader_menu, menu)
+        padMenuButton()
         return true
+    }
+
+    /**
+     * Insets the overflow button from the screen edge so it reads as balanced against the
+     * navigation (back) button on the opposite side, which already sits inset by the toolbar's
+     * content inset. The [androidx.appcompat.widget.ActionMenuView] is created during inflation,
+     * so the padding is applied on the next layout pass.
+     */
+    private fun padMenuButton() {
+        val pad = (MENU_EDGE_PAD_DP * resources.displayMetrics.density).toInt()
+        toolbar.post {
+            for (i in 0 until toolbar.childCount) {
+                (toolbar.getChildAt(i) as? androidx.appcompat.widget.ActionMenuView)?.let { menuView ->
+                    menuView.setPaddingRelative(
+                        menuView.paddingStart, menuView.paddingTop, pad, menuView.paddingBottom,
+                    )
+                }
+            }
+        }
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
@@ -213,17 +258,18 @@ class BookReaderActivity : AppCompatActivity() {
      * page jumps once on release — exactly the requested behaviour.
      */
     private fun setupSlider(startPage: Int) {
-        slider.max = pageCount - 1
-        slider.progress = startPage - 1
+        // Slider progress is a 0-based offset within the window: page = firstPage + progress.
+        slider.max = lastPage - firstPage
+        slider.progress = startPage - firstPage
         slider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar, progress: Int, fromUser: Boolean) {
-                if (fromUser) showPopupFor(progress + 1)
+                if (fromUser) showPopupFor(firstPage + progress)
             }
-            override fun onStartTrackingTouch(sb: SeekBar) = showPopupFor(sb.progress + 1)
+            override fun onStartTrackingTouch(sb: SeekBar) = showPopupFor(firstPage + sb.progress)
             override fun onStopTrackingTouch(sb: SeekBar) {
                 hidePopup()
                 // Smooth-scroll to the chosen page so the jump is animated, not abrupt.
-                pager.setCurrentItem(positionForPage(sb.progress + 1), true)
+                pager.setCurrentItem(positionForPage(firstPage + sb.progress), true)
             }
         })
     }
@@ -248,9 +294,9 @@ class BookReaderActivity : AppCompatActivity() {
         popup.visibility = View.GONE
     }
 
-    /** Reversed page↔position mapping (page = pageCount - position), matching Quran Android. */
-    private fun pageForPosition(position: Int): Int = pageCount - position
-    private fun positionForPage(page: Int): Int = pageCount - page
+    /** Reversed page↔position mapping (page = lastPage - position), matching Quran Android. */
+    private fun pageForPosition(position: Int): Int = lastPage - position
+    private fun positionForPage(page: Int): Int = lastPage - page
 
     /** Pushes the toolbar below the status bar (edge-to-edge) using stable insets. */
     private fun applyTopInset() {
@@ -279,6 +325,14 @@ class BookReaderActivity : AppCompatActivity() {
     private fun readLastPage(): Int = readerPrefs.getInt(QuranViewModel.KEY_PAGE, 0)
 
     private fun saveLastPage(index: Int) = readerPrefs.edit { putInt(QuranViewModel.KEY_PAGE, index) }
+
+    // ── Per-session last-read page (its own key, defaults to the session's first page) ──
+
+    private fun sessionPageKey() = "$KEY_SESSION_PAGE_PREFIX$sessionId"
+
+    private fun readSessionPage(): Int = readerPrefs.getInt(sessionPageKey(), firstPage)
+
+    private fun saveSessionPage(page: Int) = readerPrefs.edit { putInt(sessionPageKey(), page) }
 
     // ── Background Sync ─────────────────────────────────────────────────────────
 
@@ -339,6 +393,11 @@ class BookReaderActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_PAGE = "book_page"
+        const val EXTRA_START_PAGE = "book_start_page" // Khatmah session window, 1-based, inclusive
+        const val EXTRA_END_PAGE = "book_end_page"
+        const val EXTRA_SESSION_ID = "book_session_id" // identifies the session's saved progress
+        private const val KEY_SESSION_PAGE_PREFIX = "session_page_"
+        private const val MENU_EDGE_PAD_DP = 8f // overflow button's gap from the edge
         private const val TOOLBAR_ANIM_MS = 250L // matches Quran Android's animateToolBar
         private const val BOTTOM_PAD_DP = 24f    // bottom bar padding kept above the nav bar
         private const val POPUP_GAP_DP = 12f     // gap between the scrub popup and the bottom bar
