@@ -22,13 +22,13 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.updatePadding
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager.widget.ViewPager
 import com.google.android.material.color.MaterialColors
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.feature.audio.AudioLoadState
 import com.lhacenmed.khatmah.feature.audio.AyaAudioState
-import com.lhacenmed.khatmah.feature.audio.BookAudioController
 import com.lhacenmed.khatmah.feature.audio.GhReader
 import com.lhacenmed.khatmah.feature.audio.GithubAudioRepository
 import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
@@ -68,7 +68,9 @@ class BookReaderActivity : AppCompatActivity() {
     private lateinit var audioTitle: TextView
     private lateinit var audioSubtitle: TextView
 
-    private val audioController by lazy { BookAudioController(applicationContext) }
+    // Retained across configuration changes so recitation survives rotation (released in onCleared).
+    private val audioVm: BookAudioViewModel by viewModels()
+    private val audioController get() = audioVm.controller
     /** Readers available for the active riwaya; first one is used (single reader for now). */
     private val readers: List<GhReader> by lazy {
         GithubAudioRepository(applicationContext).readersFor(repo.riwaya.dbKey)
@@ -76,6 +78,9 @@ class BookReaderActivity : AppCompatActivity() {
 
     /** Exposes the playback state so each [BookPageFragment] can highlight the playing verse. */
     val audioState get() = audioController.state
+
+    /** Last verse the page-follow acted on (packed sura:aya), so we react only when it changes. */
+    private var followedKey = 0L
 
     private var chromeVisible = true
     private var metaJob: Job? = null
@@ -395,8 +400,26 @@ class BookReaderActivity : AppCompatActivity() {
         audioPlay.setOnClickListener { audioController.togglePlayPause() }
         findViewById<ImageButton>(R.id.audio_close).setOnClickListener { audioController.stop() }
         lifecycleScope.launch {
-            audioController.state.collect { renderAudioBar(it) }
+            audioController.state.collect {
+                renderAudioBar(it)
+                followRecitation(it)
+            }
         }
+    }
+
+    /**
+     * Keeps the page in step with the recitation: when playback moves to a verse that lives on a
+     * different page, slides the pager to it. Acts only on a verse *change* (not every progress
+     * tick), and stays on-page when the verse is already visible.
+     */
+    private suspend fun followRecitation(st: AyaAudioState) {
+        if (!st.active || st.ayaNum <= 0) { followedKey = 0L; return }
+        val key = ayaKey(st.suraNum, st.ayaNum)
+        if (key == followedKey) return
+        followedKey = key
+        val page = ayaPageMap()[key]?.plus(1) ?: return
+        val pos = positionForPage(page.coerceIn(firstPage, lastPage))
+        if (pos != pager.currentItem) pager.setCurrentItem(pos, true) // slide to the reciting verse
     }
 
     /**
@@ -406,6 +429,9 @@ class BookReaderActivity : AppCompatActivity() {
     fun onAyaLongPress(sura: Int, aya: Int) {
         val reader = readers.firstOrNull() ?: return
         audioController.play(repo.riwaya.dbKey, reader.id, reader.name, sura, aya)
+        // Reveal the chrome so the player bar slides in fully positioned (its height changes the
+        // bottom bar, which only sits correctly at translationY 0 — never half-off when hidden).
+        if (!chromeVisible) setChrome(true)
     }
 
     /** Reflects [st] into the player bar — visibility, progress, controls and labels. */
@@ -435,11 +461,6 @@ class BookReaderActivity : AppCompatActivity() {
         }
         audioSubtitle.text = if (st.ayaNum > 0) "آية ${toArNums(st.ayaNum)}" else ""
         audioSubtitle.visibility = if (st.ayaNum > 0) View.VISIBLE else View.GONE
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        audioController.release()
     }
 
     // ── Shared last-read page (same store as the Compose reader) ─────────────────
