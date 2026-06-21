@@ -342,8 +342,11 @@
 
     <!-- Notification channels -->
     <string name="notif_channel_silent">Silent</string>
-    <string name="notif_channel_device">Device sound</string>
+    <string name="notif_channel_alert">Alert sound</string>
     <string name="notif_channel_pre">Pre-adhan alert</string>
+    <string name="notif_channel_adhkar">Adhkar reminders</string>
+    <string name="notif_channel_wird">Daily wird reminders</string>
+    <string name="notif_channel_khatmah">Khatmah</string>
 
     <!-- Notification body -->
     <string name="notif_pre_alert_body">%1$d minutes until %2$s</string>

@@ -339,8 +339,11 @@
 
     <!-- Notification channels -->
     <string name="notif_channel_silent">صامت</string>
-    <string name="notif_channel_device">صوت الجهاز</string>
+    <string name="notif_channel_alert">صوت منبه</string>
     <string name="notif_channel_pre">تنبيه قبل الأذان</string>
+    <string name="notif_channel_adhkar">منبهات الأذكار</string>
+    <string name="notif_channel_wird">منبهات الورد اليومي</string>
+    <string name="notif_channel_khatmah">ختمة</string>
 
     <!-- Notification body -->
     <string name="notif_pre_alert_body">%1$d دقيقة على %2$s</string>

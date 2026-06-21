@@ -14,14 +14,13 @@ import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
 import com.lhacenmed.khatmah.feature.quran.data.MushafInitializer
 import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
+import com.lhacenmed.khatmah.feature.prayer.notification.AdhanChannels
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanPrefs
-import com.lhacenmed.khatmah.feature.prayer.notification.AdhanSound
 import com.lhacenmed.khatmah.feature.qadaa.data.QadaaPrefs
 import com.lhacenmed.khatmah.shared.fcm.FcmTokenManager
 import com.lhacenmed.khatmah.shared.reminders.ReminderNotifier
 import com.lhacenmed.khatmah.shared.reminders.ReminderPrefs
 import com.lhacenmed.khatmah.shared.reminders.ReminderScheduler
-import com.lhacenmed.khatmah.shared.util.AdhanSoundFiles
 import com.lhacenmed.khatmah.shared.util.AppPrefs
 import com.lhacenmed.khatmah.shared.util.LocaleManager
 import com.lhacenmed.khatmah.shared.util.ThemeManager
@@ -54,12 +53,9 @@ class App : Application() {
         ReminderPrefs.init(this)
         AdhanPrefs.init(this)
 
-        ReminderNotifier.ensureChannels(this, AdhanSoundFiles.list(this))
-        // Recreate custom adhan channels that may have been wiped on CH_VERSION bump.
-        AdhanPrefs.get().forEach { cfg ->
-            if (cfg.sound is AdhanSound.Custom)
-                ReminderNotifier.ensureCustomAdhanChannel(this, cfg.sound.uri, cfg.sound.displayName)
-        }
+        ReminderNotifier.ensureChannels(this)
+        // Create channels only for adhan sounds actually in use; prune the rest.
+        AdhanChannels.sync(this)
         ReminderScheduler.scheduleAll(this)
         PrayerWidgetWorker.enqueue(this)
         // Register SVG decoder so FlagCDN SVGs render via AsyncImage.
