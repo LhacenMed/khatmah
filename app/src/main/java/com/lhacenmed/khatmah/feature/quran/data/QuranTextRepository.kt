@@ -107,6 +107,19 @@ class QuranTextRepository(context: Context) {
     }
 
     /**
+     * QCF4 page range for [surahNum] — first page (aya 1) to the page of its last aya ([lastAya]) —
+     * used to open a single surah as a page-windowed session in the book reader. Null if the page
+     * anchors aren't in the DB. Resolving the end from the last aya (not the next surah) stays correct
+     * even when several short surahs share a page.
+     */
+    suspend fun pageRangeForSurah(riwaya: String, surahNum: Int, lastAya: Int): IntRange? =
+        withContext(Dispatchers.IO) {
+            val start = dao.pageForVerse(riwaya, surahNum, 1) ?: return@withContext null
+            val end = dao.pageForVerse(riwaya, surahNum, lastAya.coerceAtLeast(1)) ?: start
+            start..end
+        }
+
+    /**
      * Two-pass normalized Arabic search.
      *
      * Pass 1: single ayas whose normalized text contains the normalized query.

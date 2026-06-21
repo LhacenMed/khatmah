@@ -40,6 +40,7 @@ import com.lhacenmed.khatmah.core.motion.materialSharedAxisZ
 import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.feature.quran.ui.reader.currentReaderDest
+import com.lhacenmed.khatmah.feature.quran.ui.reader.MushafDownloadDialog
 import com.lhacenmed.khatmah.feature.quran.ui.reader.isQcf4
 import com.lhacenmed.khatmah.feature.quran.ui.reader.readerDestAt
 import com.lhacenmed.khatmah.feature.quran.ui.reader.sessionReaderDest
@@ -243,21 +244,6 @@ private fun TodayScreen(padding: PaddingValues) {
 }
 
 // ── Dialogs ───────────────────────────────────────────────────────────────────
-
-@Composable
-private fun MushafDownloadDialog(onSettings: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title            = { Text(stringResource(R.string.today_dl_title)) },
-        text             = { Text(stringResource(R.string.today_dl_msg)) },
-        confirmButton    = {
-            TextButton(onClick = onSettings) { Text(stringResource(R.string.today_settings)) }
-        },
-        dismissButton    = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.today_cancel)) }
-        },
-    )
-}
 
 /**
  * Shown when the user tries to read a session whose riwaya doesn't match
