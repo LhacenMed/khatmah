@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reader settings, built on the androidx Preference framework (Quran Android pattern): native
+     animated CheckBoxPreference toggles + custom brightness sliders. Persisted in the "book_reader"
+     SharedPreferences file (set on the PreferenceManager in ReaderSettingsFragment). -->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory
+        android:title="إعدادات العرض"
+        app:iconSpaceReserved="false"
+        xmlns:app="http://schemas.android.com/apk/res-auto">
+
+        <CheckBoxPreference
+            android:key="reader_night"
+            android:persistent="false"
+            android:title="الوضع الليلي"
+            app:iconSpaceReserved="false" />
+
+        <com.lhacenmed.khatmah.feature.quran.ui.settings.SeekBarTextBrightnessPreference
+            android:key="text_brightness"
+            android:defaultValue="180"
+            android:max="255"
+            android:dependency="reader_night"
+            android:title="سطوع النص" />
+
+        <com.lhacenmed.khatmah.feature.quran.ui.settings.SeekBarBackgroundBrightnessPreference
+            android:key="bg_brightness"
+            android:defaultValue="20"
+            android:max="64"
+            android:dependency="reader_night"
+            android:title="سطوع الخلفية" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="تفضيلات القراءة"
+        app:iconSpaceReserved="false"
+        xmlns:app="http://schemas.android.com/apk/res-auto">
+
+        <CheckBoxPreference
+            android:key="show_page_info"
+            android:persistent="false"
+            android:title="عرض معلومات الصفحة"
+            android:summary="رقم الصفحة واسم السورة ورقم الجزء أثناء القراءة"
+            app:iconSpaceReserved="false" />
+
+        <CheckBoxPreference
+            android:key="reader_test"
+            android:persistent="false"
+            android:title="اختبار"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+</PreferenceScreen>

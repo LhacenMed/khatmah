@@ -16,7 +16,9 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 object ReaderPrefs {
 
-    private const val PREFS = "book_reader"
+    /** Shared with the reader settings preferences, which persist into this same file. */
+    const val PREFS_FILE = "book_reader"
+    private const val PREFS = PREFS_FILE
     private const val KEY_TEXT_BRIGHTNESS = "text_brightness"
     private const val KEY_BG_BRIGHTNESS = "bg_brightness"
     private const val KEY_SHOW_PAGE_INFO = "show_page_info"

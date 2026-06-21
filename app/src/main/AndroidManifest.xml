@@ -58,6 +58,7 @@
         <!-- Reader display + reading settings. -->
         <activity
             android:name=".feature.quran.ui.settings.ReaderSettingsActivity"
+            android:theme="@style/Theme.Khatmah.ReaderSettings"
             android:exported="false" />
 
         <!-- Reader search; keyboard resizes the results list. -->
