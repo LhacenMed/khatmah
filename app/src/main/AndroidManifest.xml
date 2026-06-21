@@ -54,7 +54,7 @@
 
         <!-- Reader display + reading settings. -->
         <activity
-            android:name=".feature.quran.ui.reader.ReaderSettingsActivity"
+            android:name=".feature.quran.ui.settings.ReaderSettingsActivity"
             android:exported="false" />
 
         <!-- Reader search; keyboard resizes the results list. -->

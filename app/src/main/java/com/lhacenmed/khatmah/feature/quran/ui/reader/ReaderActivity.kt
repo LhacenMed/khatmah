@@ -36,6 +36,7 @@ import com.lhacenmed.khatmah.feature.quran.ui.reader.book.BookPageView
 import com.lhacenmed.khatmah.feature.quran.ui.reciter.ReaderAudioBar
 import com.lhacenmed.khatmah.feature.quran.ui.reciter.ReaderAudioViewModel
 import com.lhacenmed.khatmah.feature.quran.ui.search.ReaderSearchActivity
+import com.lhacenmed.khatmah.feature.quran.ui.settings.ReaderSettingsActivity
 import kotlinx.coroutines.launch
 
 /**

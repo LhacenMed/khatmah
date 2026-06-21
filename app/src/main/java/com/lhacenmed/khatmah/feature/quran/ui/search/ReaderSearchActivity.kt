@@ -38,7 +38,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Full-screen Quran search for the reader — its own activity, consistent with
- * [com.lhacenmed.khatmah.feature.quran.ui.reader.ReaderSettingsActivity]. The native toolbar hosts
+ * [com.lhacenmed.khatmah.feature.quran.ui.settings.ReaderSettingsActivity]. The native toolbar hosts
  * the query field and a clear action; the platform back arrow exits.
  *
  * Scope follows the reader: a session passes [EXTRA_FIRST_PAGE]/[EXTRA_LAST_PAGE] and results are

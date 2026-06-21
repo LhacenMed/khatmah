@@ -1,6 +1,8 @@
 package com.lhacenmed.khatmah.feature.quran.ui.reader.text
 
 import android.content.Context
+import android.content.res.Configuration
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Build
@@ -10,7 +12,6 @@ import android.text.style.AbsoluteSizeSpan
 import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.util.TypedValue
-import android.view.GestureDetector
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
@@ -18,6 +19,7 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.setPadding
+import com.lhacenmed.khatmah.feature.quran.ui.reader.PageZoom
 import com.lhacenmed.khatmah.feature.quran.ui.reader.toArNums
 import kotlin.math.ln1p
 
@@ -45,6 +47,18 @@ class TextPageView(context: Context) : LinearLayout(context) {
     private val ayaViews = mutableListOf<AyaView>()
 
     private val density = resources.displayMetrics.density
+
+    /**
+     * Pinch-free zoom/pan for the page (double-tap toggles, drag pans while zoomed). The whole view
+     * handles gestures, so a tap anywhere — text or margin — toggles the chrome. Active only in
+     * portrait, where the page fits the viewport; landscape keeps the wrapping vertical scroller.
+     */
+    private val zoom = PageZoom(
+        this,
+        { resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT },
+        { onTap?.invoke() },
+        ::longPressAt,
+    )
 
     var nightMode: Boolean = false
         set(value) { if (field != value) { field = value; applyColors() } }
@@ -83,7 +97,39 @@ class TextPageView(context: Context) : LinearLayout(context) {
         this.basmala = basmala
         this.centered = page.centered
         this.runs = groupSegments(page.segments)
+        zoom.reset() // a (re)used view starts at 1× so recycled pager pages never inherit a zoom
         build()
+    }
+
+    // ── Zoom/pan + page-level gestures ──────────────────────────────────────────────
+
+    @Suppress("ClickableViewAccessibility")
+    override fun onTouchEvent(event: MotionEvent): Boolean = zoom.onTouch(event)
+
+    /** Children draw through the zoom transform; at 1× it is the identity. */
+    override fun dispatchDraw(canvas: Canvas) {
+        val saved = canvas.save()
+        zoom.apply(canvas)
+        super.dispatchDraw(canvas)
+        canvas.restoreToCount(saved)
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        zoom.reset() // bounds changed → any prior pan/zoom is no longer valid
+    }
+
+    /** Long-press resolves the pressed aya across paragraphs; coordinates arrive in page space. */
+    private fun longPressAt(x: Float, y: Float) {
+        for (av in ayaViews) {
+            val v = av.view
+            if (x >= v.left && x <= v.right && y >= v.top && y <= v.bottom) {
+                val aya = av.ayaAt(x - v.left, y - v.top) ?: return
+                v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                onAyaLongPress?.invoke(aya.suraNum, aya.ayaNum)
+                return
+            }
+        }
     }
 
     // ── Build ─────────────────────────────────────────────────────────────────────
@@ -119,7 +165,6 @@ class TextPageView(context: Context) : LinearLayout(context) {
             tag = TAG_ACCENT
         })
         row.addView(rule())
-        row.tapToggles()
         return row
     }
 
@@ -139,7 +184,6 @@ class TextPageView(context: Context) : LinearLayout(context) {
             setPadding(0, v, 0, v)
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
             if (accent) tag = TAG_ACCENT
-            tapToggles()
         }
 
     /** Flowing aya paragraph: justified RTL, with inline accent ayah numbers and per-aya hit test. */
@@ -157,7 +201,6 @@ class TextPageView(context: Context) : LinearLayout(context) {
         }
         val av = AyaView(tv, run.ayas)
         ayaViews += av
-        attachAyaGestures(av)
         return tv
     }
 
@@ -220,31 +263,6 @@ class TextPageView(context: Context) : LinearLayout(context) {
             }
             av.view.text = sb
         }
-    }
-
-    // ── Gestures ──────────────────────────────────────────────────────────────────
-
-    private fun View.tapToggles() {
-        val detector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onSingleTapUp(e: MotionEvent): Boolean { onTap?.invoke(); return true }
-            override fun onDown(e: MotionEvent) = true
-        })
-        @Suppress("ClickableViewAccessibility")
-        setOnTouchListener { _, ev -> detector.onTouchEvent(ev) }
-    }
-
-    private fun attachAyaGestures(av: AyaView) {
-        val detector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onSingleTapUp(e: MotionEvent): Boolean { onTap?.invoke(); return true }
-            override fun onDown(e: MotionEvent) = true
-            override fun onLongPress(e: MotionEvent) {
-                val aya = av.ayaAt(e.x, e.y) ?: return
-                av.view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                onAyaLongPress?.invoke(aya.suraNum, aya.ayaNum)
-            }
-        })
-        @Suppress("ClickableViewAccessibility")
-        av.view.setOnTouchListener { _, ev -> detector.onTouchEvent(ev) }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────────

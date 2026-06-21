@@ -1,4 +1,4 @@
-package com.lhacenmed.khatmah.feature.quran.ui.reader
+package com.lhacenmed.khatmah.feature.quran.ui.settings
 
 import android.os.Bundle
 import android.view.View

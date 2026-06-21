@@ -8,12 +8,12 @@ import android.graphics.Paint
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.util.AttributeSet
-import android.view.GestureDetector
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
 import com.lhacenmed.khatmah.feature.quran.data.Qcf4Page
+import com.lhacenmed.khatmah.feature.quran.ui.reader.PageZoom
 import kotlin.math.ln1p
 
 /**
@@ -21,6 +21,10 @@ import kotlin.math.ln1p
  * flips by page parity (even → right, odd → left). A single tap is forwarded via [onTap] so the
  * host activity can toggle its immersive chrome; a long-press is resolved to its (sura, aya) via
  * [onAyaLongPress], and [selectedAya] highlights the playing verse.
+ *
+ * Double-tap zooms into the tapped spot (and again to zoom back out); while zoomed a drag pans the
+ * page and horizontal paging is suspended ([Zoom]). The single-tap chrome toggle stays immediate —
+ * it never waits to disambiguate a double-tap.
  */
 class BookPageView @JvmOverloads constructor(
     context: Context,
@@ -100,20 +104,23 @@ class BookPageView @JvmOverloads constructor(
     /** Fore-edge side: even pages → right, odd pages → left (real-book stacking). */
     private var stackOnRight = true
 
-    private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
-        override fun onSingleTapUp(e: MotionEvent): Boolean { onTap?.invoke(); return true }
-        override fun onDown(e: MotionEvent) = true
-        override fun onLongPress(e: MotionEvent) {
-            val cb    = onAyaLongPress ?: return
-            val key   = hitWord(e.x, e.y)?.verseKey ?: return
-            val parts = key.split(":")
-            if (parts.size != 2) return
-            val sura = parts[0].toIntOrNull() ?: return
-            val aya  = parts[1].toIntOrNull() ?: return
-            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-            cb(sura, aya)
-        }
-    })
+    /**
+     * Pinch-free zoom/pan for the page (double-tap toggles, drag pans while zoomed). Active only in
+     * portrait (fill-parent); landscape uses its own vertical scroller, so the gate is [pageAspect].
+     */
+    private val zoom = PageZoom(this, { pageAspect == 0f }, { onTap?.invoke() }, ::longPressAt)
+
+    /** Long-press resolves the pressed word's (sura, aya); coordinates arrive in page space. */
+    private fun longPressAt(x: Float, y: Float) {
+        val cb    = onAyaLongPress ?: return
+        val key   = hitWord(x, y)?.verseKey ?: return
+        val parts = key.split(":")
+        if (parts.size != 2) return
+        val sura = parts[0].toIntOrNull() ?: return
+        val aya  = parts[1].toIntOrNull() ?: return
+        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        cb(sura, aya)
+    }
 
     /** Returns the word whose glyph box contains ([x], [y]) in view coordinates, or null. */
     private fun hitWord(x: Float, y: Float): WordRender? {
@@ -141,6 +148,7 @@ class BookPageView @JvmOverloads constructor(
         this.faces = faces
         this.riwaya = riwaya
         this.calligraphicFace = calligraphicFace
+        zoom.reset() // a (re)used view starts at 1× so recycled pager pages never inherit a zoom
         rebuildLayout()
         invalidate()
     }
@@ -164,17 +172,23 @@ class BookPageView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
+        zoom.reset() // bounds changed → any prior pan/zoom is no longer valid
         rebuildLayout()
     }
 
     @Suppress("ClickableViewAccessibility")
-    override fun onTouchEvent(event: MotionEvent): Boolean = gestureDetector.onTouchEvent(event)
+    override fun onTouchEvent(event: MotionEvent): Boolean = zoom.onTouch(event)
 
     // ── Drawing ───────────────────────────────────────────────────────────────────
 
     override fun onDraw(canvas: Canvas) {
         val w = width.toFloat()
         val h = height.toFloat()
+
+        // Zoom the whole page as one unit (background, text, overlay) so it reads like zooming a
+        // photo of the sheet; at 1× the transform is the identity.
+        val saved = canvas.save()
+        zoom.apply(canvas)
 
         // Background: solid dark in night mode, otherwise the parity parchment gradient.
         if (nightMode) {
@@ -243,6 +257,8 @@ class BookPageView @JvmOverloads constructor(
         }
 
         if (showPageInfo) drawPageInfo(canvas, w, h)
+
+        canvas.restoreToCount(saved)
     }
 
     /**

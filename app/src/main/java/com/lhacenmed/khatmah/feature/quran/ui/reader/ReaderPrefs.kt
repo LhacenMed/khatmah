@@ -21,8 +21,8 @@ object ReaderPrefs {
     private const val KEY_BG_BRIGHTNESS = "bg_brightness"
     private const val KEY_SHOW_PAGE_INFO = "show_page_info"
 
-    const val DEFAULT_TEXT_BRIGHTNESS = 255
-    const val DEFAULT_BG_BRIGHTNESS = 0
+    const val DEFAULT_TEXT_BRIGHTNESS = 180
+    const val DEFAULT_BG_BRIGHTNESS = 20
 
     private val _textBrightness = MutableStateFlow(DEFAULT_TEXT_BRIGHTNESS)
     val textBrightness: StateFlow<Int> = _textBrightness.asStateFlow()

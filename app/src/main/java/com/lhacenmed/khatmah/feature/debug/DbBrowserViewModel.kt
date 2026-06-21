@@ -36,7 +36,7 @@ class DbBrowserViewModel(private val context: Context) : ViewModel() {
 
     companion object {
         private const val MAX_ROWS   = 500
-        private val KNOWN_DBS        = listOf("khatmah.db", "quran.db", "mushaf.db", "qadaa.db")
+        private val KNOWN_DBS        = listOf("khatmah.db", "mushaf.db", "qadaa.db")
     }
 
     private val _state = MutableStateFlow(DbBrowserState())
@@ -44,8 +44,7 @@ class DbBrowserViewModel(private val context: Context) : ViewModel() {
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            // quran.db is always available (copies from assets on demand)
-            val available = KNOWN_DBS.filter { it == "quran.db" || resolveDbFile(it) != null }
+            val available = KNOWN_DBS.filter { resolveDbFile(it) != null }
             _state.update { it.copy(dbNames = available) }
         }
     }
@@ -111,10 +110,6 @@ class DbBrowserViewModel(private val context: Context) : ViewModel() {
 
     private fun resolveDbFile(name: String): File? {
         val file = context.getDatabasePath(name)
-        if (name == "quran.db" && !file.exists()) {
-            file.parentFile?.mkdirs()
-            context.assets.open("databases/quran.db").use { it.copyTo(file.outputStream()) }
-        }
         return if (file.exists()) file else null
     }
 

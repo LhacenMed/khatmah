@@ -1,4 +1,4 @@
-package com.lhacenmed.khatmah.feature.quran.ui.reader
+package com.lhacenmed.khatmah.feature.quran.ui.settings
 
 import android.graphics.Color
 import android.os.Bundle
@@ -10,6 +10,8 @@ import android.widget.SeekBar
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.feature.quran.ui.reader.ReaderPrefs
+import com.lhacenmed.khatmah.feature.quran.ui.reader.ReaderTheme
 import kotlin.math.ln1p
 
 /**
