@@ -2,7 +2,7 @@ package com.lhacenmed.khatmah.feature.quran.ui.reader.book
 
 import android.graphics.Paint
 import android.graphics.Typeface
-import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
+import com.lhacenmed.khatmah.feature.quran.data.Riwaya
 import com.lhacenmed.khatmah.feature.quran.data.Qcf4Page
 import com.lhacenmed.khatmah.feature.quran.data.RiwayaConfig
 

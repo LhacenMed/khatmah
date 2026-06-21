@@ -11,8 +11,8 @@ import com.google.android.material.color.DynamicColors
 import com.lhacenmed.khatmah.BuildConfig
 import com.lhacenmed.khatmah.feature.debug.buildDynamicColorJson
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafInitializer
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.quran.data.MushafInitializer
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanPrefs
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanSound

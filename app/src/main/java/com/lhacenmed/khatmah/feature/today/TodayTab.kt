@@ -44,9 +44,9 @@ import com.lhacenmed.khatmah.feature.quran.ui.reader.isQcf4
 import com.lhacenmed.khatmah.feature.quran.ui.reader.readerDestAt
 import com.lhacenmed.khatmah.feature.quran.ui.reader.sessionReaderDest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
-import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
-import com.lhacenmed.khatmah.feature.mushaf.data.db.PageStartEntity
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.quran.data.db.MushafDb
+import com.lhacenmed.khatmah.feature.quran.data.db.PageStartEntity
 import com.lhacenmed.khatmah.feature.quran.data.QuranTextRepository
 import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
 import com.lhacenmed.khatmah.feature.today.components.KhatmahStats

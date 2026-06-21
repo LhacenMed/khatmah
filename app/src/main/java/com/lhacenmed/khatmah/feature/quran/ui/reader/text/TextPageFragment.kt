@@ -12,8 +12,8 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.ui.theme.resolveColorScheme
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
-import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.quran.data.Riwaya
 import com.lhacenmed.khatmah.feature.quran.ui.reader.ReaderActivity
 import com.lhacenmed.khatmah.feature.quran.ui.reader.ReaderPrefs
 import com.lhacenmed.khatmah.feature.quran.ui.reader.ReaderTheme

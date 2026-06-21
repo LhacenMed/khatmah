@@ -14,6 +14,9 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <!-- Re-schedule alarms after device reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Mushaf download keeps running in the background as a foreground service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:name=".core.App"
@@ -103,6 +106,12 @@
             android:exported="true"
             android:grantUriPermissions="true"
             tools:ignore="ExportedContentProvider" />
+
+        <!-- QCF4 mushaf download — runs in the background, survives leaving the screen. -->
+        <service
+            android:name=".feature.quran.data.download.DownloadService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
 
         <!-- FCM token refresh service -->
         <service

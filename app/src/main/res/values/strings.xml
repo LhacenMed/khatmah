@@ -498,6 +498,10 @@
     <string name="print_cancel_download_msg">Stop the ongoing download?</string>
     <string name="print_stop">Stop</string>
 
+    <string name="download_notif_channel">Mushaf download</string>
+    <string name="download_notif_title">Downloading %1$s mushaf</string>
+    <string name="download_notif_done">Download complete</string>
+
     <string name="today_quick_index">Quick Access</string>
     <string name="today_full_index">Index</string>
     <string name="today_continue_reading">Continue Reading</string>

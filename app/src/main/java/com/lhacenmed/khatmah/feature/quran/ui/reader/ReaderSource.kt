@@ -2,9 +2,9 @@ package com.lhacenmed.khatmah.feature.quran.ui.reader
 
 import android.content.Context
 import androidx.fragment.app.Fragment
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafFormat
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
-import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
+import com.lhacenmed.khatmah.feature.quran.data.MushafFormat
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrint
+import com.lhacenmed.khatmah.feature.quran.data.Riwaya
 import com.lhacenmed.khatmah.feature.quran.ui.reader.book.Qcf4ReaderSource
 import com.lhacenmed.khatmah.feature.quran.ui.reader.text.TextReaderSource
 

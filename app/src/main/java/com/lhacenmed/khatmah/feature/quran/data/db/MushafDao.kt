@@ -1,4 +1,4 @@
-package com.lhacenmed.khatmah.feature.mushaf.data.db
+package com.lhacenmed.khatmah.feature.quran.data.db
 
 import androidx.annotation.WorkerThread
 import androidx.room.*

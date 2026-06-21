@@ -1,10 +1,10 @@
-package com.lhacenmed.khatmah.feature.mushaf.data
+package com.lhacenmed.khatmah.feature.quran.data
 
-import com.lhacenmed.khatmah.feature.mushaf.data.db.DivisionEntity
-import com.lhacenmed.khatmah.feature.mushaf.data.db.PageStartEntity
-import com.lhacenmed.khatmah.feature.mushaf.data.db.SajdaEntity
-import com.lhacenmed.khatmah.feature.mushaf.data.db.SurahEntity
-import com.lhacenmed.khatmah.feature.mushaf.data.db.VerseEntity
+import com.lhacenmed.khatmah.feature.quran.data.db.DivisionEntity
+import com.lhacenmed.khatmah.feature.quran.data.db.PageStartEntity
+import com.lhacenmed.khatmah.feature.quran.data.db.SajdaEntity
+import com.lhacenmed.khatmah.feature.quran.data.db.SurahEntity
+import com.lhacenmed.khatmah.feature.quran.data.db.VerseEntity
 import org.json.JSONObject
 
 // ── Division type constants ───────────────────────────────────────────────────

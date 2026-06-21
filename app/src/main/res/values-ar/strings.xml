@@ -529,6 +529,10 @@
     <string name="print_cancel_download_msg">هل تريد إيقاف التنزيل الجاري؟</string>
     <string name="print_stop">إيقاف</string>
 
+    <string name="download_notif_channel">تنزيل المصحف</string>
+    <string name="download_notif_title">جارٍ تنزيل مصحف %1$s</string>
+    <string name="download_notif_done">اكتمل التنزيل</string>
+
     <!-- Quick index — TodayTab -->
     <string name="today_quick_index">الوصول السريع</string>
     <string name="today_full_index">الفهرس</string>

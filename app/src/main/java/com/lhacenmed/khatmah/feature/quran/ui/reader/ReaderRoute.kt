@@ -1,9 +1,9 @@
 package com.lhacenmed.khatmah.feature.quran.ui.reader
 
 import com.lhacenmed.khatmah.core.nav.Dest
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafFormat
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.quran.data.MushafFormat
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrint
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
 
 /** True when the selected print renders via QCF4 fonts (the downloadable book reader). */
 val MushafPrint.isQcf4: Boolean get() = format == MushafFormat.QCF4

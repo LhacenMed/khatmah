@@ -16,7 +16,7 @@ import com.lhacenmed.khatmah.feature.debug.FileBrowserScreen
 import com.lhacenmed.khatmah.feature.demo.DemoDetailScreen
 import com.lhacenmed.khatmah.feature.khatmah.ui.DailyAlarmScreen
 import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahScreen
-import com.lhacenmed.khatmah.feature.mushaf.ui.PrintSelectScreen
+import com.lhacenmed.khatmah.feature.quran.ui.prints.PrintSelectScreen
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsScreen
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.CalcMethodScreen
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.DstScreen

@@ -37,11 +37,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
-import com.lhacenmed.khatmah.feature.mushaf.data.DivType
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
-import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
-import com.lhacenmed.khatmah.feature.mushaf.data.db.PageStartEntity
+import com.lhacenmed.khatmah.feature.quran.data.DivType
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrint
+import com.lhacenmed.khatmah.feature.quran.data.db.MushafDb
+import com.lhacenmed.khatmah.feature.quran.data.db.PageStartEntity
 import com.lhacenmed.khatmah.feature.quran.data.Qcf4Repository
 import com.lhacenmed.khatmah.feature.quran.data.QuranTextRepository
 import com.lhacenmed.khatmah.feature.quran.data.SurahInfo

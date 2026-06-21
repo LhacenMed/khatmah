@@ -1,4 +1,4 @@
-package com.lhacenmed.khatmah.feature.mushaf.ui
+package com.lhacenmed.khatmah.feature.quran.ui.prints
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -69,10 +69,10 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafRegistry
-import com.lhacenmed.khatmah.feature.mushaf.data.PrintDownloadState
-import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrint
+import com.lhacenmed.khatmah.feature.quran.data.MushafRegistry
+import com.lhacenmed.khatmah.feature.quran.data.download.DownloadState
+import com.lhacenmed.khatmah.feature.quran.data.Riwaya
 
 // ── Button state key ──────────────────────────────────────────────────────────
 
@@ -83,12 +83,12 @@ import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
  */
 private enum class BtnKey { SELECTED, SELECT, DOWNLOAD, INACTIVE, PROGRESS }
 
-private fun PrintDownloadState.toBtnKey(isSelected: Boolean): BtnKey = when {
-    (this is PrintDownloadState.NotRequired || this is PrintDownloadState.Downloaded) && isSelected  -> BtnKey.SELECTED
-    (this is PrintDownloadState.NotRequired || this is PrintDownloadState.Downloaded) && !isSelected -> BtnKey.SELECT
-    this is PrintDownloadState.NotDownloaded || this is PrintDownloadState.Error                      -> BtnKey.DOWNLOAD
-    this == PrintDownloadState.Connecting                                                              -> BtnKey.INACTIVE
-    this is PrintDownloadState.Downloading -> {
+private fun DownloadState.toBtnKey(isSelected: Boolean): BtnKey = when {
+    (this is DownloadState.NotRequired || this is DownloadState.Downloaded) && isSelected  -> BtnKey.SELECTED
+    (this is DownloadState.NotRequired || this is DownloadState.Downloaded) && !isSelected -> BtnKey.SELECT
+    this is DownloadState.NotDownloaded || this is DownloadState.Error                      -> BtnKey.DOWNLOAD
+    this == DownloadState.Connecting                                                              -> BtnKey.INACTIVE
+    this is DownloadState.Downloading -> {
         // If progress is null (processing) or 100%, show the spinner (INACTIVE).
         if (progress == null || progress >= 1f) BtnKey.INACTIVE else BtnKey.PROGRESS
     }
@@ -118,8 +118,8 @@ fun PrintSelectScreen() {
 
             items(prints, key = { it.id }) { print ->
                 val state = states[print.id]
-                    ?: if (print.requiresDownload) PrintDownloadState.NotDownloaded
-                    else PrintDownloadState.NotRequired
+                    ?: if (print.requiresDownload) DownloadState.NotDownloaded
+                    else DownloadState.NotRequired
                 PrintCardWithLog(
                     print      = print,
                     state      = state,
@@ -144,14 +144,14 @@ fun PrintSelectScreen() {
 @Composable
 private fun PrintCardWithLog(
     print:      MushafPrint,
-    state:      PrintDownloadState,
+    state:      DownloadState,
     isSelected: Boolean,
     onSelect:   () -> Unit,
     onDownload: () -> Unit,
     onCancel:   () -> Unit,
     modifier:   Modifier = Modifier,
 ) {
-    val isInProgress = state is PrintDownloadState.Downloading || state == PrintDownloadState.Connecting
+    val isInProgress = state is DownloadState.Downloading || state == DownloadState.Connecting
 
     var shelfHeightPx    by remember { mutableIntStateOf(0) }
     var showCancelDialog by remember { mutableStateOf(false) }
@@ -231,10 +231,10 @@ private fun PrintCardWithLog(
  * rounded, giving the illusion of sliding out from behind the card.
  */
 @Composable
-private fun LogShelf(state: PrintDownloadState, modifier: Modifier = Modifier) {
+private fun LogShelf(state: DownloadState, modifier: Modifier = Modifier) {
     val logText = when (val s = state) {
-        PrintDownloadState.Connecting     -> stringResource(R.string.print_connecting)
-        is PrintDownloadState.Downloading -> s.log.ifBlank { stringResource(R.string.print_processing) }
+        DownloadState.Connecting     -> stringResource(R.string.print_connecting)
+        is DownloadState.Downloading -> s.log.ifBlank { stringResource(R.string.print_processing) }
         else                              -> ""
     }
     Surface(
@@ -256,22 +256,22 @@ private fun LogShelf(state: PrintDownloadState, modifier: Modifier = Modifier) {
 @Composable
 private fun PrintCard(
     print:      MushafPrint,
-    state:      PrintDownloadState,
+    state:      DownloadState,
     isSelected: Boolean,
     onSelect:   () -> Unit,
     onDownload: () -> Unit,
     onCancel:   () -> Unit,
     modifier:   Modifier = Modifier,
 ) {
-    val isAvailable  = state is PrintDownloadState.NotRequired || state is PrintDownloadState.Downloaded
-    val isActive     = state is PrintDownloadState.Downloading || state == PrintDownloadState.Connecting
+    val isAvailable  = state is DownloadState.NotRequired || state is DownloadState.Downloaded
+    val isActive     = state is DownloadState.Downloading || state == DownloadState.Connecting
     val borderColor  = if (isSelected) MaterialTheme.colorScheme.primary
     else MaterialTheme.colorScheme.outlineVariant
     val borderWidth  = if (isSelected) 2.dp else 1.dp
     val contentAlpha = if (isAvailable || isActive) 1f else 0.6f
 
-    val showProgress     = state == PrintDownloadState.Connecting || state is PrintDownloadState.Downloading
-    val downloadProgress = (state as? PrintDownloadState.Downloading)?.progress
+    val showProgress     = state == DownloadState.Connecting || state is DownloadState.Downloading
+    val downloadProgress = (state as? DownloadState.Downloading)?.progress
 
     OutlinedCard(
         onClick   = { if (isAvailable && !isSelected) onSelect() },
@@ -340,7 +340,7 @@ private fun PrintCard(
             }
 
             // ── Error message ─────────────────────────────────────────────────
-            if (state is PrintDownloadState.Error) {
+            if (state is DownloadState.Error) {
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text  = state.message,
@@ -404,7 +404,7 @@ private fun PrintCard(
  */
 @Composable
 private fun ActionButton(
-    state:      PrintDownloadState,
+    state:      DownloadState,
     isSelected: Boolean,
     onSelect:   () -> Unit,
     onDownload: () -> Unit,
@@ -505,7 +505,7 @@ private fun ActionButton(
                 )
                 BtnKey.PROGRESS -> {
                     // Reads live progress from outer state — recomposes without re-animating.
-                    val pct = (state as? PrintDownloadState.Downloading)?.progress ?: 0f
+                    val pct = (state as? DownloadState.Downloading)?.progress ?: 0f
                     Text(
                         text  = "${(pct * 100).toInt()}%",
                         style = MaterialTheme.typography.labelSmall,

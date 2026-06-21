@@ -1,4 +1,4 @@
-package com.lhacenmed.khatmah.feature.mushaf.data
+package com.lhacenmed.khatmah.feature.quran.data
 
 import com.lhacenmed.khatmah.R
 

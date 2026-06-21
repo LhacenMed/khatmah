@@ -2,7 +2,7 @@ package com.lhacenmed.khatmah.feature.quran.ui.reader.book
 
 import android.content.Context
 import androidx.fragment.app.Fragment
-import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
+import com.lhacenmed.khatmah.feature.quran.data.Riwaya
 import com.lhacenmed.khatmah.feature.quran.data.Qcf4Repository
 import com.lhacenmed.khatmah.feature.quran.data.RiwayaConfig
 import com.lhacenmed.khatmah.feature.quran.ui.reader.PageMeta

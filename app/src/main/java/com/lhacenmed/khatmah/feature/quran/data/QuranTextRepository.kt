@@ -1,9 +1,9 @@
 package com.lhacenmed.khatmah.feature.quran.data
 
 import android.content.Context
-import com.lhacenmed.khatmah.feature.mushaf.data.DivType
-import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
-import com.lhacenmed.khatmah.feature.mushaf.data.normalizeArabic
+import com.lhacenmed.khatmah.feature.quran.data.DivType
+import com.lhacenmed.khatmah.feature.quran.data.db.MushafDb
+import com.lhacenmed.khatmah.feature.quran.data.normalizeArabic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

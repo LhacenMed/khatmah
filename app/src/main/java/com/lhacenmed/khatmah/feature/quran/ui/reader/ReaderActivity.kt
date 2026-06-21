@@ -30,8 +30,8 @@ import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.feature.audio.AyaAudioState
 import com.lhacenmed.khatmah.feature.audio.GhReader
 import com.lhacenmed.khatmah.feature.audio.GithubAudioRepository
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrint
 import com.lhacenmed.khatmah.feature.quran.ui.reader.book.BookPageView
 import com.lhacenmed.khatmah.feature.quran.ui.reciter.ReaderAudioBar
 import com.lhacenmed.khatmah.feature.quran.ui.reciter.ReaderAudioViewModel

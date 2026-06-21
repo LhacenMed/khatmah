@@ -1,7 +1,7 @@
 package com.lhacenmed.khatmah.feature.quran.ui.reader
 
 import android.content.Context
-import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
+import com.lhacenmed.khatmah.feature.quran.data.db.MushafDb
 
 private val EAST_DIGITS = charArrayOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
 

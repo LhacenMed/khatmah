@@ -1,8 +1,8 @@
-package com.lhacenmed.khatmah.feature.mushaf.data
+package com.lhacenmed.khatmah.feature.quran.data
 
 import android.content.Context
 import androidx.core.content.edit
-import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
+import com.lhacenmed.khatmah.feature.quran.data.db.MushafDb
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

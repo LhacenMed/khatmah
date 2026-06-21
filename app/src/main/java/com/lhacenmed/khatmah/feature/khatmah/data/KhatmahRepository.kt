@@ -1,13 +1,13 @@
 package com.lhacenmed.khatmah.feature.khatmah.data
 
 import android.content.Context
-import com.lhacenmed.khatmah.feature.mushaf.data.DivType
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
-import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
-import com.lhacenmed.khatmah.feature.mushaf.data.db.DivisionEntity
-import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDao
-import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
-import com.lhacenmed.khatmah.feature.mushaf.data.db.PageStartEntity
+import com.lhacenmed.khatmah.feature.quran.data.DivType
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.quran.data.Riwaya
+import com.lhacenmed.khatmah.feature.quran.data.db.DivisionEntity
+import com.lhacenmed.khatmah.feature.quran.data.db.MushafDao
+import com.lhacenmed.khatmah.feature.quran.data.db.MushafDb
+import com.lhacenmed.khatmah.feature.quran.data.db.PageStartEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext

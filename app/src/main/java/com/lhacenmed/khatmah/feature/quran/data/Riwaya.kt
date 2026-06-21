@@ -1,22 +1,38 @@
 package com.lhacenmed.khatmah.feature.quran.data
 
-import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
+import android.content.Context
+import androidx.annotation.StringRes
+import com.lhacenmed.khatmah.R
+import java.io.File
 
 /**
- * Everything that varies between QCF4 mushaf riwayat, in one place. Adding a new riwaya
- * (e.g. Qaloon) is a single [entries] row — no new repository, no new download state, no new
- * branch anywhere else. The whole QCF4 stack is driven off this table via [of].
- *
- * Two partition keys matter and are deliberately distinct:
+ * The single source of truth for everything that varies per riwaya. [Riwaya] is the identity
+ * (name + db key); [RiwayaConfig] carries the QCF4 specifics (fonts, bundle URL, db partition,
+ * asset locations). Adding a riwaya (e.g. Qaloon) is one [RiwayaConfig] row plus its strings —
+ * no new repository, no new download state, no new branch anywhere else.
+ */
+enum class Riwaya(@StringRes val nameRes: Int) {
+    HAFS(R.string.riwaya_hafs),
+    WARSH(R.string.riwaya_warsh);
+
+    /** Key used in [com.lhacenmed.khatmah.feature.quran.data.db.MushafDb] tables — matches the riwaya field in bundled JSON. */
+    val dbKey: String get() = name.lowercase()  // "hafs" | "warsh"
+
+    /** QCF4 config for this riwaya. */
+    val config: RiwayaConfig get() = RiwayaConfig.of(this)
+}
+
+/**
+ * Per-riwaya QCF4 configuration and on-disk asset layout. Two partition keys matter and are
+ * deliberately distinct:
  *  - [wordKey] partitions the QCF4 glyph data (mushaf_page / mushaf_word / mushaf_verse_page).
  *    Hafs reuses the base key ("hafs"); Warsh has its own ("warsh_qcf4") so it never collides
  *    with the shared Warsh text data.
- *  - The base data (surahs / page starts / verses, shared with the text reader) is keyed by the
- *    enum's [Riwaya.dbKey] ("hafs" | "warsh"); callers read it straight off [riwaya].
+ *  - The base text data (surahs / page starts / verses) is keyed by [Riwaya.dbKey].
  */
 data class RiwayaConfig(
     val riwaya: Riwaya,
-    /** QCF4 glyph-data partition key in [com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb]. */
+    /** QCF4 glyph-data partition key in [com.lhacenmed.khatmah.feature.quran.data.db.MushafDb]. */
     val wordKey: String,
     /** Per-riwaya SharedPreferences file holding the "db ready" flag. */
     val prefsName: String,
@@ -45,9 +61,27 @@ data class RiwayaConfig(
     /** Ayah count for [suraNum] (1..114), or 0 out of range. */
     fun ayaCount(suraNum: Int): Int = if (suraNum in 1..114) ayaCounts[suraNum - 1] else 0
 
+    // ── On-disk asset layout (shared by the read repo and the downloader) ────────
+
+    /** Directory holding this riwaya's downloaded TTF glyph files. */
+    fun fontsDir(ctx: Context): File = File(ctx.filesDir, "$wordKey-qcf4/fonts")
+
+    fun prefs(ctx: Context) = ctx.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+
+    /** True when every font file is present and the DB import finished. */
+    fun isDownloaded(ctx: Context): Boolean {
+        val dir = fontsDir(ctx)
+        return dir.exists() &&
+                allFontFiles.all { File(dir, it).exists() } &&
+                prefs(ctx).getBoolean(KEY_DB_READY, false)
+    }
+
     companion object {
         /** Every QCF4 mushaf is the standard 604-page madinah layout. */
         const val PAGE_COUNT = 604
+
+        /** SharedPreferences flag set once the QCF4 DB import completes. */
+        const val KEY_DB_READY = "db_ready"
 
         fun of(riwaya: Riwaya): RiwayaConfig = entries.getValue(riwaya)
 

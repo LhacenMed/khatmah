@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * Centralized, SharedPreferences-backed store for user preferences that span
  * multiple screens (selected audio reader, and future additions).
  *
- * Mushaf print selection is managed by [com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs].
+ * Mushaf print selection is managed by [com.lhacenmed.khatmah.feature.quran.data.MushafPrefs].
  */
 object AppPrefs {
 

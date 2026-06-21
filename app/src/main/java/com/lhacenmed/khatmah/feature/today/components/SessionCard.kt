@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.ui.theme.WarshFamily
-import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
+import com.lhacenmed.khatmah.feature.quran.data.Riwaya
 import com.lhacenmed.khatmah.feature.today.TodayViewModel
 import androidx.compose.runtime.remember
 import com.lhacenmed.khatmah.core.ui.theme.HafsFamily
