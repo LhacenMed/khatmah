@@ -1,25 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Book reader overflow menu — Quran Android's quran_menu.xml subset: night reading,
-     search, settings. All shown in the overflow dropdown. -->
+<!-- Reader top-bar menu — mirrors Quran Android's quran_menu.xml item set and order.
+     Bookmark, translation and "back to page" are placeholders (no-op for now); search, night
+     reading and settings are wired. Jump and help live in the overflow dropdown, as in Quran. -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/menu_bookmark"
+        android:icon="@drawable/ic_bookmark_border"
+        android:title="العلامات المرجعية"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/menu_translation"
+        android:icon="@drawable/ic_translate"
+        android:title="الترجمة"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/menu_back_to_page"
+        android:icon="@drawable/ic_book"
+        android:title="العودة إلى الصفحة"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/menu_search"
+        android:icon="@drawable/ic_search"
+        android:title="بحث"
+        app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/menu_night_mode"
         android:checkable="true"
         android:icon="@drawable/ic_night_mode"
         android:title="القراءة الليلية"
-        app:showAsAction="never" />
+        app:showAsAction="ifRoom" />
 
     <item
-        android:id="@+id/menu_search"
-        android:icon="@drawable/ic_search"
-        android:title="بحث"
+        android:id="@+id/menu_jump"
+        android:title="الانتقال"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/menu_settings"
         android:icon="@drawable/ic_settings"
         android:title="الإعدادات"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/menu_help"
+        android:title="المساعدة"
         app:showAsAction="never" />
 </menu>

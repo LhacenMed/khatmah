@@ -3,6 +3,9 @@ package com.lhacenmed.khatmah.feature.quran.ui.reader
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.Message
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -38,6 +41,7 @@ import com.lhacenmed.khatmah.feature.quran.ui.reciter.ReaderAudioViewModel
 import com.lhacenmed.khatmah.feature.quran.ui.search.ReaderSearchActivity
 import com.lhacenmed.khatmah.feature.quran.ui.settings.ReaderSettingsActivity
 import kotlinx.coroutines.launch
+import java.lang.ref.WeakReference
 
 /**
  * Full-screen reader shell — mode-agnostic host for the QCF4 book pages and the native text pages.
@@ -81,6 +85,9 @@ class ReaderActivity : AppCompatActivity() {
     private var followedKey = 0L
 
     private var chromeVisible = true
+
+    // Auto-hides the chrome a short time after the window gains focus (Quran Android's PagerHandler).
+    private val barHideHandler = BarHideHandler(this)
     private var metaMap: Map<Int, PageMeta> = emptyMap()
 
     // Reading window: the full mushaf by default, or a single session's [firstPage]..[lastPage].
@@ -263,11 +270,54 @@ class ReaderActivity : AppCompatActivity() {
             startActivity(Intent(this, ReaderSettingsActivity::class.java))
             true
         }
+        // Placeholders mirroring Quran's toolbar — wired later; consume the click for now.
+        R.id.menu_bookmark,
+        R.id.menu_translation,
+        R.id.menu_back_to_page,
+        R.id.menu_jump,
+        R.id.menu_help -> true
         else -> super.onOptionsItemSelected(item)
     }
 
-    /** Toggles the toolbar and system bars together — the immersive "book" tap. */
-    fun toggleChrome() = setChrome(!chromeVisible)
+    /**
+     * Toggles the toolbar and system bars together — the immersive "book" tap. Mirrors Quran
+     * Android's toggleActionBar: showing just reveals the chrome; hiding also cancels any pending
+     * auto-hide so it can't fire again mid-animation.
+     */
+    fun toggleChrome() {
+        if (!chromeVisible) {
+            setChrome(true)
+        } else {
+            barHideHandler.removeMessages(MSG_HIDE_BARS)
+            setChrome(false)
+        }
+    }
+
+    /** Drives the chrome to [visible] only if it differs from the current state (Quran's toggleActionBarVisibility). */
+    private fun toggleChromeVisibility(visible: Boolean) {
+        if (visible == !chromeVisible) toggleChrome()
+    }
+
+    // Arm the one-shot auto-hide each time the window gains focus — exactly Quran's onWindowFocusChanged.
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) barHideHandler.sendEmptyMessageDelayed(MSG_HIDE_BARS, AUTO_HIDE_AFTER_MS)
+        else barHideHandler.removeMessages(MSG_HIDE_BARS)
+    }
+
+    override fun onDestroy() {
+        barHideHandler.removeCallbacksAndMessages(null)
+        super.onDestroy()
+    }
+
+    /** Posts [MSG_HIDE_BARS] after a delay to hide the chrome; weak ref avoids leaking the activity. */
+    private class BarHideHandler(activity: ReaderActivity) : Handler(Looper.getMainLooper()) {
+        private val activityRef = WeakReference(activity)
+        override fun handleMessage(msg: Message) {
+            if (msg.what == MSG_HIDE_BARS) activityRef.get()?.toggleChromeVisibility(false)
+            else super.handleMessage(msg)
+        }
+    }
 
     // ── Search ───────────────────────────────────────────────────────────────────
 
@@ -488,6 +538,9 @@ class ReaderActivity : AppCompatActivity() {
         private const val KEY_SESSION_PAGE_PREFIX = "session_page_"
         private const val MENU_EDGE_PAD_DP = 8f
         private const val TOOLBAR_ANIM_MS = 250L
+        // Quran Android's DEFAULT_HIDE_AFTER_TIME / MSG_HIDE_ACTIONBAR.
+        private const val AUTO_HIDE_AFTER_MS = 2000L
+        private const val MSG_HIDE_BARS = 1
         private const val BOTTOM_PAD_DP = 24f
         private const val POPUP_GAP_DP = 12f
     }
