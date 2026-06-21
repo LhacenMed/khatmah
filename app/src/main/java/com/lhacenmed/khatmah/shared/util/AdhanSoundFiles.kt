@@ -13,6 +13,7 @@ object AdhanSoundFiles {
      */
     private val soundsMap = listOf(
         "short_alert.opus" to "صوت تنبيه قصير",
+        "adhan_mr.opus" to "أذان الموريتانية",
         "madinah.opus" to "أذان المدينة",
         "makkah.opus" to "أذان الحرم المكي - كامل",
         "aqsa.opus" to "أذان الأقصى",
