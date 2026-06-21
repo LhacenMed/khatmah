@@ -1,6 +1,7 @@
 package com.lhacenmed.khatmah.feature.more
 
 import android.os.Build
+import com.lhacenmed.khatmah.BuildConfig
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -229,14 +230,16 @@ private fun MoreScreen(padding: PaddingValues) {
         prefItem(R.string.more_share_app,  Icons.Outlined.Share)
         prefItem(R.string.more_rate_khatmah, Icons.Outlined.StarBorder)
 
-        // ── Debug ─────────────────────────────────────────────────────────────
-        subtitle(R.string.more_debug)
-        prefItem(R.string.more_debug_db, Icons.Outlined.BugReport,
-            onClick = { nav.go(Dest.DbBrowser) })
-        prefItem(R.string.more_trip_requests, Icons.Outlined.DirectionsBus,
-            onClick = { nav.go(Dest.TripRequests) })
-        prefItem(R.string.more_files_browser, Icons.Outlined.FolderOpen,
-            onClick = { nav.go(Dest.FileBrowser) })
+        // ── Debug (debug builds only) ─────────────────────────────────────────
+        if (BuildConfig.DEBUG) {
+            subtitle(R.string.more_debug)
+            prefItem(R.string.more_debug_db, Icons.Outlined.BugReport,
+                onClick = { nav.go(Dest.DbBrowser) })
+            prefItem(R.string.more_trip_requests, Icons.Outlined.DirectionsBus,
+                onClick = { nav.go(Dest.TripRequests) })
+            prefItem(R.string.more_files_browser, Icons.Outlined.FolderOpen,
+                onClick = { nav.go(Dest.FileBrowser) })
+        }
     }
 
     if (showLanguageSheet.value) {
