@@ -142,7 +142,8 @@ private fun MoreScreen(padding: PaddingValues) {
             trailingIcon = { CountBadge(count = 13) })
         prefItem(R.string.more_upcoming_sessions, Icons.Outlined.SkipNext,
             trailingIcon = { CountBadge(count = 16) })
-        prefItem(R.string.more_bookmark, Icons.Outlined.Bookmark)
+        prefItem(R.string.more_bookmark, Icons.Outlined.Bookmark,
+            onClick = { nav.go(Dest.Bookmarks) })
 
         // ── Quranic Sunnahs ───────────────────────────────────────────────────
         subtitle(R.string.more_quranic_sunnahs)

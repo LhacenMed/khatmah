@@ -33,6 +33,7 @@ import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.feature.audio.AyaAudioState
 import com.lhacenmed.khatmah.feature.audio.GhReader
 import com.lhacenmed.khatmah.feature.audio.GithubAudioRepository
+import com.lhacenmed.khatmah.feature.quran.data.BookmarkRepository
 import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.quran.data.MushafPrint
 import com.lhacenmed.khatmah.feature.quran.ui.reader.book.BookPageView
@@ -181,12 +182,18 @@ class ReaderActivity : AppCompatActivity() {
         pager.addOnPageChangeListener(object : ViewPager.SimpleOnPageChangeListener() {
             override fun onPageSelected(position: Int) {
                 val page = pageForPosition(position)
+                currentPageNum = page
                 updateMeta(page)
                 slider.progress = page - firstPage
                 savePage(page)
+                if (bookmarkable) refreshBookmarkIcon(page)
             }
         })
         updateMeta(startPage)
+        // The initial setCurrentItem above doesn't fire onPageSelected, so seed the page + bookmark
+        // state here — otherwise reopening on a bookmarked page shows the outline until the first swipe.
+        currentPageNum = startPage
+        if (bookmarkable) refreshBookmarkIcon(startPage)
         if (popup.isVisible) showPopupFor(firstPage + slider.progress)
     }
 
@@ -252,6 +259,9 @@ class ReaderActivity : AppCompatActivity() {
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menu.findItem(R.id.menu_night_mode)?.isChecked = ReaderTheme.effectiveNight(this)
+        // Bookmarks are page-based — book reader only; hide the action for the text reader.
+        menuBookmark = menu.findItem(R.id.menu_bookmark)?.apply { isVisible = bookmarkable }
+        if (bookmarkable) refreshBookmarkIcon(currentPage())
         toolbar.overflowIcon?.setTint(
             MaterialColors.getColor(toolbar, com.google.android.material.R.attr.colorOnSurface)
         )
@@ -270,13 +280,35 @@ class ReaderActivity : AppCompatActivity() {
             startActivity(Intent(this, ReaderSettingsActivity::class.java))
             true
         }
-        // Placeholders mirroring Quran's toolbar — wired later; consume the click for now.
-        R.id.menu_bookmark,
-        R.id.menu_translation,
-        R.id.menu_back_to_page,
-        R.id.menu_jump,
+        R.id.menu_bookmark -> { toggleBookmark(); true }
+        // Placeholder mirroring Quran's toolbar — wired later; consume the click for now.
         R.id.menu_help -> true
         else -> super.onOptionsItemSelected(item)
+    }
+
+    // ── Bookmarks (book reader only) ─────────────────────────────────────────────
+
+    private val bookmarkRepo by lazy { BookmarkRepository(applicationContext) }
+    private val bookmarkable get() = source.mode == ReaderMode.QCF4
+    private var menuBookmark: MenuItem? = null
+
+    // The page currently shown — tracked so the bookmark state is correct even before the pager has
+    // dispatched a page-selected event (i.e. right after the reader opens).
+    private var currentPageNum = 1
+    private fun currentPage(): Int = currentPageNum
+
+    /** Toggles the bookmark on the current page for the active riwaya and reflects it in the icon. */
+    private fun toggleBookmark() {
+        val page = currentPage()
+        lifecycleScope.launch { setBookmarkIcon(bookmarkRepo.toggle(source.riwaya.dbKey, page)) }
+    }
+
+    private fun refreshBookmarkIcon(page: Int) {
+        lifecycleScope.launch { setBookmarkIcon(bookmarkRepo.isBookmarked(source.riwaya.dbKey, page)) }
+    }
+
+    private fun setBookmarkIcon(bookmarked: Boolean) {
+        menuBookmark?.setIcon(if (bookmarked) R.drawable.ic_bookmark else R.drawable.ic_bookmark_border)
     }
 
     /**

@@ -505,6 +505,10 @@
     <string name="download_notif_title">Downloading %1$s mushaf</string>
     <string name="download_notif_done">Download complete</string>
 
+    <string name="bookmarks_title">Bookmarks</string>
+    <string name="bookmarks_empty">No bookmarks yet. Tap the bookmark icon while reading a page to save it.</string>
+    <string name="bookmarks_remove">Remove bookmark</string>
+
     <string name="today_quick_index">Quick Access</string>
     <string name="today_full_index">Index</string>
     <string name="today_continue_reading">Continue Reading</string>

@@ -536,6 +536,10 @@
     <string name="download_notif_title">جارٍ تنزيل مصحف %1$s</string>
     <string name="download_notif_done">اكتمل التنزيل</string>
 
+    <string name="bookmarks_title">العلامات المرجعية</string>
+    <string name="bookmarks_empty">لا توجد علامات مرجعية بعد. اضغط على أيقونة العلامة أثناء قراءة صفحة لحفظها.</string>
+    <string name="bookmarks_remove">إزالة العلامة</string>
+
     <!-- Quick index — TodayTab -->
     <string name="today_quick_index">الوصول السريع</string>
     <string name="today_full_index">الفهرس</string>

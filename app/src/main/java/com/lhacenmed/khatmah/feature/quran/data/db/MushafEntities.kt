@@ -102,3 +102,15 @@ data class VerseEntity(
     val text:       String,
     val normalized: String,
 )
+
+/**
+ * A user bookmark on a mushaf page. Riwaya-scoped (the QCF4 book reader is per-riwaya) and keyed by
+ * [riwaya] ([Riwaya.dbKey]) + [pageNum] so a page can be bookmarked at most once. [createdAt] orders
+ * the bookmarks list (most recent first).
+ */
+@Entity(tableName = "mushaf_bookmark", primaryKeys = ["riwaya", "page_num"])
+data class BookmarkEntity(
+    val riwaya:                                  String,
+    @ColumnInfo(name = "page_num")  val pageNum: Int,
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+)

@@ -2,6 +2,7 @@ package com.lhacenmed.khatmah.feature.quran.data.db
 
 import androidx.annotation.WorkerThread
 import androidx.room.*
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 abstract class MushafDao {
@@ -172,6 +173,21 @@ abstract class MushafDao {
 
     @Query("DELETE FROM mushaf_verse WHERE riwaya = :riwaya")
     abstract suspend fun clearVerses(riwaya: String)
+
+    // ── Bookmarks ───────────────────────────────────────────────────────────────
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun insertBookmark(bookmark: BookmarkEntity)
+
+    @Query("DELETE FROM mushaf_bookmark WHERE riwaya = :riwaya AND page_num = :pageNum")
+    abstract suspend fun deleteBookmark(riwaya: String, pageNum: Int)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM mushaf_bookmark WHERE riwaya = :riwaya AND page_num = :pageNum)")
+    abstract suspend fun isBookmarked(riwaya: String, pageNum: Int): Boolean
+
+    /** All bookmarks for [riwaya], most recent first — observed live by the bookmarks page. */
+    @Query("SELECT * FROM mushaf_bookmark WHERE riwaya = :riwaya ORDER BY created_at DESC")
+    abstract fun bookmarks(riwaya: String): Flow<List<BookmarkEntity>>
 
     /** Clears all tables for [riwaya] in one transaction. */
     @Transaction

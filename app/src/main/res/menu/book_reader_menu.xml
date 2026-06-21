@@ -12,18 +12,6 @@
         app:showAsAction="ifRoom" />
 
     <item
-        android:id="@+id/menu_translation"
-        android:icon="@drawable/ic_translate"
-        android:title="الترجمة"
-        app:showAsAction="ifRoom" />
-
-    <item
-        android:id="@+id/menu_back_to_page"
-        android:icon="@drawable/ic_book"
-        android:title="العودة إلى الصفحة"
-        app:showAsAction="ifRoom" />
-
-    <item
         android:id="@+id/menu_search"
         android:icon="@drawable/ic_search"
         android:title="بحث"
@@ -35,11 +23,6 @@
         android:icon="@drawable/ic_night_mode"
         android:title="القراءة الليلية"
         app:showAsAction="ifRoom" />
-
-    <item
-        android:id="@+id/menu_jump"
-        android:title="الانتقال"
-        app:showAsAction="never" />
 
     <item
         android:id="@+id/menu_settings"

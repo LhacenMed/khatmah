@@ -16,6 +16,7 @@ import com.lhacenmed.khatmah.feature.debug.FileBrowserScreen
 import com.lhacenmed.khatmah.feature.demo.DemoDetailScreen
 import com.lhacenmed.khatmah.feature.khatmah.ui.DailyAlarmScreen
 import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahScreen
+import com.lhacenmed.khatmah.feature.quran.ui.bookmarks.BookmarksScreen
 import com.lhacenmed.khatmah.feature.quran.ui.prints.PrintSelectScreen
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsScreen
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.CalcMethodScreen
@@ -122,6 +123,10 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
     data object MushafPrints : Dest() {
         override val titleRes get() = R.string.mushaf_print_title
         override fun screen() = @Composable { PrintSelectScreen() }
+    }
+    data object Bookmarks : Dest() {
+        override val titleRes get() = R.string.bookmarks_title
+        override fun screen() = @Composable { BookmarksScreen() }
     }
 
     // ── Settings ────────────────────────────────────────────────────────────────
