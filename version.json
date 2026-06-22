@@ -1,6 +1,6 @@
 {
-  "versionCode": 10006,
-  "versionName": "1.0.4",
-  "apkUrl": "https://github.com/LhacenMed/khatmah/releases/download/v1.0.4/khatmah-1.0.4-universal.apk",
-  "notes": "Reliability improvements to the in-app updater and release packaging."
+  "versionCode": 10007,
+  "versionName": "1.0.5",
+  "apkUrl": "https://github.com/LhacenMed/khatmah/releases/download/v1.0.5/khatmah-1.0.5-universal.apk",
+  "notes": "What's new in this version? nothing much just added automatic cleanup for the cached update file after the installation"
 }
