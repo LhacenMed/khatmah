@@ -1,6 +1,8 @@
 package com.lhacenmed.khatmah.feature.update
 
 import android.content.Context
+import androidx.core.content.pm.PackageInfoCompat
+import com.lhacenmed.khatmah.BuildConfig
 import com.lhacenmed.khatmah.shared.util.SpeedTracker
 import com.lhacenmed.khatmah.shared.util.formatDownloadLog
 import kotlinx.coroutines.CancellationException
@@ -24,6 +26,21 @@ object ApkDownloader {
     /** Where the downloaded APK lands. Stable name so a re-download overwrites the last attempt. */
     fun apkFile(context: Context): File =
         File(context.cacheDir, "updates").apply { mkdirs() }.resolve("khatmah-update.apk")
+
+    /**
+     * Deletes the staged APK once it is no longer needed: after a successful install the running
+     * build's versionCode has caught up to (or passed) the staged one, so it is safe to remove. A
+     * newer, not-yet-installed APK is kept. Called on launch — never mid-install, since the system
+     * installer runs in its own process and finishes long before the app is next started. Cheap
+     * no-op when nothing is staged.
+     */
+    fun clearStaleApk(context: Context) {
+        val apk = apkFile(context)
+        if (!apk.exists()) return
+        val staged = context.packageManager.getPackageArchiveInfo(apk.path, 0)
+            ?.let { PackageInfoCompat.getLongVersionCode(it) } ?: 0L
+        if (staged <= BuildConfig.VERSION_CODE) apk.delete()
+    }
 
     fun download(context: Context, update: AppUpdate): Flow<UpdateState> = flow {
         val ctx = context.applicationContext

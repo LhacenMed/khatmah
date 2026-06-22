@@ -12,6 +12,7 @@ import com.lhacenmed.khatmah.BuildConfig
 import com.lhacenmed.khatmah.feature.debug.buildDynamicColorJson
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
 import com.lhacenmed.khatmah.feature.quran.data.MushafInitializer
+import com.lhacenmed.khatmah.feature.update.ApkDownloader
 import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanChannels
@@ -67,6 +68,9 @@ class App : Application() {
         }
         // Start FCM token registration (non-blocking)
         FcmTokenManager.init(this)
+
+        // Remove a staged update APK once it has been installed (or is stale); keeps cacheDir tidy.
+        appScope.launch { ApkDownloader.clearStaleApk(this@App) }
 
         // Pre-warm the Quran sura-name cache so TodayTab loads instantly.
         appScope.launch { KhatmahRepository(this@App).warmCache() }
