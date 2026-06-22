@@ -26,4 +26,5 @@ package-lock.json
 
 khatmah-key-store.jks
 *.jks
+keystore.properties
 *.log
