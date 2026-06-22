@@ -2,6 +2,7 @@ package com.lhacenmed.khatmah.feature.more
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.core.ui.components.PreferenceItem
 import com.lhacenmed.khatmah.core.ui.components.PreferenceSubtitle
@@ -40,6 +42,20 @@ fun LazyListScope.prefItem(
     enabled             : Boolean                   = true,
     onClick             : (() -> Unit)?             = null,
 ) = item { PreferenceItem(title = stringResource(titleRes), icon = icon, trailingIcon = trailingIcon, enabled = enabled, onClick = onClick ?: {}) }
+
+/** Small, centered, muted app-version line for the bottom of the More list. */
+fun LazyListScope.versionFooter(@StringRes labelRes: Int, version: String) =
+    item {
+        Text(
+            text      = stringResource(labelRes, version),
+            modifier  = Modifier
+                .fillMaxWidth()
+                .padding(top = 24.dp, bottom = 8.dp),
+            textAlign = TextAlign.Center,
+            style     = MaterialTheme.typography.bodySmall,
+            color     = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+        )
+    }
 
 /** One toggle row + one time-picker row for a reminder config. */
 fun LazyListScope.reminderPair(

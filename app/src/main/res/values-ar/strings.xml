@@ -547,6 +547,18 @@
     <string name="download_notif_title">جارٍ تنزيل مصحف %1$s</string>
     <string name="download_notif_done">اكتمل التنزيل</string>
 
+    <!-- تحديث التطبيق -->
+    <string name="update_title">يتوفر تحديث</string>
+    <string name="update_message">يتوفر إصدار جديد (%1$s) من ختمة. حدّث الآن للحصول على أحدث الميزات والإصلاحات.</string>
+    <string name="update_download">تحديث</string>
+    <string name="update_install">تثبيت</string>
+    <string name="update_retry">إعادة المحاولة</string>
+    <string name="update_later">لاحقاً</string>
+    <string name="update_notif_channel">تحديث التطبيق</string>
+    <string name="update_notif_title">جارٍ تنزيل التحديث</string>
+    <string name="update_notif_ready">اكتمل تنزيل التحديث — اضغط للتثبيت</string>
+    <string name="more_version">الإصدار %1$s</string>
+
     <string name="bookmarks_title">العلامات المرجعية</string>
     <string name="bookmarks_empty">لا توجد علامات مرجعية بعد. اضغط على أيقونة العلامة أثناء قراءة صفحة لحفظها.</string>
     <string name="bookmarks_remove">إزالة العلامة</string>
