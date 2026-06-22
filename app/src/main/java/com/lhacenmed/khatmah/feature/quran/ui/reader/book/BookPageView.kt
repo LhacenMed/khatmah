@@ -37,6 +37,8 @@ class BookPageView @JvmOverloads constructor(
     private var faces: Map<String, Typeface> = emptyMap()
     private var riwaya: Riwaya = Riwaya.HAFS
     private var calligraphicFace: Typeface = Typeface.DEFAULT
+    /** Amiri — draws the page-number footer and the sura-header circle numbers. */
+    private var numberFace: Typeface = Typeface.DEFAULT
     private var layout: List<LineRender> = emptyList()
 
     /** Toggled by the host so night mode swaps the parchment for a solid dark page. */
@@ -111,6 +113,7 @@ class BookPageView @JvmOverloads constructor(
     private val solidPaint = Paint().apply { color = NIGHT_BG }
     private val overlayPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val headerGlyphPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG) // Amiri page-number footer
 
     // Synthetic "stacked pages" fore-edge — depth shadow + sheet hairlines.
     private val edgeShadowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -155,14 +158,21 @@ class BookPageView @JvmOverloads constructor(
     }
 
     /**
-     * Supplies the decoded page, its required typefaces and the calligraphic face
-     * (KFGQPC, used for the sura-info labels inside the header glyph circles).
+     * Supplies the decoded page, its required typefaces, the calligraphic face (KFGQPC, used for the
+     * sura-info labels inside the header glyph circles) and the [numberFace] (Amiri) for page numbers.
      */
-    fun setPage(page: Qcf4Page, faces: Map<String, Typeface>, riwaya: Riwaya, calligraphicFace: Typeface) {
+    fun setPage(
+        page: Qcf4Page,
+        faces: Map<String, Typeface>,
+        riwaya: Riwaya,
+        calligraphicFace: Typeface,
+        numberFace: Typeface,
+    ) {
         this.page = page
         this.faces = faces
         this.riwaya = riwaya
         this.calligraphicFace = calligraphicFace
+        this.numberFace = numberFace
         zoom.reset() // a (re)used view starts at 1× so recycled pager pages never inherit a zoom
         rebuildLayout()
         invalidate()
@@ -294,8 +304,11 @@ class BookPageView @JvmOverloads constructor(
         drawHeaderSide(canvas, headerJuzGlyph, headerJuz, w - margin, Paint.Align.RIGHT, w * 0.34f, color, headerY, w)
 
         if (footerPage.isNotEmpty()) {
-            overlayPaint.textAlign = Paint.Align.CENTER
-            canvas.drawText(footerPage, w / 2f, footerY, overlayPaint)
+            numberPaint.typeface = numberFace
+            numberPaint.color = color
+            numberPaint.textSize = minOf(w, 480f * density) * 0.040f
+            numberPaint.textAlign = Paint.Align.CENTER
+            canvas.drawText(footerPage, w / 2f, footerY, numberPaint)
         }
     }
 
@@ -319,7 +332,7 @@ class BookPageView @JvmOverloads constructor(
             headerGlyphPaint.typeface = face
             headerGlyphPaint.color = color
             headerGlyphPaint.textAlign = align
-            val base = minOf(w, 480f * density) * 0.055f
+            val base = minOf(w, 480f * density) * 0.064f
             headerGlyphPaint.textSize = base
             val measured = headerGlyphPaint.measureText(glyph)
             if (measured > maxW && measured > 0f) headerGlyphPaint.textSize = base * (maxW / measured)
@@ -414,6 +427,7 @@ class BookPageView @JvmOverloads constructor(
             accentArgb = accent,
             riwaya = riwaya,
             kfgqpcFace = calligraphicFace,
+            numberFace = numberFace,
         )
     }
 

@@ -435,6 +435,7 @@
     <string name="today_start_reading">Start Reading</string>
     <string name="today_mark_read">Done Reading</string>
     <string name="today_khatmah_title">Khatmah Sessions</string>
+    <string name="notif_khatmah_wird">Current wird from Surah %1$s — ayah %2$d to Surah %3$s — ayah %4$d</string>
     <string name="today_previous">Previous: %d</string>
     <string name="today_upcoming">Upcoming: %d</string>
     <string name="today_no_khatmah">No active Khatmah</string>

@@ -137,14 +137,15 @@ class BookPageFragment : Fragment() {
                         if (repo.riwaya == Riwaya.HAFS) R.font.kfgqpc_hafs_uthmanic
                         else R.font.kfgqpc_warsh_uthmanic
                     val calligraphic = ResourcesCompat.getFont(ctx, fontRes) ?: Typeface.DEFAULT
+                    val number = ResourcesCompat.getFont(ctx, R.font.amiri_regular) ?: Typeface.DEFAULT
                     val allMeta = ReaderMeta.loadForRiwaya(ctx, repo.riwaya.dbKey)
                     val meta = allMeta[pageNumber] ?: PageMeta("", 1, pageNumber)
-                    Loaded(page, faces, calligraphic, meta)
+                    Loaded(page, faces, calligraphic, number, meta)
                 }
             }
             val loaded = result.getOrNull() ?: return@launch
             pageView?.apply {
-                setPage(loaded.page, loaded.faces, repo.riwaya, loaded.calligraphic)
+                setPage(loaded.page, loaded.faces, repo.riwaya, loaded.calligraphic, loaded.number)
                 setPageInfo(
                     suraGlyph = loaded.meta.suraGlyph,
                     juzGlyph = loaded.meta.juzGlyph,
@@ -163,6 +164,7 @@ class BookPageFragment : Fragment() {
         val page: com.lhacenmed.khatmah.feature.quran.data.Qcf4Page,
         val faces: Map<String, Typeface>,
         val calligraphic: Typeface,
+        val number: Typeface,
         val meta: PageMeta,
     )
 

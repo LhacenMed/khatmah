@@ -81,6 +81,7 @@ internal fun computeLayout(
     accentArgb: Int,
     riwaya: Riwaya,
     kfgqpcFace: Typeface,
+    numberFace: Typeface,
 ): List<LineRender> {
     val lineCount = page.lines.size
     if (lineCount == 0 || w <= 0f || h <= 0f) return emptyList()
@@ -177,7 +178,7 @@ internal fun computeLayout(
                     color = accentArgb
                     textSize = numFontSz
                     textAlign = Paint.Align.CENTER
-                    typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                    typeface = numberFace
                 }
 
                 val labelLineH = labelP.descent() - labelP.ascent()

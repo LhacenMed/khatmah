@@ -466,6 +466,7 @@
     <string name="today_start_reading">اقرأ الورد</string>
     <string name="today_mark_read">أتممت القراءة</string>
     <string name="today_khatmah_title">الختمة الحالية</string>
+    <string name="notif_khatmah_wird">الورد الحالي من سورة %1$s ـ آية %2$d إلى سورة %3$s ـ آية %4$d</string>
     <string name="today_previous">الأوراد السابقة: %d</string>
     <string name="today_upcoming">الأوراد القادمة: %d</string>
     <string name="today_no_khatmah">لا توجد ختمة نشطة</string>

@@ -36,6 +36,16 @@ data class SessionRow(
 /** Read vs. upcoming session counts for the active khatmah (0/0 when none). */
 data class SessionCounts(val read: Int, val upcoming: Int)
 
+/** The active khatmah's current (next-unread) wird range — used by the daily reminder. */
+data class WirdRange(
+    val startSura: Int,
+    val startAya:  Int,
+    val endSura:   Int,
+    val endAya:    Int,
+    val startSuraName: String,
+    val endSuraName:   String,
+)
+
 class KhatmahRepository(private val context: Context) {
 
     private val khatmahDb by lazy { KhatmahDatabase.get(context) }
@@ -86,6 +96,25 @@ class KhatmahRepository(private val context: Context) {
 
     fun readCount(khatmahId: Long): Flow<Int> =
         khatmahDb.dao().readCount(khatmahId)
+
+    /**
+     * The active khatmah's current (next-unread) wird range with its start/end sura names, or null
+     * when there's no active khatmah or all sessions are read. Self-contained (uses the khatmah's
+     * own riwaya), so it's safe to call from a cold-started reminder receiver.
+     */
+    suspend fun currentWird(): WirdRange? = withContext(Dispatchers.IO) {
+        val khatmah = khatmahDb.dao().activeKhatmahOnce() ?: return@withContext null
+        val s = khatmahDb.dao().firstUnreadOnce(khatmah.id) ?: return@withContext null
+        val names = mushafDao.surahs(khatmah.riwaya).associate { it.num to it.name }
+        WirdRange(
+            startSura = s.startSura,
+            startAya  = s.startAya,
+            endSura   = s.endSura,
+            endAya    = s.endAya,
+            startSuraName = names[s.startSura] ?: s.startSura.toString(),
+            endSuraName   = names[s.endSura] ?: s.endSura.toString(),
+        )
+    }
 
     /**
      * Sessions of the active khatmah filtered by read state ([showRead] = true → previously
