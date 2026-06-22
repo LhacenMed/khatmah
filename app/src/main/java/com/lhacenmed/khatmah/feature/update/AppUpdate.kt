@@ -20,6 +20,14 @@ data class AppUpdate(
     val apkUrl: String,
     val notes: String,
 ) {
+    /** Serializes back to the manifest shape so [UpdateStore] can persist it across launches. */
+    fun toJson(): String = JSONObject()
+        .put("versionCode", versionCode)
+        .put("versionName", versionName)
+        .put("apkUrl", apkUrl)
+        .put("notes", notes)
+        .toString()
+
     companion object {
         fun fromJson(json: String): AppUpdate = JSONObject(json).run {
             AppUpdate(

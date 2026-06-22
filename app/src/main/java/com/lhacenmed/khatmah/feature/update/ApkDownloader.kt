@@ -15,6 +15,9 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
+/** A downloaded APK that is a newer build than the running one, ready to hand to the installer. */
+data class StagedApk(val file: File, val versionCode: Int, val versionName: String)
+
 /**
  * Stateless engine that streams one APK to the cache, emitting [UpdateState] as a cold [Flow] —
  * [UpdateService] collects it on a background scope so the download outlives the dialog. Mirrors
@@ -28,18 +31,19 @@ object ApkDownloader {
         File(context.cacheDir, "updates").apply { mkdirs() }.resolve("khatmah-update.apk")
 
     /**
-     * Deletes the staged APK once it is no longer needed: after a successful install the running
-     * build's versionCode has caught up to (or passed) the staged one, so it is safe to remove. A
-     * newer, not-yet-installed APK is kept. Called on launch — never mid-install, since the system
-     * installer runs in its own process and finishes long before the app is next started. Cheap
-     * no-op when nothing is staged.
+     * Inspects the staged APK on launch and decides its fate by comparing its packaged versionCode
+     * against the running build: a newer, not-yet-installed APK is returned so the install prompt
+     * can resume; an already-installed (or stale) one is deleted in place and null returned. Called
+     * never mid-install — the system installer runs in its own process and finishes long before the
+     * app is next started. Cheap no-op when nothing is staged.
      */
-    fun clearStaleApk(context: Context) {
+    fun stagedUpdate(context: Context): StagedApk? {
         val apk = apkFile(context)
-        if (!apk.exists()) return
-        val staged = context.packageManager.getPackageArchiveInfo(apk.path, 0)
-            ?.let { PackageInfoCompat.getLongVersionCode(it) } ?: 0L
-        if (staged <= BuildConfig.VERSION_CODE) apk.delete()
+        if (!apk.exists()) return null
+        val info = context.packageManager.getPackageArchiveInfo(apk.path, 0)
+        val code = info?.let { PackageInfoCompat.getLongVersionCode(it) } ?: 0L
+        if (code <= BuildConfig.VERSION_CODE) { apk.delete(); return null }
+        return StagedApk(apk, code.toInt(), info?.versionName.orEmpty())
     }
 
     fun download(context: Context, update: AppUpdate): Flow<UpdateState> = flow {

@@ -10,9 +10,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -24,6 +26,7 @@ import com.lhacenmed.khatmah.feature.update.UpdateInstaller
 import com.lhacenmed.khatmah.feature.update.UpdateRegistry
 import com.lhacenmed.khatmah.feature.update.UpdateService
 import com.lhacenmed.khatmah.feature.update.UpdateState
+import com.lhacenmed.khatmah.shared.util.NetworkMonitor
 
 /**
  * Launch-time update prompt, rendered at the root of [com.lhacenmed.khatmah.core.MainActivity].
@@ -43,6 +46,31 @@ fun UpdateGate() {
     if (dismissed) return
 
     val downloading = state is UpdateState.Connecting || state is UpdateState.Downloading
+
+    // Starts the download only when online; otherwise surfaces a "connect to the internet" prompt
+    // (shown via the Error state, which flips the button to Retry). Used by Update and Retry alike.
+    val startDownload = {
+        if (NetworkMonitor.isOnline(context)) UpdateService.start(context)
+        else UpdateRegistry.update(UpdateState.Error(context.getString(R.string.update_offline)))
+    }
+
+    // Auto-launch the installer the instant a *fresh* download finishes, so the user never has to
+    // tap Install. Gated on having seen the download in flight this session (sawDownloading) so a
+    // relaunch that merely restores a staged APK shows the dialog instead of installing unbidden,
+    // and on the install grant — without it we fall through to the manual Install button.
+    var sawDownloading by remember { mutableStateOf(false) }
+    var autoInstalled  by remember { mutableStateOf(false) }
+    LaunchedEffect(state) {
+        when (val s = state) {
+            UpdateState.Connecting, is UpdateState.Downloading -> sawDownloading = true
+            is UpdateState.Downloaded ->
+                if (sawDownloading && !autoInstalled && UpdateInstaller.canInstall(context)) {
+                    autoInstalled = true
+                    context.startActivity(UpdateInstaller.installIntent(context, s.apk))
+                }
+            else -> Unit
+        }
+    }
 
     AlertDialog(
         // A download in flight is non-cancelable from the scrim; the buttons drive it instead.
@@ -93,13 +121,13 @@ fun UpdateGate() {
                     }
                 }) { Text(stringResource(R.string.update_install)) }
 
-                is UpdateState.Error -> TextButton(onClick = { UpdateService.start(context) }) {
+                is UpdateState.Error -> TextButton(onClick = { startDownload() }) {
                     Text(stringResource(R.string.update_retry))
                 }
 
                 UpdateState.Connecting, is UpdateState.Downloading -> Unit
 
-                else -> TextButton(onClick = { UpdateService.start(context) }) {
+                else -> TextButton(onClick = { startDownload() }) {
                     Text(stringResource(R.string.update_download))
                 }
             }

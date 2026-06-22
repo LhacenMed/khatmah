@@ -59,7 +59,10 @@ import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.feature.today.TodayViewModel
 import com.lhacenmed.khatmah.feature.update.UpdateChecker
 import com.lhacenmed.khatmah.feature.update.UpdateRegistry
+import com.lhacenmed.khatmah.feature.update.UpdateState
+import com.lhacenmed.khatmah.feature.update.UpdateStore
 import com.lhacenmed.khatmah.feature.update.ui.UpdateGate
+import com.lhacenmed.khatmah.shared.util.NetworkMonitor
 import com.lhacenmed.khatmah.BuildConfig
 import com.lhacenmed.khatmah.onboarding.OnboardingActivity
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
@@ -220,14 +223,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * One-shot launch update check; populates [UpdateRegistry] so [UpdateGate] can prompt. Skipped
-     * for debug builds, whose `.debug` applicationId would side-load the release APK as a separate
-     * app rather than update in place.
+     * Connectivity-driven update check; populates [UpdateRegistry] (and persists via [UpdateStore])
+     * so [UpdateGate] can prompt — now and on any later launch, even offline. Runs whenever the
+     * device is online: at launch if already connected, and again the moment connectivity returns
+     * for a user who opened the app offline. Skips re-checking while a download is mid-flight or a
+     * finished APK is awaiting install. Skipped for debug builds, whose `.debug` applicationId would
+     * side-load the release APK as a separate app rather than update in place.
      */
     private fun checkForUpdate() {
         if (BuildConfig.DEBUG) return
         lifecycleScope.launch {
-            UpdateChecker.check()?.let { UpdateRegistry.setAvailable(it) }
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                NetworkMonitor.online(applicationContext).collect { online ->
+                    if (!online || UpdateRegistry.isActive) return@collect
+                    if (UpdateRegistry.stateOf() is UpdateState.Downloaded) return@collect
+                    UpdateChecker.check()?.let {
+                        UpdateStore.save(applicationContext, it)
+                        UpdateRegistry.setAvailable(it)
+                    }
+                }
+            }
         }
     }
 

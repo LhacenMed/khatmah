@@ -7,6 +7,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- Required by android.location.Geocoder for city name resolution -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- In-app update: detect connectivity to check for / download updates -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Exact alarms: API 31-32 (user may need to grant in battery settings) -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"
         android:maxSdkVersion="32" />
