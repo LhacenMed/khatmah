@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ : dynamic Material 3 colors derived from the user's wallpaper palette.
+         Day/night is handled by the DayNight variant; no runtime DynamicColors call is needed
+         because the color roles are mapped to the system_* resources statically. -->
+    <style name="Theme.Khatmah.Widget" parent="Theme.Material3.DynamicColors.DayNight" />
+</resources>

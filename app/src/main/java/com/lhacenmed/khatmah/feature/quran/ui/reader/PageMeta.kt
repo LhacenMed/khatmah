@@ -1,6 +1,10 @@
 package com.lhacenmed.khatmah.feature.quran.ui.reader
 
 import android.content.Context
+import com.lhacenmed.khatmah.feature.quran.data.HeaderGlyphType
+import com.lhacenmed.khatmah.feature.quran.data.Riwaya
+import com.lhacenmed.khatmah.feature.quran.data.RiwayaConfig
+import com.lhacenmed.khatmah.feature.quran.data.db.HeaderGlyphEntity
 import com.lhacenmed.khatmah.feature.quran.data.db.MushafDb
 
 private val EAST_DIGITS = charArrayOf('٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩')
@@ -13,7 +17,15 @@ private fun east(n: Int): String = n.toString().map { EAST_DIGITS[it - '0'] }.jo
  * (header/footer overlay) so they always agree. The representative sura is the one of the first
  * ayah on the page (mushaf convention); the juz is that ayah's juz.
  */
-data class PageMeta(val suraName: String, val juz: Int, val page: Int) {
+data class PageMeta(
+    val suraName: String,
+    val juz: Int,
+    val page: Int,
+    /** QCF4_QBSML running-head glyph for this page's sura(s); "" when none (e.g. al-Fatiha). */
+    val suraGlyph: String = "",
+    /** QCF4_QBSML glyph for this page's juz number; "" when not downloaded. */
+    val juzGlyph: String = "",
+) {
     val toolbarTitle: String get() = "سُورَةُ $suraName"
     val toolbarSubtitle: String get() = "صفحة ${east(page)}، جزء ${east(juz)}"
     val headerSura: String get() = suraName
@@ -57,13 +69,45 @@ object ReaderMeta {
         val suras = dao.surahs(riwayaKey).associate { it.num to it.name }
         val starts = dao.allPageStarts(riwayaKey)
 
+        // Running-head glyphs live in the QCF4 download partition (wordKey), not the text key.
+        val wordKey = Riwaya.valueOf(riwayaKey.uppercase()).config.wordKey
+        val glyphs = dao.headerGlyphs(wordKey)
+        val juzGlyphs = glyphs.filter { it.type == HeaderGlyphType.JUZ }.associate { it.num to it.char }
+        // The sura running head is a run-length map (glyph from its page onward); fill it forward
+        // so any page resolves in O(1). Pages before the first entry (al-Fatiha) have no glyph.
+        val suraByPage = fillForward(glyphs.filter { it.type == HeaderGlyphType.PAGE })
+
         val map = starts.associate { start ->
             val bare = (suras[start.sura] ?: "").removePrefix("سورة ").trim()
-            start.pageNum to PageMeta(bare, juzForVerse(start.sura, start.aya), start.pageNum)
+            val juz = juzForVerse(start.sura, start.aya)
+            start.pageNum to PageMeta(
+                suraName = bare,
+                juz = juz,
+                page = start.pageNum,
+                suraGlyph = suraByPage[start.pageNum] ?: "",
+                juzGlyph = juzGlyphs[juz] ?: "",
+            )
         }
 
         metaCache = riwayaKey to map
         return map
+    }
+
+    /**
+     * Expands the run-length [rows] (a glyph effective from its `num` page onward) into a per-page
+     * map. Pages before the first entry are absent (e.g. al-Fatiha, which has no running-head glyph).
+     */
+    private fun fillForward(rows: List<HeaderGlyphEntity>): Map<Int, String> {
+        if (rows.isEmpty()) return emptyMap()
+        val sorted = rows.sortedBy { it.num }
+        val out = HashMap<Int, String>(RiwayaConfig.PAGE_COUNT)
+        var idx = 0
+        var cur = ""
+        for (page in 1..RiwayaConfig.PAGE_COUNT) {
+            while (idx < sorted.size && sorted[idx].num <= page) { cur = sorted[idx].char; idx++ }
+            if (cur.isNotEmpty()) out[page] = cur
+        }
+        return out
     }
 
     /** Juz' number (1..30) that [sura]:[aya] belongs to. */

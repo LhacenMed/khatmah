@@ -9,6 +9,7 @@ import com.lhacenmed.khatmah.feature.quran.data.db.MushafDb
 import com.lhacenmed.khatmah.feature.quran.data.db.PageEntity
 import com.lhacenmed.khatmah.feature.quran.data.db.VersePage
 import com.lhacenmed.khatmah.feature.quran.data.db.WordEntity
+import com.lhacenmed.khatmah.feature.quran.data.toHeaderGlyphEntities
 import com.lhacenmed.khatmah.feature.quran.data.toQcf4Page
 import com.lhacenmed.khatmah.shared.util.SpeedTracker
 import com.lhacenmed.khatmah.shared.util.formatDownloadLog
@@ -55,6 +56,7 @@ object MushafDownloader {
         dao.clearPages(config.wordKey)
         dao.clearWords(config.wordKey)
         dao.clearVersePages(config.wordKey)
+        dao.clearHeaderGlyphs(config.wordKey)
 
         val tmpBundle = File(ctx.cacheDir, "${config.wordKey}_qcf4_bundle.7z")
         tmpBundle.delete()
@@ -149,6 +151,12 @@ object MushafDownloader {
         // Rebuild verse→page index from all words now in DB.
         emit(DownloadState.Downloading(null, "Building verse index..."))
         rebuildVersePages(dao, config.wordKey)
+
+        // Running-head glyph map (page-info band). Best-effort: the reader falls back to plain
+        // text when it is absent, so a fetch failure must not fail an otherwise complete install.
+        emit(DownloadState.Downloading(null, "Loading page headers..."))
+        installHeaders(dao, config)
+
         prefs.edit { putBoolean(RiwayaConfig.KEY_DB_READY, true) }
         emit(DownloadState.Downloaded)
     }.flowOn(Dispatchers.IO)
@@ -175,6 +183,22 @@ object MushafDownloader {
         }
         error("Too many redirects for $url")
     }
+
+    /**
+     * Downloads the riwaya's `headers.json` and installs its running-head glyph rows. Best-effort:
+     * any failure is swallowed (logged) so it never aborts an otherwise complete install.
+     */
+    private suspend fun installHeaders(
+        dao: com.lhacenmed.khatmah.feature.quran.data.db.MushafDao,
+        config: RiwayaConfig,
+    ) = runCatching {
+        val conn = openWithRedirects(config.headersUrl)
+        val json = try { conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) } }
+        finally { conn.disconnect() }
+        val rows = JSONObject(json).toHeaderGlyphEntities(config.wordKey)
+        dao.clearHeaderGlyphs(config.wordKey)
+        if (rows.isNotEmpty()) dao.insertHeaderGlyphs(rows)
+    }.onFailure { android.util.Log.e("MushafDownloader", "headers.json install failed", it) }
 
     /**
      * Derives the aya→page index from all words in DB (MIN page per aya, so long ayas that

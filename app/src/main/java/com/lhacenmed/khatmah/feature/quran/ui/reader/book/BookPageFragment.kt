@@ -145,7 +145,13 @@ class BookPageFragment : Fragment() {
             val loaded = result.getOrNull() ?: return@launch
             pageView?.apply {
                 setPage(loaded.page, loaded.faces, repo.riwaya, loaded.calligraphic)
-                setPageInfo(loaded.meta.headerSura, loaded.meta.headerJuz, loaded.meta.footerPage)
+                setPageInfo(
+                    suraGlyph = loaded.meta.suraGlyph,
+                    juzGlyph = loaded.meta.juzGlyph,
+                    suraText = loaded.meta.headerSura,
+                    juzText = loaded.meta.headerJuz,
+                    page = loaded.meta.footerPage,
+                )
                 // Smooth native fade-in after content is set.
                 animate().alpha(1f).setDuration(250).start()
             }

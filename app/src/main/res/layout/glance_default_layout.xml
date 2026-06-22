@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Shown by the launcher while Glance is loading its first frame.
-    Uses the same widget_bg drawable so the rounded corners and green colour
-    are visible immediately — no jarring white or square flash.
+    Shown by the launcher while Glance is loading its first frame, and as the API 31+
+    picker preview. android:theme applies the Material 3 (dynamic on 12+) palette so the
+    rounded surface and label match the live Glance widget immediately — no colour flash.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:theme="@style/Theme.Khatmah.Widget"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_bg">
+    android:background="@drawable/widget_default_bg">
 
     <TextView
         android:layout_width="match_parent"
@@ -16,7 +17,7 @@
         android:gravity="center"
         android:padding="16dp"
         android:text="@string/app_name"
-        android:textColor="#FFFFFF"
+        android:textColor="?attr/colorOnSecondaryContainer"
         android:textSize="16sp" />
 
 </FrameLayout>
