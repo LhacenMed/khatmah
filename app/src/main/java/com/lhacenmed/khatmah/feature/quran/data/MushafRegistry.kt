@@ -10,7 +10,7 @@ object MushafRegistry {
 
     val all: List<MushafPrint> = Riwaya.entries.flatMap { riwaya ->
         MushafFormat.entries.map { format ->
-            MushafPrint(riwaya, format, nameRes(riwaya, format), descRes(riwaya, format))
+            MushafPrint(riwaya, format, nameRes(format), descRes(riwaya, format))
         }
     }
 
@@ -21,13 +21,12 @@ object MushafRegistry {
 
     fun byRiwaya(riwaya: Riwaya): List<MushafPrint> = all.filter { it.riwaya == riwaya }
 
-    // ── Per (riwaya, format) string resources ───────────────────────────────────
+    // ── String resources ─────────────────────────────────────────────────────────
 
-    private fun nameRes(riwaya: Riwaya, format: MushafFormat): Int = when (riwaya to format) {
-        Riwaya.WARSH to MushafFormat.TEXT -> R.string.print_warsh_text
-        Riwaya.WARSH to MushafFormat.QCF4 -> R.string.print_warsh_qcf4
-        Riwaya.HAFS  to MushafFormat.TEXT -> R.string.print_hafs_text
-        else                              -> R.string.print_hafs_qcf4
+    /** The name conveys the format only — the riwaya is already the section header above the card. */
+    private fun nameRes(format: MushafFormat): Int = when (format) {
+        MushafFormat.TEXT -> R.string.print_text_name
+        MushafFormat.QCF4 -> R.string.print_mushaf_name
     }
 
     private fun descRes(riwaya: Riwaya, format: MushafFormat): Int = when (riwaya to format) {

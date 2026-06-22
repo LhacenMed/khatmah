@@ -21,4 +21,7 @@ data class MushafPrint(
 ) {
     val id: String get() = "${riwaya.dbKey}_${format.name.lowercase()}"
     val requiresDownload: Boolean get() = format == MushafFormat.QCF4
+
+    /** The page-faithful mushaf is the premium option — surfaced with a "recommended" badge. */
+    val recommended: Boolean get() = format == MushafFormat.QCF4
 }

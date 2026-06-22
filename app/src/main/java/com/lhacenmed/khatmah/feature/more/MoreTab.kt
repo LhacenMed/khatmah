@@ -51,6 +51,8 @@ import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.core.ui.components.OptionSelectBottomSheet
 import com.lhacenmed.khatmah.core.ui.components.SheetOption
 import com.lhacenmed.khatmah.core.ui.components.showTimePicker
+import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
+import com.lhacenmed.khatmah.feature.khatmah.data.SessionCounts
 import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.quran.data.QuranTextRepository
 import com.lhacenmed.khatmah.feature.quran.data.RiwayaConfig
@@ -122,9 +124,14 @@ private fun MoreScreen(padding: PaddingValues) {
     val scrollToTop = LocalScrollToTop.current
 
     // ── Quranic sunnah surahs → page-windowed book-reader session (QCF4 only) ──────
-    val scope        = rememberCoroutineScope()
-    val sunnahRepo   = remember { QuranTextRepository(context) }
-    val showDlDialog = remember { mutableStateOf(false) }
+    val scope         = rememberCoroutineScope()
+    val sunnahRepo    = remember { QuranTextRepository(context) }
+    val showDlDialog  = remember { mutableStateOf(false) }
+
+    // ── Session counts for the badges ──────────────────────────────────────────
+    val khatmahRepo   = remember { KhatmahRepository(context) }
+    val sessionCounts by khatmahRepo.activeSessionCounts()
+        .collectAsState(initial = SessionCounts(0, 0))
 
     /** Opens [surahNum] as a session windowed to that surah's pages, or prompts to pick a QCF4 print. */
     fun openSunnah(surahNum: Int) {
@@ -165,9 +172,11 @@ private fun MoreScreen(padding: PaddingValues) {
         // ── Current Khatmah ───────────────────────────────────────────────────
         subtitle(R.string.more_current_khatmah)
         prefItem(R.string.more_previous_sessions, Icons.Outlined.SkipPrevious,
-            trailingIcon = { CountBadge(count = 13) })
+            trailingIcon = { CountBadge(count = sessionCounts.read) },
+            onClick = { nav.go(Dest.Sessions(showRead = true)) })
         prefItem(R.string.more_upcoming_sessions, Icons.Outlined.SkipNext,
-            trailingIcon = { CountBadge(count = 16) })
+            trailingIcon = { CountBadge(count = sessionCounts.upcoming) },
+            onClick = { nav.go(Dest.Sessions(showRead = false)) })
         prefItem(R.string.more_bookmark, Icons.Outlined.Bookmark,
             onClick = { nav.go(Dest.Bookmarks) })
 

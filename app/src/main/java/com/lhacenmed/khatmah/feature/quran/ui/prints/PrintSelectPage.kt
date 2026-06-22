@@ -33,17 +33,22 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoStories
+import androidx.compose.material.icons.outlined.Brush
 import androidx.compose.material.icons.outlined.CloudDownload
+import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
@@ -58,9 +63,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.annotation.StringRes
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -251,6 +258,116 @@ private fun LogShelf(state: DownloadState, modifier: Modifier = Modifier) {
     }
 }
 
+// ── Recommended badge ─────────────────────────────────────────────────────────
+
+/** Small primary-tinted pill that marks the page-faithful mushaf as the best option. */
+@Composable
+private fun RecommendedBadge(alpha: Float) {
+    Surface(
+        color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
+        shape = RoundedCornerShape(50),
+    ) {
+        Text(
+            text     = stringResource(R.string.print_recommended),
+            style    = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            color    = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+        )
+    }
+}
+
+// ── Mushaf info sheet ─────────────────────────────────────────────────────────
+
+/**
+ * Bottom sheet opened from a mushaf card's info button. Shows the print's name +
+ * riwaya, its description, and the qualities that make the page-faithful mushaf the
+ * best option. Only shown for downloadable mushaf prints — text prints have no button.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MushafInfoSheet(print: MushafPrint, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 24.dp, end = 24.dp, bottom = 32.dp),
+        ) {
+            Text(
+                text       = stringResource(print.nameRes),
+                style      = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color      = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text  = stringResource(print.riwaya.nameRes),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text  = stringResource(print.descRes),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(24.dp))
+            MushafInfoRow(
+                icon     = Icons.Outlined.AutoStories,
+                titleRes = R.string.print_info_faithful_title,
+                descRes  = R.string.print_info_faithful_desc,
+            )
+            Spacer(Modifier.height(16.dp))
+            MushafInfoRow(
+                icon     = Icons.Outlined.Brush,
+                titleRes = R.string.print_info_rasm_title,
+                descRes  = R.string.print_info_rasm_desc,
+            )
+            Spacer(Modifier.height(16.dp))
+            MushafInfoRow(
+                icon     = Icons.Outlined.DownloadForOffline,
+                titleRes = R.string.print_info_offline_title,
+                descRes  = R.string.print_info_offline_desc,
+            )
+        }
+    }
+}
+
+/** One labelled feature row inside [MushafInfoSheet]. */
+@Composable
+private fun MushafInfoRow(
+    icon:             ImageVector,
+    @StringRes titleRes: Int,
+    @StringRes descRes:  Int,
+) {
+    Row(
+        verticalAlignment     = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Icon(
+            imageVector        = icon,
+            contentDescription = null,
+            modifier           = Modifier.size(22.dp),
+            tint               = MaterialTheme.colorScheme.primary,
+        )
+        Column {
+            Text(
+                text       = stringResource(titleRes),
+                style      = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color      = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text  = stringResource(descRes),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
 // ── Print card ────────────────────────────────────────────────────────────────
 
 @Composable
@@ -272,6 +389,9 @@ private fun PrintCard(
 
     val showProgress     = state == DownloadState.Connecting || state is DownloadState.Downloading
     val downloadProgress = (state as? DownloadState.Downloading)?.progress
+
+    var showInfo by remember { mutableStateOf(false) }
+    if (showInfo) MushafInfoSheet(print = print, onDismiss = { showInfo = false })
 
     OutlinedCard(
         onClick   = { if (isAvailable && !isSelected) onSelect() },
@@ -295,7 +415,7 @@ private fun PrintCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         verticalAlignment     = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Text(
                             text       = stringResource(print.nameRes),
@@ -305,17 +425,21 @@ private fun PrintCard(
                                 .copy(alpha = contentAlpha),
                             modifier   = Modifier.weight(1f, fill = false),
                         )
-                        IconButton(
-                            onClick  = { /* TODO */ },
-                            modifier = Modifier.size(20.dp),
-                        ) {
-                            Icon(
-                                imageVector        = Icons.Outlined.Info,
-                                contentDescription = null,
-                                modifier           = Modifier.size(14.dp),
-                                tint               = MaterialTheme.colorScheme.onSurfaceVariant
-                                    .copy(alpha = contentAlpha),
-                            )
+                        if (print.recommended) RecommendedBadge(alpha = contentAlpha)
+                        // Info sheet is only meaningful for the downloadable mushaf prints.
+                        if (print.requiresDownload) {
+                            IconButton(
+                                onClick  = { showInfo = true },
+                                modifier = Modifier.size(20.dp),
+                            ) {
+                                Icon(
+                                    imageVector        = Icons.Outlined.Info,
+                                    contentDescription = stringResource(R.string.print_info_title),
+                                    modifier           = Modifier.size(14.dp),
+                                    tint               = MaterialTheme.colorScheme.onSurfaceVariant
+                                        .copy(alpha = contentAlpha),
+                                )
+                            }
                         }
                     }
                     Spacer(Modifier.height(2.dp))

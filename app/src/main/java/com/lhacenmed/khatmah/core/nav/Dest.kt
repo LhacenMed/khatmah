@@ -16,6 +16,7 @@ import com.lhacenmed.khatmah.feature.debug.FileBrowserScreen
 import com.lhacenmed.khatmah.feature.demo.DemoDetailScreen
 import com.lhacenmed.khatmah.feature.khatmah.ui.DailyAlarmScreen
 import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahScreen
+import com.lhacenmed.khatmah.feature.khatmah.ui.SessionsScreen
 import com.lhacenmed.khatmah.feature.quran.ui.bookmarks.BookmarksScreen
 import com.lhacenmed.khatmah.feature.quran.ui.prints.PrintSelectScreen
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsScreen
@@ -85,6 +86,12 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
     data object DailyAlarm : Dest() {
         override val titleRes get() = R.string.more_daily_alarm
         override fun screen() = @Composable { DailyAlarmScreen() }
+    }
+    /** Active khatmah sessions list: previously read ([showRead] = true) or upcoming (false). */
+    data class Sessions(val showRead: Boolean) : Dest() {
+        override val titleRes get() =
+            if (showRead) R.string.more_previous_sessions else R.string.more_upcoming_sessions
+        override fun screen() = @Composable { SessionsScreen(showRead) }
     }
     data object FullIndex : Dest() {
         override val titleRes get() = R.string.full_index_title

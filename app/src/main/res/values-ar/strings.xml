@@ -451,6 +451,8 @@
     <string name="khatmah_from_label">من: %1$s — آية %2$d</string>
     <string name="khatmah_to_label">إلى: %1$s — آية %2$d</string>
     <string name="khatmah_pages_label">صفحة %1$d – %2$d</string>
+    <string name="sessions_none_previous">لا توجد جلسات مقروءة بعد</string>
+    <string name="sessions_none_upcoming">لا توجد جلسات قادمة</string>
 
     <!-- Today Tab -->
     <string name="today_starts_from">من قوله تعالى</string>
@@ -491,8 +493,19 @@
     <!-- Mushaf prints -->
     <string name="mushaf_print_title">طبعة المصحف</string>
     <string name="more_mushaf_print">طبعة المصحف</string>
-    <string name="print_warsh_text">ورش — نص</string>
-    <string name="print_warsh_text_desc">نص عربي معروض مع البحث وتشغيل الصوت</string>
+    <!-- Print identity: the format the card offers (riwaya is the section header) -->
+    <string name="print_mushaf_name">المصحف</string>
+    <string name="print_text_name">النص</string>
+    <string name="print_recommended">موصى به</string>
+    <!-- Mushaf info bottom sheet -->
+    <string name="print_info_title">عن هذا المصحف</string>
+    <string name="print_info_faithful_title">مطابق للمطبوع</string>
+    <string name="print_info_faithful_desc">كل صفحة تطابق المصحف الورقي المعتمد، آيةً بآية</string>
+    <string name="print_info_rasm_title">خط المصحف الأصلي</string>
+    <string name="print_info_rasm_desc">حروف QCF عالية الدقة بالرسم العثماني</string>
+    <string name="print_info_offline_title">تحميل لمرة واحدة</string>
+    <string name="print_info_offline_desc">يُحفظ على جهازك ويعمل بدون اتصال بالإنترنت</string>
+    <string name="print_warsh_text_desc">نص خفيف للقراءة السريعة · بدون تحميل</string>
     <string name="print_warsh_images">ورش — صفحات المصحف</string>
     <string name="print_warsh_images_desc">صور ممسوحة لصفحات مصحف ورش · حوالي 120 ميغابايت</string>
     <string name="print_warsh_svg">ورش — صفحات SVG</string>
@@ -507,17 +520,14 @@
     <string name="trip_notif_reason">السبب</string>
     <string name="trip_notif_description">التفاصيل</string>
 
-    <string name="print_hafs_qcf4">حفص — مصحف QCF4</string>
-    <string name="print_hafs_qcf4_desc">مصحف المدينة النبوية بخط رواية حفص عن عاصم</string>
+    <string name="print_hafs_qcf4_desc">مصحف المدينة المطبوع · بخط رواية حفص عن عاصم</string>
 
     <string name="more_files_browser">متصفح الملفات</string>
     <string name="more_qadaa">قضاء</string>
 
-    <string name="print_warsh_qcf4">ورش — مصحف QCF4</string>
-    <string name="print_warsh_qcf4_desc">مصحف المغرب بخط رواية ورش عن نافع</string>
+    <string name="print_warsh_qcf4_desc">مصحف المغرب المطبوع · بخط رواية ورش عن نافع</string>
 
-    <string name="print_hafs_text">نص حفص</string>
-    <string name="print_hafs_text_desc">قراءة نصية بخط عثماني - رواية حفص</string>
+    <string name="print_hafs_text_desc">نص خفيف للقراءة السريعة · بدون تحميل</string>
 
     <string name="print_select">تحديد</string>
     <string name="print_active">مفعل</string>
