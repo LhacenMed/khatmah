@@ -1,6 +1,7 @@
 @file:Suppress("UnstableApiUsage")
 
 import com.android.build.api.variant.FilterConfiguration
+import com.android.build.api.variant.impl.VariantOutputImpl
 import java.io.File
 import java.io.FileInputStream
 import java.util.Properties
@@ -53,9 +54,10 @@ val currentVersion: Version = Version.Stable(
 
 val keystorePropertiesFile: File = rootProject.file("keystore.properties")
 
-// Default: single universal APK — sideloadable without picking the right ABI file.
-// Pass -Psplits to generate per-ABI APKs + universal for store distribution.
-val splitApks = project.hasProperty("splits")
+// Release builds always emit per-ABI APKs + a universal one (store/sideload distribution);
+// debug stays a single fast universal APK. Pass -Psplits to force splits for any build type.
+val isReleaseBuild = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
+val splitApks = project.hasProperty("splits") || isReleaseBuild
 
 val abiFilterList = (properties["ABI_FILTERS"] as? String)
     ?.split(';')
@@ -146,16 +148,22 @@ android {
 
 androidComponents {
     onVariants { variant ->
-        if (!splitApks) return@onVariants
         val abiCodes = mapOf("armeabi-v7a" to 1, "arm64-v8a" to 2, "x86" to 3, "x86_64" to 4)
         variant.outputs.forEach { output ->
-            val name = output.filters
+            val abi = output.filters
                 .find { it.filterType == FilterConfiguration.FilterType.ABI }
                 ?.identifier
-                ?: abiFilterList.firstOrNull()
-            abiCodes[name]?.let { code ->
-                output.versionCode.set(code + (output.versionCode.get() ?: 0))
+            // Per-ABI APKs get a distinct versionCode so each ABI is independently updatable.
+            // The single non-split APK keeps the base code (no bump).
+            if (splitApks) {
+                abiCodes[abi ?: abiFilterList.firstOrNull()]?.let { code ->
+                    output.versionCode.set(code + (output.versionCode.get() ?: 0))
+                }
             }
+            // Name every artifact "khatmah-<version>-<abi>.apk" ("…-universal.apk" for the
+            // ABI-less output) so a bare "app-release.apk" can never be produced.
+            (output as? VariantOutputImpl)?.outputFileName
+                ?.set("khatmah-${currentVersion.toVersionName()}-${abi ?: "universal"}.apk")
         }
     }
 }
