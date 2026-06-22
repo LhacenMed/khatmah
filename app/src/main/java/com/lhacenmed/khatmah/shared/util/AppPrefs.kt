@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * Centralized, SharedPreferences-backed store for user preferences that span
  * multiple screens (selected audio reader, and future additions).
  *
- * Mushaf print selection is managed by [com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs].
+ * Mushaf print selection is managed by [com.lhacenmed.khatmah.feature.quran.data.MushafPrefs].
  */
 object AppPrefs {
 
@@ -21,7 +21,7 @@ object AppPrefs {
 
     /**
      * ID of the currently selected Quran audio reader.
-     * Matches [ReaderInfo.id] from assets/readers.json.
+     * Matches [GhReader.id] from assets/recitations.json.
      * Empty string means "use the first reader in the manifest".
      */
     private val _audioReaderId = MutableStateFlow("")

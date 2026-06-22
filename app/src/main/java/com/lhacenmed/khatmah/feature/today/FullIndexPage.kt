@@ -37,18 +37,16 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
-import com.lhacenmed.khatmah.feature.mushaf.data.DivType
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrint
-import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
-import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
-import com.lhacenmed.khatmah.feature.mushaf.data.db.PageStartEntity
-import com.lhacenmed.khatmah.feature.quran.data.HafsQcf4Repository
-import com.lhacenmed.khatmah.feature.quran.data.QuranRepository
+import com.lhacenmed.khatmah.feature.quran.data.DivType
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrint
+import com.lhacenmed.khatmah.feature.quran.data.db.MushafDb
+import com.lhacenmed.khatmah.feature.quran.data.db.PageStartEntity
+import com.lhacenmed.khatmah.feature.quran.data.Qcf4Repository
+import com.lhacenmed.khatmah.feature.quran.data.QuranTextRepository
 import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
-import com.lhacenmed.khatmah.feature.quran.data.WarshQcf4Repository
-import com.lhacenmed.khatmah.feature.quran.ui.book.isQcf4
-import com.lhacenmed.khatmah.feature.quran.ui.book.readerDestAt
+import com.lhacenmed.khatmah.feature.quran.ui.reader.isQcf4
+import com.lhacenmed.khatmah.feature.quran.ui.reader.readerDestAt
 import com.lhacenmed.khatmah.shared.util.RecentSurahsPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -94,7 +92,7 @@ class FullIndexViewModel(context: Context) : ViewModel() {
         withContext(Dispatchers.IO) {
             val riwayaKey  = print.riwaya.dbKey
             val dao        = MushafDb.get(appContext).dao()
-            val all        = QuranRepository(appContext).surahList(riwayaKey)
+            val all        = QuranTextRepository(appContext).surahList(riwayaKey)
             val pageStarts = dao.allPageStarts(riwayaKey)
             val divisions  = dao.divisions(riwayaKey, DivType.JUZ)
             val nameMap    = dao.surahs(riwayaKey).associate { it.num to it.name }
@@ -129,8 +127,7 @@ class FullIndexViewModel(context: Context) : ViewModel() {
         val byStart: (Int, Int) -> Int = { sura, aya -> pageFor(pageStarts, sura, aya) }
         if (!print.isQcf4) return byStart
 
-        val source = if (print.riwaya == Riwaya.WARSH) WarshQcf4Repository.get(appContext)
-                     else HafsQcf4Repository.get(appContext)
+        val source = Qcf4Repository.get(appContext, print.riwaya)
         val ayaPage = runCatching { source.ayaPageIndex() }.getOrDefault(emptyMap())
         if (ayaPage.isEmpty()) return byStart
         return { sura, aya ->

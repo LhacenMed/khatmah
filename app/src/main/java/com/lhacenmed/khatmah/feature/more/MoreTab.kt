@@ -1,6 +1,7 @@
 package com.lhacenmed.khatmah.feature.more
 
 import android.os.Build
+import com.lhacenmed.khatmah.BuildConfig
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -35,6 +36,8 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -48,11 +51,19 @@ import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.core.ui.components.OptionSelectBottomSheet
 import com.lhacenmed.khatmah.core.ui.components.SheetOption
 import com.lhacenmed.khatmah.core.ui.components.showTimePicker
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
+import com.lhacenmed.khatmah.feature.khatmah.data.SessionCounts
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.quran.data.QuranTextRepository
+import com.lhacenmed.khatmah.feature.quran.data.RiwayaConfig
+import com.lhacenmed.khatmah.feature.quran.ui.reader.MushafDownloadDialog
+import com.lhacenmed.khatmah.feature.quran.ui.reader.isQcf4
+import com.lhacenmed.khatmah.feature.quran.ui.reader.sessionReaderDest
 import com.lhacenmed.khatmah.shared.reminders.ReminderConfig
 import com.lhacenmed.khatmah.shared.reminders.ReminderPrefs
 import com.lhacenmed.khatmah.shared.reminders.ReminderScheduler
 import com.lhacenmed.khatmah.shared.util.LocaleManager
+import kotlinx.coroutines.launch
 
 // Items within this distance from the top animate directly; farther ones jump-then-animate.
 private const val SMOOTH_SCROLL_THRESHOLD = 4
@@ -112,6 +123,29 @@ private fun MoreScreen(padding: PaddingValues) {
     val nav         = LocalNavigator.current
     val scrollToTop = LocalScrollToTop.current
 
+    // ── Quranic sunnah surahs → page-windowed book-reader session (QCF4 only) ──────
+    val scope         = rememberCoroutineScope()
+    val sunnahRepo    = remember { QuranTextRepository(context) }
+    val showDlDialog  = remember { mutableStateOf(false) }
+
+    // ── Session counts for the badges ──────────────────────────────────────────
+    val khatmahRepo   = remember { KhatmahRepository(context) }
+    val sessionCounts by khatmahRepo.activeSessionCounts()
+        .collectAsState(initial = SessionCounts(0, 0))
+
+    /** Opens [surahNum] as a session windowed to that surah's pages, or prompts to pick a QCF4 print. */
+    fun openSunnah(surahNum: Int) {
+        if (!selectedPrint.isQcf4) { showDlDialog.value = true; return }
+        val cfg = RiwayaConfig.of(selectedPrint.riwaya)
+        scope.launch {
+            val range = sunnahRepo.pageRangeForSurah(
+                selectedPrint.riwaya.dbKey, surahNum, cfg.ayaCount(surahNum),
+            ) ?: return@launch
+            // Negative session id keeps a per-surah reading position, never colliding with khatmah ids.
+            nav.go(sessionReaderDest(-surahNum.toLong(), range.first, range.last))
+        }
+    }
+
     // Two-phase scroll-to-top: instant jump to near the top, then smooth animation
     // for the final items. This avoids the visual churn of animating through dozens
     // of items when the list is scrolled far down.
@@ -138,16 +172,19 @@ private fun MoreScreen(padding: PaddingValues) {
         // ── Current Khatmah ───────────────────────────────────────────────────
         subtitle(R.string.more_current_khatmah)
         prefItem(R.string.more_previous_sessions, Icons.Outlined.SkipPrevious,
-            trailingIcon = { CountBadge(count = 13) })
+            trailingIcon = { CountBadge(count = sessionCounts.read) },
+            onClick = { nav.go(Dest.Sessions(showRead = true)) })
         prefItem(R.string.more_upcoming_sessions, Icons.Outlined.SkipNext,
-            trailingIcon = { CountBadge(count = 16) })
-        prefItem(R.string.more_bookmark, Icons.Outlined.Bookmark)
+            trailingIcon = { CountBadge(count = sessionCounts.upcoming) },
+            onClick = { nav.go(Dest.Sessions(showRead = false)) })
+        prefItem(R.string.more_bookmark, Icons.Outlined.Bookmark,
+            onClick = { nav.go(Dest.Bookmarks) })
 
         // ── Quranic Sunnahs ───────────────────────────────────────────────────
         subtitle(R.string.more_quranic_sunnahs)
-        prefItem(R.string.more_surat_kahf,    R.drawable.round_book_24)
-        prefItem(R.string.more_surat_mulk,    R.drawable.round_book_24)
-        prefItem(R.string.more_surat_baqarah, R.drawable.round_book_24)
+        prefItem(R.string.more_surat_kahf,    R.drawable.round_book_24, onClick = { openSunnah(18) })
+        prefItem(R.string.more_surat_mulk,    R.drawable.round_book_24, onClick = { openSunnah(67) })
+        prefItem(R.string.more_surat_baqarah, R.drawable.round_book_24, onClick = { openSunnah(2) })
 
         // ── Settings ──────────────────────────────────────────────────────────
         subtitle(R.string.more_settings)
@@ -229,14 +266,23 @@ private fun MoreScreen(padding: PaddingValues) {
         prefItem(R.string.more_share_app,  Icons.Outlined.Share)
         prefItem(R.string.more_rate_khatmah, Icons.Outlined.StarBorder)
 
-        // ── Debug ─────────────────────────────────────────────────────────────
-        subtitle(R.string.more_debug)
-        prefItem(R.string.more_debug_db, Icons.Outlined.BugReport,
-            onClick = { nav.go(Dest.DbBrowser) })
-        prefItem(R.string.more_trip_requests, Icons.Outlined.DirectionsBus,
-            onClick = { nav.go(Dest.TripRequests) })
-        prefItem(R.string.more_files_browser, Icons.Outlined.FolderOpen,
-            onClick = { nav.go(Dest.FileBrowser) })
+        // ── Debug (debug builds only) ─────────────────────────────────────────
+        if (BuildConfig.DEBUG) {
+            subtitle(R.string.more_debug)
+            prefItem(R.string.more_debug_db, Icons.Outlined.BugReport,
+                onClick = { nav.go(Dest.DbBrowser) })
+            prefItem(R.string.more_trip_requests, Icons.Outlined.DirectionsBus,
+                onClick = { nav.go(Dest.TripRequests) })
+            prefItem(R.string.more_files_browser, Icons.Outlined.FolderOpen,
+                onClick = { nav.go(Dest.FileBrowser) })
+        }
+    }
+
+    if (showDlDialog.value) {
+        MushafDownloadDialog(
+            onSettings = { showDlDialog.value = false; nav.go(Dest.MushafPrints) },
+            onDismiss  = { showDlDialog.value = false },
+        )
     }
 
     if (showLanguageSheet.value) {

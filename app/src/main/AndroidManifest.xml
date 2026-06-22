@@ -14,6 +14,9 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <!-- Re-schedule alarms after device reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Mushaf download keeps running in the background as a foreground service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:name=".core.App"
@@ -47,19 +50,20 @@
              screens reuse it, so new screens never need a manifest entry. -->
         <activity android:name=".core.ScreenHostActivity" android:exported="false" />
 
-        <!-- Native (View-based) QCF4 book reader — Quran Android's PagerActivity port. -->
+        <!-- Reader activity -->
         <activity
-            android:name=".feature.quran.ui.book.BookReaderActivity"
+            android:name=".feature.quran.ui.reader.ReaderActivity"
             android:exported="false" />
 
-        <!-- Reader settings — Quran Android's QuranPreferenceActivity analog. -->
+        <!-- Reader settings -->
         <activity
-            android:name=".feature.quran.ui.book.BookReaderSettingsActivity"
+            android:name=".feature.quran.ui.settings.ReaderSettingsActivity"
+            android:theme="@style/Theme.Khatmah.ReaderSettings"
             android:exported="false" />
 
-        <!-- Reader search — the QuranSearchScreen port; keyboard resizes the results list. -->
+        <!-- Reader search -->
         <activity
-            android:name=".feature.quran.ui.book.BookSearchActivity"
+            android:name=".feature.quran.ui.search.ReaderSearchActivity"
             android:windowSoftInputMode="adjustResize"
             android:exported="false" />
 
@@ -103,6 +107,12 @@
             android:exported="true"
             android:grantUriPermissions="true"
             tools:ignore="ExportedContentProvider" />
+
+        <!-- QCF4 mushaf download — runs in the background, survives leaving the screen. -->
+        <service
+            android:name=".feature.quran.data.download.DownloadService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
 
         <!-- FCM token refresh service -->
         <service

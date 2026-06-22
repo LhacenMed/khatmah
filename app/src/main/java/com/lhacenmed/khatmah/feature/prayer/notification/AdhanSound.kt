@@ -47,6 +47,6 @@ sealed class AdhanSound {
         }
 
         /** Filename used as the app-wide default. */
-        const val DEFAULT_ASSET = "makkah.opus"
+        const val DEFAULT_ASSET = "adhan_mr.opus"
     }
 }

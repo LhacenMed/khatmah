@@ -24,8 +24,8 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:titleTextAppearance="@style/CompactToolbarTitleText"
-            app:subtitleTextAppearance="@style/CompactToolbarSubtitleText" />
+            app:titleTextAppearance="@style/ToolbarTitleText"
+            app:subtitleTextAppearance="@style/ToolbarSubtitleText" />
     </FrameLayout>
 
     <!-- Bottom page-jump bar — slides in/out with the toolbar. -->

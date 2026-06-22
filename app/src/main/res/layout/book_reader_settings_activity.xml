@@ -22,7 +22,7 @@
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/settings_container"
-        android:name="com.lhacenmed.khatmah.feature.quran.ui.book.BookReaderSettingsFragment"
+        android:name="com.lhacenmed.khatmah.feature.quran.ui.settings.ReaderSettingsFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="?attr/colorSurface" />

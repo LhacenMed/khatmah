@@ -8,10 +8,28 @@
         <item name="android:fontFamily">@font/noto_kufi_regular</item>
         <item name="fontFamily">@font/noto_kufi_regular</item>
 
+        <!-- Required by PreferenceFragmentCompat (reader settings). -->
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+
         <item name="textAppearanceTitleLarge">@style/App.TextAppearance.TitleLarge</item>
         <item name="textAppearanceTitleSmall">@style/App.TextAppearance.TitleSmall</item>
         <item name="textAppearanceBodyLarge">@style/App.TextAppearance.BodyLarge</item>
         <item name="textAppearanceBodyMedium">@style/App.TextAppearance.BodyMedium</item>
+    </style>
+
+    <!-- Reader settings (PreferenceFragmentCompat). Keeps the Material3 chrome but forces the
+         AppCompat animated check drawable on checkboxes — the same drawable Quran Android's
+         AppCompat theme gives its CheckBoxPreference, which is what makes the toggle animate.
+         Material3's checkbox style binds a non-animated drawable to the framework CheckBox the
+         preference uses, so the override is what restores the path-draw animation. -->
+    <style name="Theme.Khatmah.ReaderSettings" parent="Theme.Khatmah">
+        <item name="checkboxStyle">@style/Widget.Khatmah.AnimatedCheckBox</item>
+        <item name="android:checkboxStyle">@style/Widget.Khatmah.AnimatedCheckBox</item>
+    </style>
+
+    <style name="Widget.Khatmah.AnimatedCheckBox" parent="Widget.AppCompat.CompoundButton.CheckBox">
+        <item name="android:button" tools:ignore="PrivateResource">@drawable/abc_btn_check_material_anim</item>
+        <item name="android:buttonTint">@color/reader_checkbox_tint</item>
     </style>
 
     <style name="App.TextAppearance.TitleLarge" parent="TextAppearance.Material3.TitleLarge">
@@ -34,19 +52,14 @@
         <item name="fontFamily">@font/noto_kufi_regular</item>
     </style>
 
-    <!-- Native Chrome Typography -->
-    <style name="ToolbarTitleText" parent="App.TextAppearance.TitleLarge" />
-
-    <style name="ToolbarSubtitleText" parent="App.TextAppearance.BodyMedium" />
-
-    <!-- Compact toolbar: chrome showing title + subtitle together (book reader, the Prayers
-         tab in the main host), so the tall Noto Kufi font is sized down to keep both rows
-         inside the action bar height. -->
-    <style name="CompactToolbarTitleText" parent="App.TextAppearance.TitleLarge">
+    <!-- Native chrome typography — one shared size for every top app bar (main tabs, detail hosts,
+         book reader, reader settings) so titles stay consistent. The tall Noto Kufi font is sized
+         down to keep a title + subtitle together inside the action bar height. -->
+    <style name="ToolbarTitleText" parent="App.TextAppearance.TitleLarge">
         <item name="android:textSize">17sp</item>
     </style>
 
-    <style name="CompactToolbarSubtitleText" parent="App.TextAppearance.BodyMedium">
+    <style name="ToolbarSubtitleText" parent="App.TextAppearance.BodyMedium">
         <item name="android:textSize">11sp</item>
     </style>
 

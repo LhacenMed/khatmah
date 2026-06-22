@@ -22,7 +22,7 @@ object ReminderPrefs {
     private const val K_CUSTOM    = "custom_sounds"
 
     // Matches AdhanSound.Asset(AdhanSound.DEFAULT_ASSET).toKey()
-    private const val DEFAULT_PRAYER_SOUND = "asset:makkah.mp3"
+    private const val DEFAULT_PRAYER_SOUND = "asset:adhan_mr.opus"
 
     @Volatile var version: Int = 0
         private set

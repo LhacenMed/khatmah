@@ -342,8 +342,11 @@
 
     <!-- Notification channels -->
     <string name="notif_channel_silent">Silent</string>
-    <string name="notif_channel_device">Device sound</string>
+    <string name="notif_channel_alert">Alert sound</string>
     <string name="notif_channel_pre">Pre-adhan alert</string>
+    <string name="notif_channel_adhkar">Adhkar reminders</string>
+    <string name="notif_channel_wird">Daily wird reminders</string>
+    <string name="notif_channel_khatmah">Khatmah</string>
 
     <!-- Notification body -->
     <string name="notif_pre_alert_body">%1$d minutes until %2$s</string>
@@ -417,6 +420,8 @@
     <string name="khatmah_from_label">From: %1$s — Aya %2$d</string>
     <string name="khatmah_to_label">To: %1$s — Aya %2$d</string>
     <string name="khatmah_pages_label">Page %1$d – %2$d</string>
+    <string name="sessions_none_previous">No sessions read yet</string>
+    <string name="sessions_none_upcoming">No upcoming sessions</string>
 
     <!-- Today Tab -->
     <string name="today_starts_from">Starts From</string>
@@ -457,8 +462,19 @@
     <!-- Mushaf prints -->
     <string name="mushaf_print_title">Mushaf Print</string>
     <string name="more_mushaf_print">Mushaf Print</string>
-    <string name="print_warsh_text">Warsh — Text</string>
-    <string name="print_warsh_text_desc">Rendered Arabic text with search and audio playback</string>
+    <!-- Print identity: the format the card offers (riwaya is the section header) -->
+    <string name="print_mushaf_name">Mushaf</string>
+    <string name="print_text_name">Text</string>
+    <string name="print_recommended">Recommended</string>
+    <!-- Mushaf info bottom sheet -->
+    <string name="print_info_title">About this Mushaf</string>
+    <string name="print_info_faithful_title">True to the printed copy</string>
+    <string name="print_info_faithful_desc">Every page matches the certified printed mushaf, line for line</string>
+    <string name="print_info_rasm_title">Original mushaf script</string>
+    <string name="print_info_rasm_desc">High-fidelity QCF glyphs in the Uthmanic rasm</string>
+    <string name="print_info_offline_title">One-time download</string>
+    <string name="print_info_offline_desc">Saved on your device and works offline</string>
+    <string name="print_warsh_text_desc">Lightweight text for quick reading · no download</string>
     <string name="print_warsh_images">Warsh — Mushaf Pages</string>
     <string name="print_warsh_images_desc">Scanned Warsh mushaf pages · ~120 MB</string>
     <string name="print_warsh_svg">Warsh — SVG Pages</string>
@@ -473,17 +489,14 @@
     <string name="trip_notif_reason">Reason</string>
     <string name="trip_notif_description">Details</string>
 
-    <string name="print_hafs_qcf4">Hafs — QCF4 Mushaf</string>
-    <string name="print_hafs_qcf4_desc">Madinah Mushaf · Hafs recitation · QCF4 fonts</string>
+    <string name="print_hafs_qcf4_desc">Faithful to the printed Madinah Mushaf · Hafs from ʿAsim</string>
 
     <string name="more_files_browser">File Browser</string>
     <string name="more_qadaa">Qadaa</string>
 
-    <string name="print_warsh_qcf4">Warsh — QCF4 Mushaf</string>
-    <string name="print_warsh_qcf4_desc">Moroccan Mushaf in Warsh narration from Nafiʿ</string>
+    <string name="print_warsh_qcf4_desc">Faithful to the printed Moroccan Mushaf · Warsh from Nafiʿ</string>
 
-    <string name="print_hafs_text">نص حفص</string>
-    <string name="print_hafs_text_desc">قراءة نصية بخط عثماني - رواية حفص</string>
+    <string name="print_hafs_text_desc">Lightweight text for quick reading · no download</string>
 
     <string name="print_select">Select</string>
     <string name="print_active">Active</string>
@@ -497,6 +510,14 @@
     <string name="print_cancel_download_title">Cancel Download</string>
     <string name="print_cancel_download_msg">Stop the ongoing download?</string>
     <string name="print_stop">Stop</string>
+
+    <string name="download_notif_channel">Mushaf download</string>
+    <string name="download_notif_title">Downloading %1$s mushaf</string>
+    <string name="download_notif_done">Download complete</string>
+
+    <string name="bookmarks_title">Bookmarks</string>
+    <string name="bookmarks_empty">No bookmarks yet. Tap the bookmark icon while reading a page to save it.</string>
+    <string name="bookmarks_remove">Remove bookmark</string>
 
     <string name="today_quick_index">Quick Access</string>
     <string name="today_full_index">Index</string>

@@ -17,8 +17,8 @@ import java.io.File
 /**
  * Activity-scoped audio controller for the book reader.
  *
- * Mirrors [AyaAudioManager], but is instance-owned (the book reader is its own Activity) and
- * sources audio from [GithubAudioRepository] instead of Google Drive. It reuses the shared
+ * Instance-owned (the book reader is its own Activity) and sources audio from
+ * [GithubAudioRepository] over raw.githubusercontent. It reuses the shared
  * [AyaAudioState] / [AudioLoadState] models so the player-bar rendering stays identical to the
  * Compose readers'.
  *

@@ -1,15 +1,19 @@
 package com.lhacenmed.khatmah.feature.khatmah.data
 
 import android.content.Context
-import com.lhacenmed.khatmah.feature.mushaf.data.DivType
-import com.lhacenmed.khatmah.feature.mushaf.data.MushafPrefs
-import com.lhacenmed.khatmah.feature.mushaf.data.Riwaya
-import com.lhacenmed.khatmah.feature.mushaf.data.db.DivisionEntity
-import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDao
-import com.lhacenmed.khatmah.feature.mushaf.data.db.MushafDb
-import com.lhacenmed.khatmah.feature.mushaf.data.db.PageStartEntity
+import com.lhacenmed.khatmah.feature.quran.data.DivType
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.quran.data.Riwaya
+import com.lhacenmed.khatmah.feature.quran.data.db.DivisionEntity
+import com.lhacenmed.khatmah.feature.quran.data.db.MushafDao
+import com.lhacenmed.khatmah.feature.quran.data.db.MushafDb
+import com.lhacenmed.khatmah.feature.quran.data.db.PageStartEntity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlin.math.ceil
 import kotlin.math.min
@@ -21,6 +25,16 @@ data class SessionMeta(
     val juzNum:        Int,
     val firstAyaText:  String,
 )
+
+/** One session row enriched with its start/end sura names for the sessions list. */
+data class SessionRow(
+    val entity:        KhatmahSessionEntity,
+    val startSuraName: String,
+    val endSuraName:   String,
+)
+
+/** Read vs. upcoming session counts for the active khatmah (0/0 when none). */
+data class SessionCounts(val read: Int, val upcoming: Int)
 
 class KhatmahRepository(private val context: Context) {
 
@@ -72,6 +86,34 @@ class KhatmahRepository(private val context: Context) {
 
     fun readCount(khatmahId: Long): Flow<Int> =
         khatmahDb.dao().readCount(khatmahId)
+
+    /**
+     * Sessions of the active khatmah filtered by read state ([showRead] = true → previously
+     * read, false → upcoming/unread), ordered by day and enriched with sura names. Emits an
+     * empty list when there is no active khatmah.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun sessionRows(showRead: Boolean): Flow<List<SessionRow>> =
+        khatmahDb.dao().activeKhatmah().flatMapLatest { khatmah ->
+            if (khatmah == null) flowOf(emptyList())
+            else khatmahDb.dao().sessions(khatmah.id).map { sessions ->
+                val names = suraNames(khatmah.riwaya)
+                sessions
+                    .filter { it.isRead == showRead }
+                    .map { SessionRow(it, names[it.startSura].orEmpty(), names[it.endSura].orEmpty()) }
+            }
+        }
+
+    /** Live read/upcoming session counts for the active khatmah; used by the More tab badges. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun activeSessionCounts(): Flow<SessionCounts> =
+        khatmahDb.dao().activeKhatmah().flatMapLatest { khatmah ->
+            if (khatmah == null) flowOf(SessionCounts(0, 0))
+            else khatmahDb.dao().sessions(khatmah.id).map { sessions ->
+                val read = sessions.count { it.isRead }
+                SessionCounts(read = read, upcoming = sessions.size - read)
+            }
+        }
 
     suspend fun markSessionRead(id: Long) = withContext(Dispatchers.IO) {
         khatmahDb.dao().markRead(id)

@@ -1,9 +1,11 @@
 package com.lhacenmed.khatmah.shared.util
 
 import android.content.Context
+import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.core.content.edit
+import java.util.Locale
 
 object LocaleManager {
 
@@ -53,4 +55,19 @@ object LocaleManager {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(KEY, null)
             .takeIf { !it.isNullOrEmpty() }
+
+    /**
+     * Returns a context configured with the persisted app locale. Services (unlike Activities)
+     * don't receive the AppCompat per-app locale on API < 33, so any service that builds
+     * user-facing text must wrap its base context with this to stay in the chosen language.
+     */
+    fun applyTo(context: Context): Context {
+        val tag = savedTag(context) ?: return context
+        val locale = Locale.forLanguageTag(tag)
+        val config = Configuration(context.resources.configuration).apply {
+            setLocale(locale)
+            setLayoutDirection(locale)
+        }
+        return context.createConfigurationContext(config)
+    }
 }

@@ -1,6 +1,7 @@
 package com.lhacenmed.khatmah.feature.prayer.notification
 
 import android.content.Context
+import android.os.Build
 import androidx.core.content.edit
 import com.lhacenmed.khatmah.shared.reminders.ReminderPrefs
 import com.lhacenmed.khatmah.shared.reminders.ReminderType
@@ -61,6 +62,8 @@ object AdhanPrefs {
         _flow.value = buildConfigs()
         version++
         if (config.sound is AdhanSound.Custom) addCustomSound(context, config.sound)
+        // Create the channel for a newly-chosen sound and drop any now-unused one.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) AdhanChannels.sync(context)
     }
 
     fun getCustomSounds(context: Context): List<AdhanSound.Custom> = _customSoundsFlow.value

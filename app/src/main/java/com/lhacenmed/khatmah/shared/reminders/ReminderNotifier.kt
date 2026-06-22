@@ -14,33 +14,44 @@ import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.MainActivity
+import com.lhacenmed.khatmah.shared.util.AdhanSoundFiles
 
 /**
  * Creates notification channels and posts all reminder notifications.
  *
- * Channel IDs:
- *  "reminder_silent"         — IMPORTANCE_LOW, no sound/vibration.
- *  "reminder_device"         — IMPORTANCE_HIGH, system default sound.
- *  "reminder_pre"            — IMPORTANCE_HIGH, pre-adhan alerts.
- *  "adhan_<hash>"            — IMPORTANCE_HIGH, per adhan asset file.
- *  "adhan_custom_<hash>"     — IMPORTANCE_HIGH, per user-picked adhan file.
- *  "reminder_custom_<hash>"  — IMPORTANCE_HIGH, per user-picked non-prayer file.
+ * Channels are organised by **purpose**, not by sound:
+ *  "reminder_silent"   — صامت, IMPORTANCE_LOW, no sound/vibration.
+ *  "reminder_alert"    — صوت منبه, IMPORTANCE_HIGH, device default sound.
+ *  "reminder_pre"      — تنبيه قبل الأذان, IMPORTANCE_HIGH, pre-adhan alerts.
+ *  "reminder_adhkar"   — منبهات الأذكار, IMPORTANCE_HIGH (adhkar reminders).
+ *  "reminder_wird"     — منبهات الورد اليومي, IMPORTANCE_HIGH (daily khatmah).
+ *  "reminder_khatmah"  — ختمة, IMPORTANCE_HIGH (sunnah surahs + custom reminders).
  *
- * Bump [CH_VERSION] on any channel config change — channels are immutable after creation.
+ * Adhan sounds need a per-sound channel (Android binds sound to channel). Those are created
+ * **on demand** — only for a sound a prayer actually uses — by [ensureAdhanAssetChannel] /
+ * [ensureCustomAdhanChannel], and orphans are removed by [pruneAdhanChannels]. The prayer feature
+ * drives that sync (it owns AdhanSound); this file stays independent of feature/prayer.
  *
- * AdhanSound is intentionally NOT imported here; sound keys are parsed as plain strings
- * to keep shared/ independent of feature/prayer.
+ * Sound keys are parsed as plain strings (the "custom" form is "custom"+[SEP]+name+[SEP]+uri) so
+ * shared/ never imports AdhanSound. Bump [CH_VERSION] on any fixed-channel config change.
  */
 @RequiresApi(Build.VERSION_CODES.O)
 object ReminderNotifier {
 
-    private const val CH_VERSION = 1
+    private const val CH_VERSION = 2
     private const val PREFS_CH   = "notif_channels"
     private const val K_VER      = "version"
 
-    private const val CH_SILENT = "reminder_silent"
-    private const val CH_DEVICE = "reminder_device"
-    private const val CH_PRE    = "reminder_pre"
+    private const val CH_SILENT  = "reminder_silent"
+    private const val CH_ALERT   = "reminder_alert"
+    private const val CH_PRE     = "reminder_pre"
+    private const val CH_ADHKAR  = "reminder_adhkar"
+    private const val CH_WIRD    = "reminder_wird"
+    private const val CH_KHATMAH = "reminder_khatmah"
+
+    /** Separator inside a "custom" sound key — the NUL char, never present in names or URIs. */
+    private val SEP = 0.toChar()
+    private val CUSTOM_PREFIX = "custom$SEP"
 
     // ── Notification IDs ──────────────────────────────────────────────────────
 
@@ -57,30 +68,33 @@ object ReminderNotifier {
 
     // ── Channel ID resolution ─────────────────────────────────────────────────
 
-    /**
-     * Channel ID for a prayer soundKey.
-     * Matches AdhanSound key format without importing AdhanSound.
-     */
+    /** Stable channel id for an adhan asset file (so the same sound reuses its channel). */
+    fun adhanAssetChannelId(filename: String): String = "adhan_${filename.hashCode()}"
+
+    /** Stable channel id for a user-picked adhan sound, keyed by its content URI. */
+    fun customAdhanChannelId(uri: String): String = "adhan_custom_${uri.hashCode()}"
+
+    /** Channel id for a prayer soundKey (AdhanSound key format, parsed as a plain string). */
     fun prayerChannelId(soundKey: String): String = when {
         soundKey == "off" || soundKey == "silent" -> CH_SILENT
-        soundKey == "device"                       -> CH_DEVICE
-        soundKey.startsWith("asset:")              -> "adhan_${soundKey.removePrefix("asset:").hashCode()}"
-        soundKey.startsWith("custom\u0000")        ->
-            "adhan_custom_${soundKey.split('\u0000').getOrElse(2) { "" }.hashCode()}"
-        else -> CH_DEVICE
+        soundKey == "device"                       -> CH_ALERT
+        soundKey.startsWith("asset:")              -> adhanAssetChannelId(assetFile(soundKey))
+        soundKey.startsWith(CUSTOM_PREFIX)         -> customAdhanChannelId(customUri(soundKey))
+        else                                       -> CH_ALERT
     }
 
-    private fun reminderChannelId(soundKey: String): String = when {
-        soundKey == "off"                   -> CH_SILENT
-        soundKey == "device"                -> CH_DEVICE
-        soundKey.startsWith("custom\u0000") ->
-            "reminder_custom_${soundKey.split('\u0000').getOrElse(2) { "" }.hashCode()}"
-        else -> CH_DEVICE
+    /** Channel id for a non-prayer reminder — by type when it has sound, silent when off. */
+    private fun reminderChannelId(soundKey: String, typeKey: String): String = when {
+        soundKey == "off"                  -> CH_SILENT
+        soundKey.startsWith(CUSTOM_PREFIX) -> "reminder_custom_${customUri(soundKey).hashCode()}"
+        typeKey.startsWith("adhkar:")      -> CH_ADHKAR
+        typeKey == "khatmah"               -> CH_WIRD
+        else                               -> CH_KHATMAH   // sunnah + custom + fallback
     }
 
-    // ── Channel creation ──────────────────────────────────────────────────────
+    // ── Fixed channel creation ────────────────────────────────────────────────
 
-    fun ensureChannels(context: Context, adhanFilenames: List<String>) {
+    fun ensureChannels(context: Context) {
         val nm    = context.getSystemService<NotificationManager>() ?: return
         val prefs = context.getSharedPreferences(PREFS_CH, Context.MODE_PRIVATE)
 
@@ -91,47 +105,45 @@ object ReminderNotifier {
             prefs.edit { putInt(K_VER, CH_VERSION) }
         }
 
-        val musicAttr = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-            .build()
-
         nm.createNotificationChannel(
             NotificationChannel(CH_SILENT, context.getString(R.string.notif_channel_silent),
-                NotificationManager.IMPORTANCE_LOW).apply {
-                setSound(null, null); enableVibration(false)
-            }
+                NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) }
         )
-        nm.createNotificationChannel(
-            NotificationChannel(CH_DEVICE, context.getString(R.string.notif_channel_device),
-                NotificationManager.IMPORTANCE_HIGH)
-        )
-        nm.createNotificationChannel(
-            NotificationChannel(CH_PRE, context.getString(R.string.notif_channel_pre),
-                NotificationManager.IMPORTANCE_HIGH)
-        )
-        adhanFilenames.forEach { filename ->
-            val id = "adhan_${filename.hashCode()}"
-            if (nm.getNotificationChannel(id) != null) return@forEach
+        listOf(
+            CH_ALERT   to R.string.notif_channel_alert,
+            CH_PRE     to R.string.notif_channel_pre,
+            CH_ADHKAR  to R.string.notif_channel_adhkar,
+            CH_WIRD    to R.string.notif_channel_wird,
+            CH_KHATMAH to R.string.notif_channel_khatmah,
+        ).forEach { (id, nameRes) ->
             nm.createNotificationChannel(
-                NotificationChannel(id, filename.removeSuffix(".mp3"),
-                    NotificationManager.IMPORTANCE_HIGH)
-                    .apply { setSound(adhanAssetUri(context, filename), musicAttr) }
+                NotificationChannel(id, context.getString(nameRes), NotificationManager.IMPORTANCE_HIGH)
             )
         }
+    }
+
+    // ── On-demand adhan channels ──────────────────────────────────────────────
+
+    /** Ensures the channel for an adhan asset exists, named by its display name. */
+    fun ensureAdhanAssetChannel(context: Context, filename: String) {
+        val nm = context.getSystemService<NotificationManager>() ?: return
+        val id = adhanAssetChannelId(filename)
+        if (nm.getNotificationChannel(id) != null) return
+        nm.createNotificationChannel(
+            NotificationChannel(id, AdhanSoundFiles.getDisplayName(filename),
+                NotificationManager.IMPORTANCE_HIGH)
+                .apply { setSound(adhanAssetUri(context, filename), musicAttributes()) }
+        )
     }
 
     /** Ensures a channel exists for a user-picked adhan (prayer) sound file. */
     fun ensureCustomAdhanChannel(context: Context, uri: String, displayName: String) {
         val nm = context.getSystemService<NotificationManager>() ?: return
-        val id = "adhan_custom_${uri.hashCode()}"
+        val id = customAdhanChannelId(uri)
         if (nm.getNotificationChannel(id) != null) return
         nm.createNotificationChannel(
-            NotificationChannel(id, displayName, NotificationManager.IMPORTANCE_HIGH).apply {
-                setSound(Uri.parse(uri), AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
-            }
+            NotificationChannel(id, displayName, NotificationManager.IMPORTANCE_HIGH)
+                .apply { setSound(Uri.parse(uri), musicAttributes()) }
         )
     }
 
@@ -141,12 +153,17 @@ object ReminderNotifier {
         val id = "reminder_custom_${sound.uri.hashCode()}"
         if (nm.getNotificationChannel(id) != null) return
         nm.createNotificationChannel(
-            NotificationChannel(id, sound.displayName, NotificationManager.IMPORTANCE_HIGH).apply {
-                setSound(Uri.parse(sound.uri), AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
-            }
+            NotificationChannel(id, sound.displayName, NotificationManager.IMPORTANCE_HIGH)
+                .apply { setSound(Uri.parse(sound.uri), musicAttributes()) }
         )
+    }
+
+    /** Deletes every adhan channel whose id is not in [keep] — i.e. no prayer uses it anymore. */
+    fun pruneAdhanChannels(context: Context, keep: Set<String>) {
+        val nm = context.getSystemService<NotificationManager>() ?: return
+        nm.notificationChannels
+            .filter { it.id.startsWith("adhan_") && it.id !in keep }
+            .forEach { nm.deleteNotificationChannel(it.id) }
     }
 
     // ── Notification posting ──────────────────────────────────────────────────
@@ -158,7 +175,7 @@ object ReminderNotifier {
         val time = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(timeMs))
         nm.notify(mainNotifId(config), build(
             context    = context,
-            channelId  = prayerChannelId(config.soundKey),
+            channelId  = ensurePrayerChannel(context, config.soundKey),
             title      = context.getString(R.string.notif_adhan_title, prayerName, time),
             body       = context.getString(R.string.notif_adhan_body, prayerName),
             isSilent   = config.soundKey == "silent",
@@ -181,11 +198,13 @@ object ReminderNotifier {
 
     /** Posts a fixed-time reminder (adhkar, sunnah, khatmah, custom). No-op if sound is "off". */
     fun postReminder(context: Context, config: ReminderConfig, title: String, body: String) {
-        if (ReminderSound.fromKey(config.soundKey) is ReminderSound.Off) return
+        val sound = ReminderSound.fromKey(config.soundKey)
+        if (sound is ReminderSound.Off) return
         val nm = context.getSystemService<NotificationManager>() ?: return
+        if (sound is ReminderSound.Custom) ensureCustomReminderChannel(context, sound)
         nm.notify(mainNotifId(config), build(
             context  = context,
-            channelId = reminderChannelId(config.soundKey),
+            channelId = reminderChannelId(config.soundKey, config.type.toKey()),
             title    = title,
             body     = body,
             deepLink = config.deepLink ?: defaultDeepLink(config.type),
@@ -193,6 +212,29 @@ object ReminderNotifier {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /** Ensures the channel backing a prayer [soundKey] exists, then returns its id. */
+    private fun ensurePrayerChannel(context: Context, soundKey: String): String {
+        when {
+            soundKey.startsWith("asset:") -> ensureAdhanAssetChannel(context, assetFile(soundKey))
+            soundKey.startsWith(CUSTOM_PREFIX) -> ensureCustomAdhanChannel(
+                context, customUri(soundKey), soundKey.split(SEP).getOrElse(1) { "" })
+        }
+        return prayerChannelId(soundKey)
+    }
+
+    /** Bare asset filename from an "asset:<file>" key (legacy ".mp3" keys map to ".opus"). */
+    private fun assetFile(soundKey: String): String =
+        soundKey.removePrefix("asset:").replace(".mp3", ".opus")
+
+    /** Content URI from a "custom"+SEP+name+SEP+uri key. */
+    private fun customUri(soundKey: String): String =
+        soundKey.split(SEP).getOrElse(2) { "" }
+
+    private fun musicAttributes(): AudioAttributes = AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+        .build()
 
     private fun defaultDeepLink(type: ReminderType): String = when (type) {
         is ReminderType.Prayer       -> "prayers"

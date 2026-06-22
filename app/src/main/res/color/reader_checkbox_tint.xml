@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tints the reader-settings checkbox with the app's Material3 colours: primary when checked,
+     onSurfaceVariant when not — so it follows the dynamic/app theme instead of AppCompat's accent. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true" android:color="?attr/colorPrimary" />
+    <item android:color="?attr/colorOnSurfaceVariant" />
+</selector>
