@@ -276,6 +276,9 @@ private fun MoreScreen(padding: PaddingValues) {
             prefItem(R.string.more_files_browser, Icons.Outlined.FolderOpen,
                 onClick = { nav.go(Dest.FileBrowser) })
         }
+
+        // ── App version ─────────────────────────────────────────────────────────
+        versionFooter(R.string.more_version, BuildConfig.VERSION_NAME)
     }
 
     if (showDlDialog.value) {

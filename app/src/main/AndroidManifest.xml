@@ -17,6 +17,8 @@
     <!-- Mushaf download keeps running in the background as a foreground service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- In-app update: install the downloaded APK (user grants "install unknown apps" once) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:name=".core.App"
@@ -113,6 +115,23 @@
             android:name=".feature.quran.data.download.DownloadService"
             android:foregroundServiceType="dataSync"
             android:exported="false" />
+
+        <!-- App-update APK download — runs in the background, survives the dialog closing. -->
+        <service
+            android:name=".feature.update.UpdateService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
+        <!-- Serves the downloaded update APK (cacheDir/updates) to the system installer. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <!-- FCM token refresh service -->
         <service

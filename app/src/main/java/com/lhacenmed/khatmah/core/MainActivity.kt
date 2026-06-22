@@ -57,6 +57,10 @@ import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarViewModel
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.feature.today.TodayViewModel
+import com.lhacenmed.khatmah.feature.update.UpdateChecker
+import com.lhacenmed.khatmah.feature.update.UpdateRegistry
+import com.lhacenmed.khatmah.feature.update.ui.UpdateGate
+import com.lhacenmed.khatmah.BuildConfig
 import com.lhacenmed.khatmah.onboarding.OnboardingActivity
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import com.lhacenmed.khatmah.widget.PrayerWidget
@@ -166,6 +170,8 @@ class MainActivity : AppCompatActivity() {
         // Deep links apply only on a fresh launch — never override the restored tab on recreate.
         if (savedInstanceState == null) handleLaunchIntent(intent)
         observeSettingsForWidget()
+        // Check for a newer build once per fresh launch; UpdateGate prompts when one is found.
+        if (savedInstanceState == null) checkForUpdate()
 
         // Colour the native chrome + set the title/pill synchronously before the first frame, so a
         // theme switch (Activity recreate) never flashes baseline colours, the app name, or a
@@ -206,8 +212,22 @@ class MainActivity : AppCompatActivity() {
                             AppTabs[page].Content(PaddingValues(0.dp))
                         }
                     }
+                    // Launch-time "update available" prompt (own window; overlays every tab).
+                    UpdateGate()
                 }
             }
+        }
+    }
+
+    /**
+     * One-shot launch update check; populates [UpdateRegistry] so [UpdateGate] can prompt. Skipped
+     * for debug builds, whose `.debug` applicationId would side-load the release APK as a separate
+     * app rather than update in place.
+     */
+    private fun checkForUpdate() {
+        if (BuildConfig.DEBUG) return
+        lifecycleScope.launch {
+            UpdateChecker.check()?.let { UpdateRegistry.setAvailable(it) }
         }
     }
 
