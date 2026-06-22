@@ -260,6 +260,8 @@ object ReminderNotifier {
         .setSmallIcon(R.drawable.ic_stat_name)
         .setContentTitle(title)
         .setContentText(body)
+        // Expandable so longer bodies (e.g. the khatmah wird range) show in full.
+        .setStyle(NotificationCompat.BigTextStyle().bigText(body))
         .setAutoCancel(true)
         .setPriority(NotificationCompat.PRIORITY_HIGH)
         .setSilent(isSilent)

@@ -33,6 +33,9 @@ abstract class MushafDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     abstract suspend fun insertVerses(verses: List<VerseEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun insertHeaderGlyphs(glyphs: List<HeaderGlyphEntity>)
+
     /** Inserts [page] and all its [words] in a single atomic transaction. */
     @Transaction
     open suspend fun insertPageWithWords(page: PageEntity, words: List<WordEntity>) {
@@ -84,6 +87,9 @@ abstract class MushafDao {
 
     @Query("SELECT * FROM mushaf_verse WHERE riwaya = :riwaya ORDER BY sura, aya")
     abstract suspend fun verses(riwaya: String): List<VerseEntity>
+
+    @Query("SELECT * FROM mushaf_header_glyph WHERE riwaya = :riwaya")
+    abstract suspend fun headerGlyphs(riwaya: String): List<HeaderGlyphEntity>
 
     @Query("SELECT COUNT(*) FROM mushaf_verse WHERE riwaya = :riwaya")
     abstract suspend fun verseCount(riwaya: String): Int
@@ -173,6 +179,9 @@ abstract class MushafDao {
 
     @Query("DELETE FROM mushaf_verse WHERE riwaya = :riwaya")
     abstract suspend fun clearVerses(riwaya: String)
+
+    @Query("DELETE FROM mushaf_header_glyph WHERE riwaya = :riwaya")
+    abstract suspend fun clearHeaderGlyphs(riwaya: String)
 
     // ── Bookmarks ───────────────────────────────────────────────────────────────
 

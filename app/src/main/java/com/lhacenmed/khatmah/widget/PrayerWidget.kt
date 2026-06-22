@@ -5,6 +5,8 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.graphics.Typeface
 import android.os.Build
 import android.os.SystemClock
@@ -14,18 +16,23 @@ import android.text.style.StyleSpan
 import android.view.View
 import android.widget.RemoteViews
 import androidx.annotation.RequiresApi
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
-import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -35,7 +42,6 @@ import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.lhacenmed.khatmah.core.MainActivity
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerEngine
@@ -66,12 +72,26 @@ class PrayerWidget : GlanceAppWidget() {
         data class ElapsedSince(override val prayer: PrayerTime, val msElapsed: Long)   : Countdown()
     }
 
+    /**
+     * Dynamic Material 3 colors (ARGB) resolved once per render and fed to the
+     * RemoteViews panels — the only layer [GlanceTheme.colors] cannot reach.
+     *
+     * [panel]/[onPanel]     → countdown panel surface + its text/icon (primaryContainer)
+     * [onSurface]/[accent]  → prayer-list text, normal + highlighted (onSecondaryContainer / primary)
+     */
+    private data class WidgetColors(
+        val panel:     Int,
+        val onPanel:   Int,
+        val onSurface: Int,
+        val accent:    Int,
+    )
+
     companion object {
         /** How long (ms) to show "Since / مضى على" before switching to the next prayer. */
         private const val ELAPSED_WINDOW_MS = 30 * 60 * 1000L
 
-        private val COLOR_HIGHLIGHT = android.graphics.Color.argb(255, 255, 235, 59)
-        private const val COLOR_NORMAL = android.graphics.Color.WHITE
+        /** Widget corner radius — mirrors the rounded countdown shapes; effective on API 31+. */
+        private val CORNER_RADIUS = 15.dp
 
         private val TIME_FMT = DateTimeFormatter.ofPattern("HH:mm")
 
@@ -245,13 +265,14 @@ class PrayerWidget : GlanceAppWidget() {
         if (prayers.isEmpty() || countdown == null) {
             Box(
                 modifier         = GlanceModifier.fillMaxSize()
-                    .background(ImageProvider(R.drawable.widget_bg))
+                    .cornerRadius(CORNER_RADIUS)
+                    .background(GlanceTheme.colors.secondaryContainer)
                     .clickable(openPrayersAction),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text  = "Open the app to set your location",
-                    style = TextStyle(color = ColorProvider(Color.White), fontSize = 30.sp),
+                    style = TextStyle(color = GlanceTheme.colors.onSecondaryContainer, fontSize = 30.sp),
                 )
             }
             return
@@ -261,7 +282,8 @@ class PrayerWidget : GlanceAppWidget() {
 
         Row(
             modifier          = GlanceModifier.fillMaxSize()
-                .background(ImageProvider(R.drawable.widget_bg))
+                .cornerRadius(CORNER_RADIUS)
+                .background(GlanceTheme.colors.secondaryContainer)
                 .clickable(openPrayersAction),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -302,14 +324,28 @@ class PrayerWidget : GlanceAppWidget() {
                 SystemClock.elapsedRealtime() + countdown.msRemaining to true
         }
 
+        val colors = resolveColors(context)
+
         AndroidRemoteViews(
             modifier    = modifier,
             remoteViews = RemoteViews(context.packageName, R.layout.widget_countdown).apply {
-                setInt(R.id.countdown_root, "setBackgroundResource", bgRes)
+                // Rounded shape + dynamic tint on API 31+; flat dynamic fill below.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    setInt(R.id.countdown_root, "setBackgroundResource", bgRes)
+                    setColorStateList(
+                        R.id.countdown_root, "setBackgroundTintList",
+                        ColorStateList.valueOf(colors.panel),
+                    )
+                } else {
+                    setInt(R.id.countdown_root, "setBackgroundColor", colors.panel)
+                }
                 setImageViewResource(R.id.prayer_icon, prayerIcon(countdown.prayer.name))
+                setInt(R.id.prayer_icon, "setColorFilter", colors.onPanel)
                 setTextViewText(R.id.prayer_label, label)
+                setTextColor(R.id.prayer_label, colors.onPanel)
                 setChronometer(R.id.chrono, chronometerBase, null, true)
                 setChronometerCountDown(R.id.chrono, countingDown)
+                setTextColor(R.id.chrono, colors.onPanel)
             },
         )
     }
@@ -324,12 +360,13 @@ class PrayerWidget : GlanceAppWidget() {
         modifier:      GlanceModifier,
     ) {
         val context = LocalContext.current
+        val colors  = resolveColors(context)
         AndroidRemoteViews(
             modifier    = modifier,
             remoteViews = RemoteViews(context.packageName, R.layout.widget_prayer_list).apply {
                 prayers.forEachIndexed { i, prayer ->
                     val isHighlight = prayer.name == highlightName
-                    val color       = if (isHighlight) COLOR_HIGHLIGHT else COLOR_NORMAL
+                    val color       = if (isHighlight) colors.accent else colors.onSurface
                     val nameText    = prayerName(prayer.name, context, isRtl)
                     val timeText    = prayer.time.format(TIME_FMT)
 
@@ -350,6 +387,30 @@ class PrayerWidget : GlanceAppWidget() {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Resolves the dynamic Material 3 scheme exactly the way [GlanceTheme] does:
+     * device dynamic colors on API 31+, the Material baseline below — honoring the
+     * current night-mode setting. Keeps the RemoteViews panels in lock-step with the
+     * Glance composables, which read [GlanceTheme.colors].
+     */
+    private fun resolveColors(context: Context): WidgetColors {
+        val night = (context.resources.configuration.uiMode and
+            Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+
+        val scheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (night) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        } else {
+            if (night) darkColorScheme() else lightColorScheme()
+        }
+
+        return WidgetColors(
+            panel     = scheme.primaryContainer.toArgb(),
+            onPanel   = scheme.onPrimaryContainer.toArgb(),
+            onSurface = scheme.onSecondaryContainer.toArgb(),
+            accent    = scheme.primary.toArgb(),
+        )
+    }
 
     /**
      * Returns the localized prayer name.

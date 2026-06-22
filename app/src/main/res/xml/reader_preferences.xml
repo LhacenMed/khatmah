@@ -41,11 +41,5 @@
             android:title="عرض معلومات الصفحة"
             android:summary="رقم الصفحة واسم السورة ورقم الجزء أثناء القراءة"
             app:iconSpaceReserved="false" />
-
-        <CheckBoxPreference
-            android:key="reader_test"
-            android:persistent="false"
-            android:title="اختبار"
-            app:iconSpaceReserved="false" />
     </PreferenceCategory>
 </PreferenceScreen>

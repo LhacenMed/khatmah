@@ -12,8 +12,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         PageEntity::class, WordEntity::class, VersePage::class,
         SurahEntity::class, DivisionEntity::class, SajdaEntity::class,
         PageStartEntity::class, VerseEntity::class, BookmarkEntity::class,
+        HeaderGlyphEntity::class,
     ],
-    version      = 4,
+    version      = 5,
     exportSchema = false,
 )
 abstract class MushafDb : RoomDatabase() {
@@ -34,12 +35,23 @@ abstract class MushafDb : RoomDatabase() {
             }
         }
 
+        /** v4→v5: adds the running-head glyph table (re-filled on the next QCF4 download). */
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS mushaf_header_glyph (" +
+                        "riwaya TEXT NOT NULL, type TEXT NOT NULL, num INTEGER NOT NULL, char TEXT NOT NULL, " +
+                        "PRIMARY KEY(riwaya, type, num))"
+                )
+            }
+        }
+
         @Volatile private var instance: MushafDb? = null
 
         fun get(context: Context): MushafDb = instance ?: synchronized(this) {
             instance ?: Room
                 .databaseBuilder(context.applicationContext, MushafDb::class.java, DB_NAME)
-                .addMigrations(MIGRATION_3_4)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { instance = it }

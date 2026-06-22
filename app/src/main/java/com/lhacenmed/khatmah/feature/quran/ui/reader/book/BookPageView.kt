@@ -37,6 +37,8 @@ class BookPageView @JvmOverloads constructor(
     private var faces: Map<String, Typeface> = emptyMap()
     private var riwaya: Riwaya = Riwaya.HAFS
     private var calligraphicFace: Typeface = Typeface.DEFAULT
+    /** Amiri — draws the page-number footer and the sura-header circle numbers. */
+    private var numberFace: Typeface = Typeface.DEFAULT
     private var layout: List<LineRender> = emptyList()
 
     /** Toggled by the host so night mode swaps the parchment for a solid dark page. */
@@ -79,11 +81,25 @@ class BookPageView @JvmOverloads constructor(
     private var headerSura = ""
     private var headerJuz = ""
     private var footerPage = ""
+    // QCF4_QBSML running-head glyphs; empty → fall back to the plain-text header above.
+    private var headerSuraGlyph = ""
+    private var headerJuzGlyph = ""
 
-    /** Supplies the overlay text for this page. */
-    fun setPageInfo(sura: String, juz: String, page: String) {
-        headerSura = sura
-        headerJuz = juz
+    /**
+     * Supplies the page-info band content: the QCF4_QBSML sura/juz glyphs (preferred) plus their
+     * plain-text equivalents used as a fallback when a glyph is unavailable, and the page number.
+     */
+    fun setPageInfo(
+        suraGlyph: String,
+        juzGlyph: String,
+        suraText: String,
+        juzText: String,
+        page: String,
+    ) {
+        headerSuraGlyph = suraGlyph
+        headerJuzGlyph = juzGlyph
+        headerSura = suraText
+        headerJuz = juzText
         footerPage = page
         invalidate()
     }
@@ -96,6 +112,8 @@ class BookPageView @JvmOverloads constructor(
     private val gradientPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val solidPaint = Paint().apply { color = NIGHT_BG }
     private val overlayPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val headerGlyphPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG) // Amiri page-number footer
 
     // Synthetic "stacked pages" fore-edge — depth shadow + sheet hairlines.
     private val edgeShadowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -140,14 +158,21 @@ class BookPageView @JvmOverloads constructor(
     }
 
     /**
-     * Supplies the decoded page, its required typefaces and the calligraphic face
-     * (KFGQPC, used for the sura-info labels inside the header glyph circles).
+     * Supplies the decoded page, its required typefaces, the calligraphic face (KFGQPC, used for the
+     * sura-info labels inside the header glyph circles) and the [numberFace] (Amiri) for page numbers.
      */
-    fun setPage(page: Qcf4Page, faces: Map<String, Typeface>, riwaya: Riwaya, calligraphicFace: Typeface) {
+    fun setPage(
+        page: Qcf4Page,
+        faces: Map<String, Typeface>,
+        riwaya: Riwaya,
+        calligraphicFace: Typeface,
+        numberFace: Typeface,
+    ) {
         this.page = page
         this.faces = faces
         this.riwaya = riwaya
         this.calligraphicFace = calligraphicFace
+        this.numberFace = numberFace
         zoom.reset() // a (re)used view starts at 1× so recycled pager pages never inherit a zoom
         rebuildLayout()
         invalidate()
@@ -262,24 +287,59 @@ class BookPageView @JvmOverloads constructor(
     }
 
     /**
-     * Draws the page-info overlay: a top band with the sura name (start) and juz (end), and a
+     * Draws the page-info overlay: a top band with the sura name (start) and juz (end) — rendered
+     * with the calligraphic QCF4_QBSML running-head glyphs, falling back to plain text — and a
      * bottom band with the centered page number.
      */
     private fun drawPageInfo(canvas: Canvas, w: Float, h: Float) {
-        overlayPaint.color = if (nightMode) scaleAlpha(OVERLAY_NIGHT, nightAlpha) else OVERLAY_DAY
+        val color = if (nightMode) scaleAlpha(OVERLAY_NIGHT, nightAlpha) else OVERLAY_DAY
+        overlayPaint.color = color
         overlayPaint.textSize = minOf(w, 480f * density) * 0.0345f
         val margin = w * 0.04f
         val headerY = h * 0.07f
         val footerY = h * 0.96f
 
-        overlayPaint.textAlign = Paint.Align.LEFT
-        canvas.drawText(headerSura, margin, headerY, overlayPaint)
-        overlayPaint.textAlign = Paint.Align.RIGHT
-        canvas.drawText(headerJuz, w - margin, headerY, overlayPaint)
+        // Sura (start edge) and juz (end edge). Glyphs are wider than text, so each side is capped.
+        drawHeaderSide(canvas, headerSuraGlyph, headerSura, margin, Paint.Align.LEFT, w * 0.52f, color, headerY, w)
+        drawHeaderSide(canvas, headerJuzGlyph, headerJuz, w - margin, Paint.Align.RIGHT, w * 0.34f, color, headerY, w)
 
         if (footerPage.isNotEmpty()) {
-            overlayPaint.textAlign = Paint.Align.CENTER
-            canvas.drawText(footerPage, w / 2f, footerY, overlayPaint)
+            numberPaint.typeface = numberFace
+            numberPaint.color = color
+            numberPaint.textSize = minOf(w, 480f * density) * 0.040f
+            numberPaint.textAlign = Paint.Align.CENTER
+            canvas.drawText(footerPage, w / 2f, footerY, numberPaint)
+        }
+    }
+
+    /**
+     * Draws one side of the page-info band: the QCF4_QBSML [glyph] when present and its face is
+     * loaded (scaled down to fit [maxW]), otherwise the plain-text [fallback].
+     */
+    private fun drawHeaderSide(
+        canvas: Canvas,
+        glyph: String,
+        fallback: String,
+        x: Float,
+        align: Paint.Align,
+        maxW: Float,
+        color: Int,
+        y: Float,
+        w: Float,
+    ) {
+        val face = faces["QCF4_QBSML"]
+        if (glyph.isNotEmpty() && face != null && face != Typeface.DEFAULT) {
+            headerGlyphPaint.typeface = face
+            headerGlyphPaint.color = color
+            headerGlyphPaint.textAlign = align
+            val base = minOf(w, 480f * density) * 0.064f
+            headerGlyphPaint.textSize = base
+            val measured = headerGlyphPaint.measureText(glyph)
+            if (measured > maxW && measured > 0f) headerGlyphPaint.textSize = base * (maxW / measured)
+            canvas.drawText(glyph, x, y, headerGlyphPaint)
+        } else {
+            overlayPaint.textAlign = align
+            canvas.drawText(fallback, x, y, overlayPaint)
         }
     }
 
@@ -367,6 +427,7 @@ class BookPageView @JvmOverloads constructor(
             accentArgb = accent,
             riwaya = riwaya,
             kfgqpcFace = calligraphicFace,
+            numberFace = numberFace,
         )
     }
 

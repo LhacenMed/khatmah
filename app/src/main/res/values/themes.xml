@@ -17,6 +17,12 @@
         <item name="textAppearanceBodyMedium">@style/App.TextAppearance.BodyMedium</item>
     </style>
 
+    <!-- App-widget theme for the static initial/preview layout (RemoteViews can't read
+         GlanceTheme.colors). This baseline maps Material 3 color roles for API < 31; the
+         values-v31 override swaps the parent to the DynamicColors theme so the picker preview
+         and loading frame follow the device's dynamic palette, matching the live Glance widget. -->
+    <style name="Theme.Khatmah.Widget" parent="Theme.Material3.DayNight" />
+
     <!-- Reader settings (PreferenceFragmentCompat). Keeps the Material3 chrome but forces the
          AppCompat animated check drawable on checkboxes — the same drawable Quran Android's
          AppCompat theme gives its CheckBoxPreference, which is what makes the toggle animate.

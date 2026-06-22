@@ -38,6 +38,8 @@ data class RiwayaConfig(
     val prefsName: String,
     /** .7z bundle of the riwaya's TTF fonts and page JSON. */
     val bundleUrl: String,
+    /** Running-head glyph map (sura names + juz numbers) for the book reader's page-info band. */
+    val headersUrl: String,
     /** Count of numbered QCF4 glyph fonts (e.g. 47 Hafs, 50 Warsh). */
     private val glyphFontCount: Int,
     /** Numbered glyph-font prefix, e.g. "QCF4_Hafs" → `QCF4_Hafs_01_W.ttf`. */
@@ -91,6 +93,7 @@ data class RiwayaConfig(
                 wordKey = "hafs",
                 prefsName = "hafs_qcf4_prefs",
                 bundleUrl = "https://raw.githubusercontent.com/LhacenMed/khatmah-hafs-qcf4/main/hafs.7z",
+                headersUrl = "https://raw.githubusercontent.com/LhacenMed/khatmah-hafs-qcf4/main/headers.json",
                 glyphFontCount = 47,
                 glyphFontPrefix = "QCF4_Hafs",
                 ayaCounts = SURA_AYA_COUNTS_HAFS,
@@ -100,6 +103,7 @@ data class RiwayaConfig(
                 wordKey = "warsh_qcf4",
                 prefsName = "warsh_qcf4_prefs",
                 bundleUrl = "https://raw.githubusercontent.com/LhacenMed/khatmah-warsh-qcf4/main/warsh.7z",
+                headersUrl = "https://raw.githubusercontent.com/LhacenMed/khatmah-warsh-qcf4/main/headers.json",
                 glyphFontCount = 50,
                 glyphFontPrefix = "QCF4_Warsh",
                 ayaCounts = SURA_AYA_COUNTS_WARSH,

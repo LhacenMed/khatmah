@@ -91,6 +91,20 @@ data class PageStartEntity(
 )
 
 /**
+ * Running-head glyph for the book reader's page-info band — one per (riwaya, [type], [num]).
+ * [type] is "page" (the sura running head; [num] is the page it takes effect from, filled forward
+ * to the next entry) or "juz" (keyed by juz number). [char] is the QCF4_QBSML glyph to draw.
+ * Downloaded with the QCF4 assets, so this is keyed by the riwaya's `wordKey` like the page tables.
+ */
+@Entity(tableName = "mushaf_header_glyph", primaryKeys = ["riwaya", "type", "num"])
+data class HeaderGlyphEntity(
+    val riwaya: String,
+    val type:   String,   // "page" | "juz"
+    val num:    Int,
+    val char:   String,
+)
+
+/**
  * One verse of the Quran for a given riwaya.
  * [normalized] is pre-computed for fast in-memory search (diacritics stripped, alef variants unified).
  */

@@ -6,7 +6,11 @@ import android.content.Intent
 import android.os.Build
 import androidx.annotation.RequiresApi
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Central broadcast receiver for all scheduled reminders.
@@ -34,8 +38,9 @@ class ReminderReceiver : BroadcastReceiver() {
         if (!config.enabled) return
 
         when (config.type) {
-            is ReminderType.Prayer -> handlePrayer(context, config, isPre, timeMs)
-            else                   -> handleFixed(context, config)
+            is ReminderType.Prayer       -> handlePrayer(context, config, isPre, timeMs)
+            is ReminderType.DailyKhatmah -> handleKhatmah(context, config)
+            else                         -> handleFixed(context, config)
         }
 
         ReminderScheduler.schedule(context, config)
@@ -57,6 +62,30 @@ class ReminderReceiver : BroadcastReceiver() {
     private fun handleFixed(context: Context, config: ReminderConfig) {
         val (title, body) = labelFor(context, config)
         ReminderNotifier.postReminder(context, config, title, body)
+    }
+
+    /**
+     * Daily khatmah: the body names the current wird's range, so it needs a DB read. Done off the
+     * main thread via [goAsync]; falls back to a generic body when there's no active khatmah.
+     */
+    private fun handleKhatmah(context: Context, config: ReminderConfig) {
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val wird = KhatmahRepository(context).currentWird()
+                val body = if (wird != null) {
+                    context.getString(
+                        R.string.notif_khatmah_wird,
+                        wird.startSuraName, wird.startAya, wird.endSuraName, wird.endAya,
+                    )
+                } else {
+                    context.getString(R.string.today_khatmah_title)
+                }
+                ReminderNotifier.postReminder(context, config, context.getString(R.string.app_name), body)
+            } finally {
+                pending.finish()
+            }
+        }
     }
 
     // ── Label resolution ──────────────────────────────────────────────────────
