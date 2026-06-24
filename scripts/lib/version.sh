@@ -3,7 +3,6 @@
 # Source this file; do not execute directly.
 
 # ── Regex patterns (match the sealed class blocks in build.gradle.kts) ─────────
-_VERSION_CLASS_RE='Version\.(Stable|Alpha|Beta|ReleaseCandidate)\('
 _MAJOR_RE='versionMajor[[:space:]]*=[[:space:]]*([0-9]+)'
 _MINOR_RE='versionMinor[[:space:]]*=[[:space:]]*([0-9]+)'
 _PATCH_RE='versionPatch[[:space:]]*=[[:space:]]*([0-9]+)'
@@ -14,7 +13,14 @@ _BUILD_RE='versionBuild[[:space:]]*=[[:space:]]*([0-9]+)'
 version::read() {
     local file="$1"
     local block
-    block="$(awk '/val currentVersion/,/\)/' "$file")"
+    # grep -A is far more robust than an awk range pattern against CRLF/BOM
+    # quirks that can otherwise hang or silently mismatch on Windows-edited files.
+    block="$(grep -A 5 'val currentVersion' "$file")"
+
+    if [[ -z "$block" ]]; then
+        echo "✗ version::read — could not locate 'val currentVersion' block in ${file}" >&2
+        exit 1
+    fi
 
     if   echo "$block" | grep -q 'Version\.Alpha';             then V_TYPE="Alpha"
     elif echo "$block" | grep -q 'Version\.Beta';              then V_TYPE="Beta"
@@ -27,6 +33,14 @@ version::read() {
     V_PATCH="$(echo "$block" | grep -oE "$_PATCH_RE" | grep -oE '[0-9]+$')"
     V_BUILD="$(echo "$block" | grep -oE "$_BUILD_RE" | grep -oE '[0-9]+$')"
     V_BUILD="${V_BUILD:-0}"
+
+    # Fail loudly instead of silently proceeding with empty version numbers.
+    if [[ -z "$V_MAJOR" || -z "$V_MINOR" || -z "$V_PATCH" ]]; then
+        echo "✗ version::read — failed to parse major/minor/patch from ${file}" >&2
+        echo "  Parsed block was:" >&2
+        echo "$block" >&2
+        exit 1
+    fi
 }
 
 # version::name <type> <major> <minor> <patch> [build]
@@ -51,28 +65,28 @@ version::bump() {
         minor) V_MINOR=$(( V_MINOR + 1 )); V_PATCH=0; V_BUILD=0             ;;
         patch) V_PATCH=$(( V_PATCH + 1 )); V_BUILD=0                        ;;
         build) V_BUILD=$(( V_BUILD + 1 ))                                   ;;
+        *)     echo "✗ version::bump — unknown bump kind: ${kind}" >&2; exit 1 ;;
     esac
 }
 
 # version::write <gradle_file> <new_type> <major> <minor> <patch> [build]
 # Rewrites the `val currentVersion` block in-place.
+# Uses printf (not bash string \n interpolation) to build real newlines reliably,
+# then passes the block to perl via an environment variable — never via shell
+# string interpolation into the perl program text, which avoids any quoting/
+# escaping hazard from the version values reaching the regex engine.
 version::write() {
     local file="$1" type="$2" major="$3" minor="$4" patch="$5" build="${6:-0}"
 
-    local has_build=""
-    [[ "$type" != "Stable" ]] && has_build="    versionBuild = ${build},"
-
-    # Build the replacement block (indentation matches project style).
     local new_block
     if [[ "$type" == "Stable" ]]; then
-        new_block="val currentVersion: Version = Version.Stable(\n    versionMajor = ${major},\n    versionMinor = ${minor},\n    versionPatch = ${patch},\n)"
+        new_block="$(printf 'val currentVersion: Version = Version.Stable(\n    versionMajor = %s,\n    versionMinor = %s,\n    versionPatch = %s,\n)' "$major" "$minor" "$patch")"
     else
-        local class_name="$type"
-        new_block="val currentVersion: Version = Version.${class_name}(\n    versionMajor = ${major},\n    versionMinor = ${minor},\n    versionPatch = ${patch},\n    versionBuild = ${build},\n)"
+        new_block="$(printf 'val currentVersion: Version = Version.%s(\n    versionMajor = %s,\n    versionMinor = %s,\n    versionPatch = %s,\n    versionBuild = %s,\n)' "$type" "$major" "$minor" "$patch" "$build")"
     fi
 
-    # Use perl for reliable multi-line substitution (sed -z is not universal on macOS/Git Bash).
-    perl -i -0777 -pe \
-        "s/val currentVersion: Version = Version\.\w+\(.*?\)\n?/${new_block}\n/s" \
-        "$file"
+    NEW_BLOCK="$new_block" perl -i -0777 -pe \
+        's/val currentVersion: Version = Version\.\w+\(.*?\)\n?/$ENV{NEW_BLOCK}\n/s' \
+        "$file" \
+        || { echo "✗ version::write — perl substitution failed on ${file}" >&2; exit 1; }
 }
