@@ -47,7 +47,7 @@ object CountryMethodMap {
         put("LY", CountryConfig(CalcMethod.LIBYA,         JuristicMethod.SHAFI_MALIKI_HANBALI))
         put("EG", CountryConfig(CalcMethod.EGYPTIAN,      JuristicMethod.SHAFI_MALIKI_HANBALI))
         put("SD", CountryConfig(CalcMethod.SUDAN,         JuristicMethod.SHAFI_MALIKI_HANBALI))
-        put("MR", MWL_S)
+        put("MR", CountryConfig(CalcMethod.MAURITANIA_MWL, JuristicMethod.SHAFI_MALIKI_HANBALI))
 
         // ── West Africa ───────────────────────────────────────────────────────
         put("SN", MWL_S); put("ML", MWL_S); put("NE", MWL_S)
