@@ -11,8 +11,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,6 +35,9 @@ import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
 import com.lhacenmed.khatmah.core.nav.TabAction
 import com.lhacenmed.khatmah.core.nav.toIntent
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerRepository
+import com.lhacenmed.khatmah.feature.prayer.notification.AdhanConfig
+import com.lhacenmed.khatmah.feature.prayer.notification.AdhanPrefs
+import com.lhacenmed.khatmah.feature.prayer.notification.AdhanSound
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerTime
 import com.lhacenmed.khatmah.feature.prayer.data.toAmPm
 import com.lhacenmed.khatmah.shared.util.HijriDate
@@ -59,7 +64,7 @@ object PrayersTab : AppTab(
         TabAction(R.drawable.ic_kaaba, R.string.prayers_qibla) {
             it.startActivity(Dest.Qibla.toIntent(it))
         },
-        TabAction(R.drawable.ic_mosque, R.string.prayers_settings) {
+        TabAction(R.drawable.ic_settings, R.string.prayers_settings) {
             it.startActivity(Dest.PrayerSettings.toIntent(it))
         },
     )
@@ -215,8 +220,7 @@ private fun PrayersScreenContent(padding: PaddingValues) {
         }
     }
 
-    // Alarm state per prayer index — Sunrise (index 1) is off by default.
-    var alarmOn by remember { mutableStateOf(List(6) { i -> i != 1 }) }
+    val configs by AdhanPrefs.flow.collectAsState()
 
     Column(
         modifier = Modifier
@@ -290,9 +294,9 @@ private fun PrayersScreenContent(padding: PaddingValues) {
                             PrayerRow(
                                 prayer        = prayer,
                                 isCurrent     = i == currentIdx,
-                                alarmOn       = alarmOn.getOrElse(i) { false },
-                                onAlarmToggle = {
-                                    alarmOn = alarmOn.toMutableList().also { list -> list[i] = !list[i] }
+                                config        = configs.getOrNull(i),
+                                onAlarmClick  = {
+                                    context.startActivity(Dest.AdhanSoundSelection(i).toIntent(context))
                                 },
                             )
                             if (i < prayers.size - 1) {
@@ -452,8 +456,8 @@ private fun PrayerDateNav(
 private fun PrayerRow(
     prayer: PrayerTime,
     isCurrent: Boolean,
-    alarmOn: Boolean,
-    onAlarmToggle: () -> Unit,
+    config: AdhanConfig?,
+    onAlarmClick: () -> Unit,
 ) {
     val bgColor   = if (isCurrent) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
     val textColor = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
@@ -477,17 +481,27 @@ private fun PrayerRow(
             color    = textColor,
             modifier = Modifier.padding(end = 8.dp),
         )
+
+        val isOn = config?.isEnabled == true
+        val isSilent = config?.sound is AdhanSound.Silent
+        val icon = when {
+            !isOn -> Icons.Outlined.NotificationsOff
+            isSilent -> Icons.AutoMirrored.Outlined.VolumeOff
+            else -> Icons.Filled.Notifications
+        }
+        val tint = if (isOn && !isSilent) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+
         IconButton(
-            onClick  = onAlarmToggle,
+            onClick  = onAlarmClick,
             modifier = Modifier.size(36.dp),
         ) {
             Icon(
-                imageVector        = if (alarmOn) Icons.Filled.Notifications else Icons.Outlined.Notifications,
+                imageVector        = icon,
                 contentDescription = stringResource(
-                    if (alarmOn) R.string.prayers_alarm_on else R.string.prayers_alarm_off
+                    if (isOn) R.string.prayers_alarm_on else R.string.prayers_alarm_off
                 ),
-                tint     = if (alarmOn) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                tint     = tint,
                 modifier = Modifier.size(22.dp),
             )
         }
