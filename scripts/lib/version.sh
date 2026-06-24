@@ -31,7 +31,10 @@ version::read() {
     V_MAJOR="$(echo "$block" | grep -oE "$_MAJOR_RE" | grep -oE '[0-9]+$')"
     V_MINOR="$(echo "$block" | grep -oE "$_MINOR_RE" | grep -oE '[0-9]+$')"
     V_PATCH="$(echo "$block" | grep -oE "$_PATCH_RE" | grep -oE '[0-9]+$')"
-    V_BUILD="$(echo "$block" | grep -oE "$_BUILD_RE" | grep -oE '[0-9]+$')"
+    # versionBuild is absent for Stable versions — grep legitimately finds no match
+    # and exits 1, which would otherwise trip set -e/pipefail. The `|| true` lets
+    # that be a normal "not present" case instead of a fatal error.
+    V_BUILD="$(echo "$block" | grep -oE "$_BUILD_RE" | grep -oE '[0-9]+$' || true)"
     V_BUILD="${V_BUILD:-0}"
 
     # Fail loudly instead of silently proceeding with empty version numbers.
