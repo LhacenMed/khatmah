@@ -663,4 +663,8 @@
     <string name="demo_open">فتح التفاصيل</string>
     <string name="demo_detail">تفاصيل تجريبية</string>
     <string name="demo_detail_body">وصلت إلى هنا من تبويب التجريبي 🎉</string>
+
+    <!-- Release notification -->
+    <string name="update_notif_title">تحديث متاح</string>
+    <string name="update_notif_body">الإصدار %s جاهز — اضغط للتنزيل</string>
 </resources>

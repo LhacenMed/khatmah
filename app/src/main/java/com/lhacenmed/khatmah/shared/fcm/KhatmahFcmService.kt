@@ -30,14 +30,55 @@ class KhatmahFcmService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(msg: RemoteMessage) {
-        val data      = msg.data
-        val requestId = data["requestId"]
+        val data = msg.data
 
-        // Required fields — bail silently if missing.
-        val fullName    = data["fullName"]?.takeIf { it.isNotBlank() } ?: return
+        when (data["type"]) {
+            "app_update" -> handleUpdateNotif(data)
+            else         -> handleTripRequest(data)
+        }
+    }
+
+// ── Update notification ────────────────────────────────────────────────────────
+
+    private fun handleUpdateNotif(data: Map<String, String>) {
+        val versionName = data["versionName"]?.takeIf { it.isNotBlank() } ?: return
+        val apkUrl      = data["apkUrl"]?.takeIf      { it.isNotBlank() } ?: return
+        val notes       = data["notes"] ?: ""
+
+        ensureChannel()
+
+        val tapIntent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(apkUrl)).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        val pi = PendingIntent.getActivity(
+            this, UPDATE_NOTIF_ID, tapIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val title = getString(R.string.update_notif_title)                  // "Update available"
+        val body  = getString(R.string.update_notif_body, versionName)      // "Version %s is ready — tap to download"
+
+        val notif = NotificationCompat.Builder(this, CH_TRIPS)
+            .setSmallIcon(R.drawable.ic_stat_name)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle()
+                .bigText(if (notes.isNotBlank()) "$body\n\n$notes" else body))
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pi)
+            .build()
+
+        getSystemService<NotificationManager>()?.notify(UPDATE_NOTIF_ID, notif)
+    }
+
+// ── Trip request notification (extracted from onMessageReceived) ───────────────
+
+    private fun handleTripRequest(data: Map<String, String>) {
+        val requestId   = data["requestId"]
+        val fullName    = data["fullName"]?.takeIf    { it.isNotBlank() } ?: return
         val destination = data["destination"]?.takeIf { it.isNotBlank() } ?: return
-
-        val reasonKey   = data["reasonKey"]?.takeIf { it.isNotBlank() }
+        val reasonKey   = data["reasonKey"]?.takeIf   { it.isNotBlank() }
         val description = data["description"]?.takeIf { it.isNotBlank() }
 
         ensureChannel()
@@ -52,13 +93,10 @@ class KhatmahFcmService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        // Collapsed line: "Lhacen → Ambassade"
         val collapsedBody = "$fullName → $destination"
-
-        // Expanded body: adds reason and description when available.
-        val expandedBody = buildString {
+        val expandedBody  = buildString {
             append(collapsedBody)
-            reasonKey?.let  { append("\n${getString(R.string.trip_notif_reason)}: $it") }
+            reasonKey?.let   { append("\n${getString(R.string.trip_notif_reason)}: $it") }
             description?.let { append("\n${getString(R.string.trip_notif_description)}: $it") }
         }
 
@@ -72,8 +110,7 @@ class KhatmahFcmService : FirebaseMessagingService() {
             .setContentIntent(pi)
             .build()
 
-        getSystemService<NotificationManager>()
-            ?.notify(requestId.hashCode(), notif)
+        getSystemService<NotificationManager>()?.notify(requestId.hashCode(), notif)
     }
 
     private fun ensureChannel() {
@@ -86,6 +123,7 @@ class KhatmahFcmService : FirebaseMessagingService() {
 
     companion object {
         private const val CH_TRIPS          = "trip_requests"
+        private const val UPDATE_NOTIF_ID   = -1
         const val ACTION_TRIP_REQUEST       = "com.lhacenmed.khatmah.TRIP_REQUEST"
         const val EXTRA_REQUEST_ID          = "requestId"
     }

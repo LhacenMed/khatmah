@@ -2,7 +2,7 @@
 #
 # release.sh — smart release pipeline for Khatmah.
 #
-# Run from ANY branch (main or dev or feature/*).
+# Run from ANY branch (main or dev or feature/*), on ANY device.
 # The script will:
 #   1. Read the current version from app/build.gradle.kts
 #   2. Prompt for bump type (major / minor / patch) and optional pre-release flavour
@@ -10,6 +10,8 @@
 #   4. Build signed release APKs
 #   5. Write version.json, commit + push main
 #   6. Create the GitHub release and upload every APK variant
+#      (GitHub then auto-fires .github/workflows/notify-release.yml — push
+#      notifications are handled server-side, no local secrets involved)
 #   7. Rebase the source branch back on top of main (so dev stays in sync)
 #
 # Usage:
@@ -39,7 +41,7 @@ gh auth status >/dev/null 2>&1 || { echo "✗ gh not authenticated — run: gh a
 [ -f keystore.properties ] || { echo "✗ keystore.properties missing — release APK would be unsigned"; exit 1; }
 [ -f "$GRADLE_FILE"       ] || { echo "✗ ${GRADLE_FILE} not found"; exit 1; }
 
-REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
+REPO="$(git::repo_slug)"
 SOURCE_BRANCH="$(git::current_branch)"
 
 # ── Guard: no uncommitted changes ───────────────────────────────────────────────
@@ -84,7 +86,6 @@ echo "    1) patch  — bug fixes          (x.y.Z)"
 echo "    2) minor  — new features       (x.Y.0)"
 echo "    3) major  — breaking changes   (X.0.0)"
 
-# Pre-release types also offer build-number increment
 if [[ "$NEW_TYPE" != "Stable" ]]; then
     echo "    4) build  — pre-release iteration (same x.y.z, +build)"
 fi
@@ -107,7 +108,6 @@ case "$BUMP_CHOICE" in
     *) echo "✗ Invalid choice"; exit 1 ;;
 esac
 
-# Apply bump to current values (modifies V_MAJOR, V_MINOR, V_PATCH, V_BUILD in place)
 version::bump "$NEW_TYPE" "$BUMP_KIND"
 NEW_NAME="$(version::name "$NEW_TYPE" "$V_MAJOR" "$V_MINOR" "$V_PATCH" "$V_BUILD")"
 TAG="v${NEW_NAME}"
@@ -152,7 +152,6 @@ fi
 echo "▶ Bumping version to ${NEW_NAME} in ${GRADLE_FILE}…"
 version::write "$GRADLE_FILE" "$NEW_TYPE" "$V_MAJOR" "$V_MINOR" "$V_PATCH" "$V_BUILD"
 
-# Verify the write round-trips correctly
 version::read "$GRADLE_FILE"
 VERIFY_NAME="$(version::name "$V_TYPE" "$V_MAJOR" "$V_MINOR" "$V_PATCH" "$V_BUILD")"
 if [[ "$VERIFY_NAME" != "$NEW_NAME" ]]; then
@@ -176,7 +175,6 @@ UNIVERSAL_APK="${RELEASE_DIR}/$(jq -r '.outputFile' <<<"$ELEM")"
 
 APK_URL="https://github.com/${REPO}/releases/download/${TAG}/$(basename "$UNIVERSAL_APK")"
 
-# Collect all APK variants (universal + per-ABI)
 APKS=()
 while IFS= read -r f; do APKS+=("$f"); done \
     < <(ls -1 "${RELEASE_DIR}/khatmah-${NEW_NAME}-"*.apk 2>/dev/null)
@@ -197,6 +195,8 @@ echo "▶ Wrote version.json"
 git::commit_and_push "$MAIN_BRANCH" "release: ${TAG}" "$GRADLE_FILE" version.json
 
 # ── Step 12: Create GitHub release, upload APKs ──────────────────────────────────
+# This publish event is what triggers .github/workflows/notify-release.yml on
+# GitHub's servers — push notifications fire automatically from there.
 echo "▶ Creating GitHub release ${TAG}…"
 gh release create "$TAG" \
     --target "$MAIN_BRANCH" \
@@ -220,4 +220,5 @@ echo "  Tag       : ${TAG}"
 echo "  APK URL   : ${APK_URL}"
 echo "  Manifest  : https://raw.githubusercontent.com/${REPO}/${MAIN_BRANCH}/version.json"
 echo "  Branch    : back on ${SOURCE_BRANCH} (rebased on ${MAIN_BRANCH})"
+echo "  Push      : triggered via GitHub Actions (check the Actions tab)"
 echo ""
