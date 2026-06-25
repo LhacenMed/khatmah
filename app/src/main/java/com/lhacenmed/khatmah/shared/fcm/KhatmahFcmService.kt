@@ -12,6 +12,7 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.MainActivity
+import androidx.core.net.toUri
 
 /**
  * Handles incoming FCM messages and token refreshes.
@@ -47,7 +48,7 @@ class KhatmahFcmService : FirebaseMessagingService() {
 
         ensureChannel()
 
-        val tapIntent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(apkUrl)).apply {
+        val tapIntent = Intent(Intent.ACTION_VIEW, apkUrl.toUri()).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         val pi = PendingIntent.getActivity(
@@ -55,8 +56,8 @@ class KhatmahFcmService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val title = getString(R.string.update_notif_title)                  // "Update available"
-        val body  = getString(R.string.update_notif_body, versionName)      // "Version %s is ready — tap to download"
+        val title = getString(R.string.release_notif_title)                  // "Update available"
+        val body  = getString(R.string.release_notif_body, versionName)      // "Version %s is ready — tap to download"
 
         val notif = NotificationCompat.Builder(this, CH_TRIPS)
             .setSmallIcon(R.drawable.ic_stat_name)

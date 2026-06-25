@@ -658,6 +658,8 @@
     <string name="qadaa_confirm">تأكيد</string>
     <string name="tap_back_again_to_exit">اضغط رجوع مرة أخرى للخروج</string>
 
+    <string name="debug_warsh_title">Debug Warsh 001</string>
+
     <!-- Demo tab (temporary example) -->
     <string name="demo_tab">تجريبي</string>
     <string name="demo_open">فتح التفاصيل</string>
@@ -665,6 +667,6 @@
     <string name="demo_detail_body">وصلت إلى هنا من تبويب التجريبي 🎉</string>
 
     <!-- Release notification -->
-    <string name="update_notif_title">تحديث متاح</string>
-    <string name="update_notif_body">الإصدار %s جاهز — اضغط للتنزيل</string>
+    <string name="release_notif_title">تحديث متاح</string>
+    <string name="release_notif_body">الإصدار %s جاهز — اضغط للتنزيل</string>
 </resources>

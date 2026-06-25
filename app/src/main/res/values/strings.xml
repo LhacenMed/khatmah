@@ -633,6 +633,6 @@
     <string name="demo_detail_body">You navigated here from the Demo tab 🎉</string>
 
     <!-- Release notification -->
-    <string name="update_notif_title">Update available</string>
-    <string name="update_notif_body">Version %s is ready — tap to download</string>
+    <string name="release_notif_title">Update available</string>
+    <string name="release_notif_body">Version %s is ready — tap to download</string>
 </resources>
