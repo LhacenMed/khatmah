@@ -2,7 +2,13 @@
 # lib/git.sh — git workflow helpers for the release pipeline.
 # Source this file; do not execute directly.
 
-# git::current_branch → prints current branch name
+# git::repo_slug -> prints "owner/repo" from the remote URL (supports https and ssh)
+git::repo_slug() {
+    git remote get-url origin \
+        | sed -E 's|.*github\.com[:/]||; s|\.git$||'
+}
+
+# git::current_branch -> prints current branch name
 git::current_branch() {
     git rev-parse --abbrev-ref HEAD
 }
