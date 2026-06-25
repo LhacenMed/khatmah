@@ -1,0 +1,41 @@
+name: notify-release
+
+# Fires automatically the instant a GitHub release is published — regardless
+# of which machine ran release.sh. No local secrets needed on any device.
+on:
+  release:
+    types: [published]
+
+jobs:
+  push-notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send FCM push to all registered devices
+        env:
+          FUNCTIONS_URL: ${{ secrets.SUPABASE_FUNCTIONS_URL }}
+          WEBHOOK_SECRET: ${{ secrets.RELEASE_WEBHOOK_SECRET }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+          NOTES: ${{ github.event.release.body }}
+          ASSETS_JSON: ${{ toJson(github.event.release.assets) }}
+        run: |
+          VERSION_NAME="${TAG_NAME#v}"
+
+          # Prefer the universal APK; fall back to the first asset if naming ever changes.
+          APK_URL="$(echo "$ASSETS_JSON" | jq -r '
+            ([.[] | select(.name | test("universal"))][0].browser_download_url)
+            // .[0].browser_download_url
+          ')"
+
+          # Build JSON with jq, not string interpolation — safe against quotes/
+          # newlines in release notes.
+          PAYLOAD="$(jq -n --arg v "$VERSION_NAME" --arg n "$NOTES" --arg u "$APK_URL" \
+            '{versionName: $v, notes: $n, apkUrl: $u}')"
+
+          STATUS="$(curl -sS -o /tmp/resp.json -w '%{http_code}' -X POST "$FUNCTIONS_URL" \
+            -H "Content-Type: application/json" \
+            -H "x-release-secret: ${WEBHOOK_SECRET}" \
+            -d "$PAYLOAD")"
+
+          echo "HTTP ${STATUS}"
+          cat /tmp/resp.json
+          [ "$STATUS" = "200" ]
