@@ -17,9 +17,11 @@ import androidx.core.net.toUri
 /**
  * Handles incoming FCM messages and token refreshes.
  *
- * The edge function sends **data-only** messages (no `notification` block) so
- * this callback fires in every app state — foreground, background, and killed —
- * giving us full control over the icon, channel, and expanded layout.
+ * Delivery model:
+ *   - Background / killed  → FCM delivers the `notification` block as a system
+ *     tray notification automatically; onMessageReceived is NOT called.
+ *   - Foreground           → FCM calls onMessageReceived; we build a richer
+ *     notification ourselves and cancel the system-auto one (same notif ID).
  *
  * Token registration/upload is handled by [FcmTokenManager].
  */
@@ -32,7 +34,6 @@ class KhatmahFcmService : FirebaseMessagingService() {
 
     override fun onMessageReceived(msg: RemoteMessage) {
         val data = msg.data
-
         when (data["type"]) {
             "app_update" -> handleUpdateNotif(data)
             else         -> handleTripRequest(data)
@@ -46,7 +47,7 @@ class KhatmahFcmService : FirebaseMessagingService() {
         val apkUrl      = data["apkUrl"]?.takeIf      { it.isNotBlank() } ?: return
         val notes       = data["notes"] ?: ""
 
-        ensureChannel()
+        ensureUpdateChannel()
 
         val tapIntent = Intent(Intent.ACTION_VIEW, apkUrl.toUri()).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -56,10 +57,10 @@ class KhatmahFcmService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val title = getString(R.string.release_notif_title)                  // "Update available"
-        val body  = getString(R.string.release_notif_body, versionName)      // "Version %s is ready — tap to download"
+        val title = getString(R.string.release_notif_title)
+        val body  = getString(R.string.release_notif_body, versionName)
 
-        val notif = NotificationCompat.Builder(this, CH_TRIPS)
+        val notif = NotificationCompat.Builder(this, CH_UPDATE)
             .setSmallIcon(R.drawable.ic_stat_name)
             .setContentTitle(title)
             .setContentText(body)
@@ -70,10 +71,13 @@ class KhatmahFcmService : FirebaseMessagingService() {
             .setContentIntent(pi)
             .build()
 
+        // Using UPDATE_NOTIF_ID matches the id FCM would assign to the system
+        // notification from the `notification` block — so this replaces it cleanly
+        // when onMessageReceived fires in the foreground.
         getSystemService<NotificationManager>()?.notify(UPDATE_NOTIF_ID, notif)
     }
 
-// ── Trip request notification (extracted from onMessageReceived) ───────────────
+// ── Trip request notification ──────────────────────────────────────────────────
 
     private fun handleTripRequest(data: Map<String, String>) {
         val requestId   = data["requestId"]
@@ -82,7 +86,7 @@ class KhatmahFcmService : FirebaseMessagingService() {
         val reasonKey   = data["reasonKey"]?.takeIf   { it.isNotBlank() }
         val description = data["description"]?.takeIf { it.isNotBlank() }
 
-        ensureChannel()
+        ensureTripChannel()
 
         val tapIntent = Intent(this, MainActivity::class.java).apply {
             action = ACTION_TRIP_REQUEST
@@ -114,7 +118,15 @@ class KhatmahFcmService : FirebaseMessagingService() {
         getSystemService<NotificationManager>()?.notify(requestId.hashCode(), notif)
     }
 
-    private fun ensureChannel() {
+    private fun ensureUpdateChannel() {
+        val nm = getSystemService<NotificationManager>() ?: return
+        if (nm.getNotificationChannel(CH_UPDATE) != null) return
+        nm.createNotificationChannel(
+            NotificationChannel(CH_UPDATE, getString(R.string.update_notif_channel), NotificationManager.IMPORTANCE_DEFAULT),
+        )
+    }
+
+    private fun ensureTripChannel() {
         val nm = getSystemService<NotificationManager>() ?: return
         if (nm.getNotificationChannel(CH_TRIPS) != null) return
         nm.createNotificationChannel(
@@ -123,9 +135,10 @@ class KhatmahFcmService : FirebaseMessagingService() {
     }
 
     companion object {
-        private const val CH_TRIPS          = "trip_requests"
-        private const val UPDATE_NOTIF_ID   = -1
-        const val ACTION_TRIP_REQUEST       = "com.lhacenmed.khatmah.TRIP_REQUEST"
-        const val EXTRA_REQUEST_ID          = "requestId"
+        const val CH_UPDATE               = "app_update"
+        private const val CH_TRIPS        = "trip_requests"
+        private const val UPDATE_NOTIF_ID = -1
+        const val ACTION_TRIP_REQUEST     = "com.lhacenmed.khatmah.TRIP_REQUEST"
+        const val EXTRA_REQUEST_ID        = "requestId"
     }
 }
