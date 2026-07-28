@@ -14,6 +14,7 @@ import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.SeekBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -170,6 +171,9 @@ class ReaderActivity : AppCompatActivity() {
 
         ayaPageCache = source.ayaPageIndex()
         metaMap = source.pageMeta()
+        // Hizb/rub' division toasts are a book-reader-only affordance (see [bookmarkable]); loading
+        // the index only for QCF4 avoids an unnecessary query for the text reader.
+        if (bookmarkable) hizbMap = HizbIndex.loadForRiwaya(this, source.riwaya.dbKey)
 
         val startPage = resolveStartPage().coerceIn(firstPage, lastPage)
 
@@ -187,6 +191,7 @@ class ReaderActivity : AppCompatActivity() {
                 slider.progress = page - firstPage
                 savePage(page)
                 if (bookmarkable) refreshBookmarkIcon(page)
+                showHizbToastFor(page)
             }
         })
         updateMeta(startPage)
@@ -311,6 +316,22 @@ class ReaderActivity : AppCompatActivity() {
         menuBookmark?.setIcon(if (bookmarked) R.drawable.ic_bookmark else R.drawable.ic_bookmark_border)
     }
 
+    // ── Hizb / rub'-al-hizb swipe toast (book reader only) ───────────────────────
+
+    // page → division event for the active riwaya; empty (and inert) for the text reader.
+    private var hizbMap: Map<Int, HizbEvent> = emptyMap()
+
+    // The one toast this feature ever shows — cancelled before each re-show so fast swiping
+    // through several markers never leaves a queue of stale toasts trailing behind the finger.
+    private var hizbToast: Toast? = null
+
+    /** Shows the juz'/hizb/rub' toast for [page], if it starts a division marker. No-op otherwise. */
+    private fun showHizbToastFor(page: Int) {
+        val event = hizbMap[page] ?: return
+        hizbToast?.cancel()
+        hizbToast = Toast.makeText(this, event.toToastText(this), Toast.LENGTH_SHORT).also { it.show() }
+    }
+
     /**
      * Toggles the toolbar and system bars together — the immersive "book" tap. Mirrors Quran
      * Android's toggleActionBar: showing just reveals the chrome; hiding also cancels any pending
@@ -339,6 +360,7 @@ class ReaderActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         barHideHandler.removeCallbacksAndMessages(null)
+        hizbToast?.cancel()
         super.onDestroy()
     }
 

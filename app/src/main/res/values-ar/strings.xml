@@ -90,6 +90,10 @@
     <string name="reader_style_text_desc">نص القرآن الكريم مع إمكانية البحث والتنقل</string>
     <string name="reader_style_images">صفحات المصحف</string>
     <string name="reader_style_images_desc">صفحات المصحف المصوّرة، صفحة تلو الأخرى</string>
+    <string name="reader_hizb_start">الجزء %1$s الحزب %2$s</string>
+    <string name="reader_hizb_quarter">¼ الحزب %1$s</string>
+    <string name="reader_hizb_half">نصف الحزب %1$s</string>
+    <string name="reader_hizb_three_quarters">¾ الحزب %1$s</string>
     <string name="more_trip_requests">طلبات الرحلات</string>
 
     <!-- Index tab -->

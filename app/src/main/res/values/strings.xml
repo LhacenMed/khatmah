@@ -90,6 +90,10 @@
     <string name="reader_style_text_desc">Rendered Quran text with search and navigation</string>
     <string name="reader_style_images">Mushaf Pages</string>
     <string name="reader_style_images_desc">Scanned pages of the Mushaf, page by page</string>
+    <string name="reader_hizb_start">Juz %1$s • Hizb %2$s</string>
+    <string name="reader_hizb_quarter">¼ Hizb %1$s</string>
+    <string name="reader_hizb_half">½ Hizb %1$s</string>
+    <string name="reader_hizb_three_quarters">¾ Hizb %1$s</string>
     <string name="more_trip_requests">Trip Requests</string>
 
     <!-- Index tab -->
