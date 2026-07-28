@@ -21,23 +21,30 @@ sealed class HizbEvent(open val juz: Int, open val hizb: Int) {
 }
 
 /**
- * Builds and caches page → [HizbEvent] for the book reader's swipe toast, sourced from
- * [DivType.RUB] markers (240 per riwaya) + `mushaf_page_start` — both seeded by
+ * Builds and caches page → [HizbEvent] for the book reader's swipe toast. The rub'-al-hizb
+ * boundaries ([DivType.RUB], 240 rows) are always read from **Hafs** — Warsh's own rub' rows in
+ * `mushaf_division` are known to be inaccurate, and hizb/rub' boundaries are riwaya-independent
+ * divisions of the same aya sequence, so Hafs's markers are the single source of truth for both
+ * riwayat. Each marker's *page* is still resolved against [riwayaKey]'s own `mushaf_page_start`
+ * (Hafs and Warsh paginate differently — see `docs/riwaya_data.md`), so the result stays correct
+ * for whichever mushaf is actually open. Both tables are seeded by
  * [com.lhacenmed.khatmah.feature.quran.data.MushafInitializer] on first launch, so this works
- * without any QCF4 download. Keyed by [com.lhacenmed.khatmah.feature.quran.data.Riwaya.dbKey],
- * matching how [ReaderMeta] resolves the same bundled-JSON data.
+ * without any QCF4 download. Keyed by [com.lhacenmed.khatmah.feature.quran.data.Riwaya.dbKey].
  */
 object HizbIndex {
+
+    /** Rub'-al-hizb boundaries are only trustworthy in the Hafs seed data — see class doc. */
+    private const val RUB_SOURCE_RIWAYA = "hafs"
 
     @Volatile
     private var cache: Pair<String, Map<Int, HizbEvent>>? = null
 
-    /** page (1-based, QCF4 pagination) → [HizbEvent] for every rub' start in [riwayaKey]. */
+    /** page (1-based, [riwayaKey]'s own QCF4 pagination) → [HizbEvent] for every rub' start. */
     suspend fun loadForRiwaya(context: Context, riwayaKey: String): Map<Int, HizbEvent> {
         cache?.let { (key, map) -> if (key == riwayaKey) return map }
 
         val dao = MushafDb.get(context.applicationContext).dao()
-        val rubs = dao.divisions(riwayaKey, DivType.RUB) // 240 rows, ordered by num
+        val rubs = dao.divisions(RUB_SOURCE_RIWAYA, DivType.RUB) // 240 rows, ordered by num
 
         val map = HashMap<Int, HizbEvent>(rubs.size)
         for (rub in rubs) {
