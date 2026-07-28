@@ -1,6 +1,6 @@
 {
-  "versionCode": 10012,
-  "versionName": "1.0.10",
-  "apkUrl": "https://github.com/LhacenMed/khatmah/releases/download/v1.0.10/khatmah-1.0.10-universal.apk",
-  "notes": "Bug fixes and improvements."
+  "versionCode": 10102,
+  "versionName": "1.1.0",
+  "apkUrl": "https://github.com/LhacenMed/khatmah/releases/download/v1.1.0/khatmah-1.1.0-universal.apk",
+  "notes": "Add swipe-triggered hizb/rub' division toast to the QCF4 book reader. Shows juz'/hizb/rub' progress when landing on rub' start pages, adds cached HizbIndex built from bundled mushaf division/page data (Hafs rub' boundaries with active riwaya pagination), and wires it into ReaderActivity page changes with a single cancelable Toast to prevent stale notifications during fast swiping."
 }
