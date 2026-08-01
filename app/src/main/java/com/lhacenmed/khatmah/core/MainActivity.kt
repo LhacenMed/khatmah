@@ -1,5 +1,6 @@
 package com.lhacenmed.khatmah.core
 
+import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.drawable.ColorDrawable
@@ -15,6 +16,7 @@ import androidx.activity.viewModels
 import androidx.annotation.DrawableRes
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import com.lhacenmed.khatmah.core.ui.UiScale
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
@@ -85,6 +87,10 @@ import kotlinx.coroutines.launch
  */
 @RequiresApi(Build.VERSION_CODES.O)
 class MainActivity : AppCompatActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(UiScale.wrap(newBase))
+    }
 
     private lateinit var binding: ActivityMainBinding
 

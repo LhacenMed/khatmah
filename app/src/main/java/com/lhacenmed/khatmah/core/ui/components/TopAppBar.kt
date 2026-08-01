@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import com.lhacenmed.khatmah.R
 
 // ── Scroll-fraction easing ────────────────────────────────────────────────────
@@ -52,16 +53,25 @@ fun AppTopBar(
     TopAppBar(
         title = {
             if (subtitle != null) {
+                // Two stacked lines must fit the bar's fixed height, so the title drops to a
+                // compact style and both lines stay single-line with ellipsis — never clipped.
                 Column {
-                    Text(title)
                     Text(
-                        text  = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text     = title,
+                        style    = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text     = subtitle,
+                        style    = MaterialTheme.typography.bodySmall,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             } else {
-                Text(title)
+                Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         },
         navigationIcon = {

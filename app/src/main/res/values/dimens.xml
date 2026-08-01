@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Native top-app-bar height. Matches the Compose Material3 TopAppBar (64dp) used by the main
+         tabs, so every bar (detail hosts, book reader, reader settings) is the same height and a
+         stacked title + subtitle always fits without clipping. -->
+    <dimen name="top_app_bar_height">64dp</dimen>
+</resources>

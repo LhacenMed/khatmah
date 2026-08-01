@@ -12,12 +12,12 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- Fixed actionBarSize height so the title and back arrow share one clean bar (the
-         status-bar inset is applied to the root in code, not to the toolbar). -->
+    <!-- Fixed top-app-bar height (matches the main tabs) so the title + subtitle share one clean
+         bar without clipping (the status-bar inset is applied to the root in code, not the toolbar). -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
+        android:layout_height="@dimen/top_app_bar_height"
         android:background="?attr/colorSurface"
         app:titleTextAppearance="@style/ToolbarTitleText"
         app:subtitleTextAppearance="@style/ToolbarSubtitleText" />

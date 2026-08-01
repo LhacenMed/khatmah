@@ -19,6 +19,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.IntentNavigator
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
+import com.lhacenmed.khatmah.core.ui.fitTitleText
 import com.lhacenmed.khatmah.core.ui.theme.Theme
 import com.lhacenmed.khatmah.core.ui.theme.isAppInDarkTheme
 import com.lhacenmed.khatmah.core.ui.theme.resolveColorScheme
@@ -52,6 +53,7 @@ class ScreenHostActivity : BaseComposeActivity() {
             supportActionBar?.setDisplayHomeAsUpEnabled(true) // platform back arrow, mirrored in RTL
             supportActionBar?.title = title
             supportActionBar?.subtitle = dest.subtitle(this)
+            binding.toolbar.fitTitleText() // drop the tall font's padding so the subtitle never clips
             // Route the up arrow through the back dispatcher so a page's BackHandler (e.g. a
             // multi-step wizard) intercepts it exactly like system back; otherwise it finishes.
             binding.toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
@@ -97,7 +99,7 @@ class ScreenHostActivity : BaseComposeActivity() {
 
     /**
      * Push the whole bar below the status bar via the root's top padding (edge-to-edge). Padding
-     * the root rather than the toolbar keeps the toolbar a clean actionBarSize, so its title and
+     * the root rather than the toolbar keeps the toolbar a clean fixed height, so its title and
      * back arrow stay vertically aligned.
      */
     private fun applyTopInset(root: View) {

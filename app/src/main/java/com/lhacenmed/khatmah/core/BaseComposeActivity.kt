@@ -1,8 +1,10 @@
 package com.lhacenmed.khatmah.core
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import com.lhacenmed.khatmah.core.ui.UiScale
 
 /**
  * Base for the Compose host Activity ([ScreenHostActivity]). Enables edge-to-edge once and
@@ -11,6 +13,10 @@ import androidx.appcompat.app.AppCompatActivity
  * transitions — no custom nav stack or motion seek.
  */
 open class BaseComposeActivity : AppCompatActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(UiScale.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()

@@ -23,7 +23,7 @@
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
+            android:layout_height="@dimen/top_app_bar_height"
             app:titleTextAppearance="@style/ToolbarTitleText"
             app:subtitleTextAppearance="@style/ToolbarSubtitleText" />
     </FrameLayout>

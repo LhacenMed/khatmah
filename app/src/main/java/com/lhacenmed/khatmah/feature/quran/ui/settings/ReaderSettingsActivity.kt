@@ -1,5 +1,6 @@
 package com.lhacenmed.khatmah.feature.quran.ui.settings
 
+import android.content.Context
 import android.os.Bundle
 import android.view.View
 import androidx.activity.enableEdgeToEdge
@@ -10,6 +11,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import com.google.android.material.color.MaterialColors
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.core.ui.UiScale
+import com.lhacenmed.khatmah.core.ui.fitTitleText
 
 /**
  * Hosts the reader's settings fragment. Native toolbar with a platform back arrow; the body is
@@ -19,6 +22,10 @@ import com.lhacenmed.khatmah.R
  * the nav bar (surface), so each system-bar strip matches the region it overlays.
  */
 class ReaderSettingsActivity : AppCompatActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(UiScale.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -31,6 +38,7 @@ class ReaderSettingsActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = "إعدادات القارئ"
+        toolbar.fitTitleText() // consistent with the other bars: no font-padding inflation
         toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
 
         // Match the reader's surface-coloured chrome.

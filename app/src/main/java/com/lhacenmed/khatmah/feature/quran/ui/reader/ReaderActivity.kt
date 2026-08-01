@@ -31,6 +31,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.viewpager.widget.ViewPager
 import com.google.android.material.color.MaterialColors
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.core.ui.UiScale
+import com.lhacenmed.khatmah.core.ui.fitTitleText
 import com.lhacenmed.khatmah.feature.audio.AyaAudioState
 import com.lhacenmed.khatmah.feature.audio.GhReader
 import com.lhacenmed.khatmah.feature.audio.GithubAudioRepository
@@ -57,6 +59,10 @@ import java.lang.ref.WeakReference
  * (the page-based QCF4 mushaf); the text reader always opens the full mushaf.
  */
 class ReaderActivity : AppCompatActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(UiScale.wrap(newBase))
+    }
 
     private lateinit var pager: ViewPager
     private lateinit var toolbar: Toolbar
@@ -238,6 +244,7 @@ class ReaderActivity : AppCompatActivity() {
         val meta = metaMap[page] ?: return
         supportActionBar?.title = meta.toolbarTitle
         supportActionBar?.subtitle = meta.toolbarSubtitle
+        toolbar.fitTitleText() // subtitle view is (re)created per page → keep font padding off
     }
 
     // ── Toolbar menu: night reading, search, settings ───────────────────────────

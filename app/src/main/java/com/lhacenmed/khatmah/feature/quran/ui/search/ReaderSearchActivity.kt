@@ -1,5 +1,6 @@
 package com.lhacenmed.khatmah.feature.quran.ui.search
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
 import android.os.Bundle
@@ -27,6 +28,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.color.MaterialColors
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.core.ui.UiScale
 import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.quran.data.Riwaya
 import com.lhacenmed.khatmah.feature.quran.data.Qcf4Repository
@@ -46,6 +48,10 @@ import kotlinx.coroutines.launch
  * to that aya's page.
  */
 class ReaderSearchActivity : AppCompatActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(UiScale.wrap(newBase))
+    }
 
     private val firstPage get() = intent.getIntExtra(EXTRA_FIRST_PAGE, 0)
     private val lastPage  get() = intent.getIntExtra(EXTRA_LAST_PAGE, 0)

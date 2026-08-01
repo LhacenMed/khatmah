@@ -1,5 +1,6 @@
 package com.lhacenmed.khatmah.onboarding
 
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -21,6 +22,7 @@ import androidx.navigation.navArgument
 import com.lhacenmed.khatmah.core.MainActivity
 import com.lhacenmed.khatmah.core.nav.LocalNavController
 import com.lhacenmed.khatmah.core.nav.ShellRoutes
+import com.lhacenmed.khatmah.core.ui.UiScale
 import com.lhacenmed.khatmah.core.ui.theme.Theme
 
 /** Exit points out of the onboarding wizard, supplied by [OnboardingActivity]. */
@@ -48,6 +50,10 @@ val LocalOnboardingExit = staticCompositionLocalOf<OnboardingExit> {
  * NavHost; the three completion points exit through [LocalOnboardingExit].
  */
 class OnboardingActivity : AppCompatActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(UiScale.wrap(newBase))
+    }
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
