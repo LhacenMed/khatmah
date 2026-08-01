@@ -123,8 +123,9 @@ class BookPageView @JvmOverloads constructor(
     private var stackOnRight = true
 
     /**
-     * Pinch-free zoom/pan for the page (double-tap toggles, drag pans while zoomed). Active only in
-     * portrait (fill-parent); landscape uses its own vertical scroller, so the gate is [pageAspect].
+     * Pinch/double-tap zoom + drag-pan for the page (pinch scales freely, double-tap toggles, drag
+     * pans while zoomed). Active only in portrait (fill-parent); landscape uses its own vertical
+     * scroller, so the gate is [pageAspect].
      */
     private val zoom = PageZoom(this, { pageAspect == 0f }, { onTap?.invoke() }, ::longPressAt)
 
@@ -211,9 +212,9 @@ class BookPageView @JvmOverloads constructor(
         val h = height.toFloat()
 
         // Zoom the whole page as one unit (background, text, overlay) so it reads like zooming a
-        // photo of the sheet; at 1× the transform is the identity.
-        val saved = canvas.save()
-        zoom.apply(canvas)
+        // photo of the sheet; at 1× the transform is the identity. While pinching this replays a
+        // one-shot snapshot instead of re-rasterising every glyph, keeping the gesture smooth.
+        zoom.draw(canvas) {
 
         // Background: solid dark in night mode, otherwise the parity parchment gradient.
         if (nightMode) {
@@ -282,8 +283,7 @@ class BookPageView @JvmOverloads constructor(
         }
 
         if (showPageInfo) drawPageInfo(canvas, w, h)
-
-        canvas.restoreToCount(saved)
+        }
     }
 
     /**

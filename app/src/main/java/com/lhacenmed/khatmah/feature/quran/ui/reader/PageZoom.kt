@@ -3,19 +3,26 @@ package com.lhacenmed.khatmah.feature.quran.ui.reader
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
+import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Matrix
+import android.graphics.Paint
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 
 /**
- * Reusable double-tap zoom + drag-pan for a reader page, shared by the book and text readers so both
+ * Reusable pinch-zoom + drag-pan for a reader page, shared by the book and text readers so both
  * behave identically.
  *
- * The page draws itself in its own (content) coordinates and calls [apply] inside its draw pass;
- * [PageZoom] maps screen↔content via [toContentX]/[toContentY] for hit-testing, and suspends pager
- * paging while zoomed. The single-tap [onTap] stays immediate — it never waits to disambiguate a
+ * The page draws itself in its own (content) coordinates through [draw]; [PageZoom] maps
+ * screen↔content via [toContentX]/[toContentY] for hit-testing, and suspends pager paging while
+ * zoomed. A two-finger pinch scales freely between [MIN_SCALE] and [MAX_SCALE] about the finger
+ * focal point; a double-tap is a quick toggle between 1× and [DOUBLE_TAP_SCALE] centred on the
+ * tapped spot. The single-tap [onTap] stays immediate — it never waits to disambiguate a
  * double-tap — while a long-press is reported through [onLongPressAt] in content coordinates.
  *
  * Feed every touch from the host view's `onTouchEvent` into [onTouch]. Zoom only engages while
@@ -41,15 +48,31 @@ class PageZoom(
     /** Target (scale, transX, transY) of the running animation, committed when it ends. */
     private var animEnd: Triple<Float, Float, Float>? = null
 
+    // ── Live pinch state ─────────────────────────────────────────────────────────
+    //
+    // A pinch drives the *canvas* transform (same path as [pan]), never the view's own scale, so
+    // Android never warps the incoming touch coordinates and the focal point stays rock-steady.
+    // To stay smooth at every zoom level — including full-screen, where re-rasterising the whole
+    // page each frame stutters — the page is snapshotted once at 1× ([snapshot]) and that bitmap is
+    // blitted (scaled) during the gesture instead of redrawing vector glyphs; on release the crisp
+    // vector page is drawn again.
+    private var pinching = false
+    private var capturing = false
+    private var prevFocusX = 0f; private var prevFocusY = 0f
+    private var snapshot: Bitmap? = null
+    private val snapMatrix = Matrix()
+    private val snapPaint = Paint(Paint.FILTER_BITMAP_FLAG)
+
     private val detector = GestureDetector(target.context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent) = true
         override fun onSingleTapUp(e: MotionEvent): Boolean { onTap(); return true }
         override fun onDoubleTap(e: MotionEvent): Boolean {
-            if (!enabled()) return false
+            if (!enabled() || pinching) return false
             toggle(e.x, e.y)
             return true
         }
         override fun onScroll(e1: MotionEvent?, e2: MotionEvent, dX: Float, dY: Float): Boolean {
+            if (pinching || scaleDetector.isInProgress) return false // a pinch owns the gesture
             if (!isZoomed) return false // not zoomed → let the host scroller / pager handle the drag
             pan(dX, dY)
             return true
@@ -57,25 +80,92 @@ class PageZoom(
         override fun onLongPress(e: MotionEvent) = onLongPressAt(toContentX(e.x), toContentY(e.y))
     })
 
-    /** Route the host view's touches here; holds the pager/scroller off while zoomed. */
-    fun onTouch(event: MotionEvent): Boolean {
-        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-            target.parent?.requestDisallowInterceptTouchEvent(isZoomed)
+    private val scaleDetector = ScaleGestureDetector(target.context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        override fun onScaleBegin(d: ScaleGestureDetector): Boolean {
+            if (!enabled()) return false
+            cancelAnim() // fold any in-flight double-tap animation into the pinch's start state
+            capture()    // freeze the page as a bitmap so the gesture blits instead of re-rasterising
+            if (snapshot == null) return false // view not laid out yet → let the touch fall through
+            pinching = true
+            prevFocusX = d.focusX; prevFocusY = d.focusY
+            return true
         }
-        return detector.onTouchEvent(event)
+        override fun onScale(d: ScaleGestureDetector): Boolean {
+            // Follow the focal point as the fingers drift (two-finger pan)…
+            var tx = transX + (d.focusX - prevFocusX)
+            var ty = transY + (d.focusY - prevFocusY)
+            // …then scale about that focal point so the pinched spot stays under the fingers.
+            val goal = (scale * d.scaleFactor).coerceIn(MIN_SCALE, MAX_SCALE)
+            val f = goal / scale
+            tx = d.focusX - (d.focusX - tx) * f
+            ty = d.focusY - (d.focusY - ty) * f
+            clampTo(goal, tx, ty) { cx, cy -> scale = goal; transX = cx; transY = cy }
+            prevFocusX = d.focusX; prevFocusY = d.focusY
+            target.invalidate()
+            return true
+        }
+        override fun onScaleEnd(d: ScaleGestureDetector) { pinching = false; target.invalidate() }
+    }).apply { isQuickScaleEnabled = false } // double-tap is a toggle, not a drag-zoom
+
+    /** Route the host view's touches here; holds the pager/scroller off while zoomed or pinching. */
+    fun onTouch(event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            // A pinch can start from 1×, so grab the gesture as soon as a second finger lands.
+            MotionEvent.ACTION_DOWN -> target.parent?.requestDisallowInterceptTouchEvent(isZoomed)
+            MotionEvent.ACTION_POINTER_DOWN -> target.parent?.requestDisallowInterceptTouchEvent(true)
+        }
+        scaleDetector.onTouchEvent(event)
+        detector.onTouchEvent(event)
+        return true
     }
 
     fun toContentX(screenX: Float): Float = (screenX - transX) / scale
     fun toContentY(screenY: Float): Float = (screenY - transY) / scale
 
-    /** Apply the current transform inside the host's draw pass; the identity at 1×. */
-    fun apply(canvas: Canvas) {
-        canvas.translate(transX, transY)
-        canvas.scale(scale, scale)
+    /**
+     * Draws the page through the current transform. While pinching, [content] is *not* re-run: the
+     * one-shot [snapshot] of the page at 1× is blitted (scaled), so the gesture stays smooth at
+     * every zoom level — even full-screen, where re-rasterising the whole page each frame is what
+     * used to stutter. Off the gesture (and while capturing the snapshot) the vector [content] is
+     * drawn crisply; at 1× the transform is the identity.
+     */
+    fun draw(canvas: Canvas, content: () -> Unit) {
+        if (capturing) { content(); return } // render the raw 1× page into the snapshot bitmap
+        val bmp = snapshot
+        if (pinching && bmp != null) {
+            snapMatrix.setScale(scale, scale)
+            snapMatrix.postTranslate(transX, transY)
+            canvas.drawBitmap(bmp, snapMatrix, snapPaint)
+        } else {
+            val saved = canvas.save()
+            canvas.translate(transX, transY)
+            canvas.scale(scale, scale)
+            content()
+            canvas.restoreToCount(saved)
+        }
+    }
+
+    /** Rasterises the page once at 1× into [snapshot], reusing the bitmap while the size holds. */
+    private fun capture() {
+        val w = target.width; val h = target.height
+        if (w <= 0 || h <= 0) return
+        var bmp = snapshot
+        if (bmp == null || bmp.width != w || bmp.height != h) {
+            bmp?.recycle()
+            bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            snapshot = bmp
+        } else {
+            bmp.eraseColor(Color.TRANSPARENT)
+        }
+        capturing = true // makes [draw] render the vector page at 1× (identity) into the bitmap
+        target.draw(Canvas(bmp))
+        capturing = false
     }
 
     fun reset() {
         cancelAnim()
+        pinching = false
+        snapshot?.recycle(); snapshot = null
         if (scale == 1f && transX == 0f && transY == 0f && target.scaleX == 1f && target.translationX == 0f) return
         commit(1f, 0f, 0f)
     }
@@ -87,7 +177,7 @@ class PageZoom(
         } else {
             val cx = toContentX(fx)
             val cy = toContentY(fy)
-            val goal = MAX_SCALE
+            val goal = DOUBLE_TAP_SCALE
             clampTo(goal, fx - cx * goal, fy - cy * goal) { tx, ty -> animateTo(goal, tx, ty) }
         }
     }
@@ -162,7 +252,9 @@ class PageZoom(
     }
 
     private companion object {
-        const val MAX_SCALE = 2.6f // double-tap zoom level
+        const val MIN_SCALE = 1f          // pinch floor (page fills the view)
+        const val MAX_SCALE = 4f          // pinch ceiling
+        const val DOUBLE_TAP_SCALE = 2.6f // quick double-tap zoom level
         const val ANIM_MS = 220L
         const val EPS = 0.01f
     }

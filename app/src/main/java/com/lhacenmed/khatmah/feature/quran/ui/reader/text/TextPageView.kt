@@ -49,9 +49,10 @@ class TextPageView(context: Context) : LinearLayout(context) {
     private val density = resources.displayMetrics.density
 
     /**
-     * Pinch-free zoom/pan for the page (double-tap toggles, drag pans while zoomed). The whole view
-     * handles gestures, so a tap anywhere — text or margin — toggles the chrome. Active only in
-     * portrait, where the page fits the viewport; landscape keeps the wrapping vertical scroller.
+     * Pinch/double-tap zoom + drag-pan for the page (pinch scales freely, double-tap toggles, drag
+     * pans while zoomed). The whole view handles gestures, so a tap anywhere — text or margin —
+     * toggles the chrome. Active only in portrait, where the page fits the viewport; landscape keeps
+     * the wrapping vertical scroller.
      */
     private val zoom = PageZoom(
         this,
@@ -108,10 +109,7 @@ class TextPageView(context: Context) : LinearLayout(context) {
 
     /** Children draw through the zoom transform; at 1× it is the identity. */
     override fun dispatchDraw(canvas: Canvas) {
-        val saved = canvas.save()
-        zoom.apply(canvas)
-        super.dispatchDraw(canvas)
-        canvas.restoreToCount(saved)
+        zoom.draw(canvas) { super.dispatchDraw(canvas) }
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
