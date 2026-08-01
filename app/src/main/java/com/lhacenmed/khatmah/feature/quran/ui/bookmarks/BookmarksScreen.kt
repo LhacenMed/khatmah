@@ -39,8 +39,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** One bookmark row: its page plus the page's resolved sura/juz meta (null until meta loads). */
-data class BookmarkRow(val page: Int, val meta: PageMeta?)
+/**
+ * One bookmark row: its page, the user-given [label] (null → default sura name), plus the page's
+ * resolved sura/juz meta (null until meta loads).
+ */
+data class BookmarkRow(val page: Int, val label: String?, val meta: PageMeta?)
 
 /**
  * Bookmarks for the currently selected riwaya, newest first, enriched with each page's sura/juz.
@@ -55,7 +58,7 @@ class BookmarksViewModel(app: Application) : AndroidViewModel(app) {
     val rows: StateFlow<List<BookmarkRow>?> = repo.bookmarks(riwaya.dbKey)
         .map { list ->
             val meta = ReaderMeta.loadForRiwaya(getApplication(), riwaya.dbKey)
-            list.map { BookmarkRow(it.pageNum, meta[it.pageNum]) }
+            list.map { BookmarkRow(it.pageNum, it.label, meta[it.pageNum]) }
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -101,7 +104,7 @@ private fun BookmarkItem(row: BookmarkRow, onOpen: () -> Unit, onRemove: () -> U
     ListItem(
         modifier = Modifier.clickable(onClick = onOpen),
         headlineContent = {
-            Text(row.meta?.toolbarTitle ?: "صفحة ${row.page}")
+            Text(row.label ?: row.meta?.toolbarTitle ?: "صفحة ${row.page}")
         },
         supportingContent = row.meta?.let { { Text(it.toolbarSubtitle) } },
         trailingContent = {

@@ -9,6 +9,7 @@ import android.os.Message
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ProgressBar
@@ -30,6 +31,7 @@ import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager.widget.ViewPager
 import com.google.android.material.color.MaterialColors
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.ui.UiScale
 import com.lhacenmed.khatmah.core.ui.fitTitleText
@@ -44,6 +46,7 @@ import com.lhacenmed.khatmah.feature.quran.ui.reciter.ReaderAudioBar
 import com.lhacenmed.khatmah.feature.quran.ui.reciter.ReaderAudioViewModel
 import com.lhacenmed.khatmah.feature.quran.ui.search.ReaderSearchActivity
 import com.lhacenmed.khatmah.feature.quran.ui.settings.ReaderSettingsActivity
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 
@@ -271,8 +274,9 @@ class ReaderActivity : AppCompatActivity() {
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menu.findItem(R.id.menu_night_mode)?.isChecked = ReaderTheme.effectiveNight(this)
-        // Bookmarks are page-based — book reader only; hide the action for the text reader.
+        // Bookmarks are page-based — book reader only; hide the actions for the text reader.
         menuBookmark = menu.findItem(R.id.menu_bookmark)?.apply { isVisible = bookmarkable }
+        menu.findItem(R.id.menu_bookmarks_list)?.isVisible = bookmarkable
         if (bookmarkable) refreshBookmarkIcon(currentPage())
         toolbar.overflowIcon?.setTint(
             MaterialColors.getColor(toolbar, com.google.android.material.R.attr.colorOnSurface)
@@ -293,6 +297,7 @@ class ReaderActivity : AppCompatActivity() {
             true
         }
         R.id.menu_bookmark -> { toggleBookmark(); true }
+        R.id.menu_bookmarks_list -> { openBookmarks(); true }
         // Placeholder mirroring Quran's toolbar — wired later; consume the click for now.
         R.id.menu_help -> true
         else -> super.onOptionsItemSelected(item)
@@ -309,10 +314,69 @@ class ReaderActivity : AppCompatActivity() {
     private var currentPageNum = 1
     private fun currentPage(): Int = currentPageNum
 
-    /** Toggles the bookmark on the current page for the active riwaya and reflects it in the icon. */
+    /**
+     * Bookmark action on the current page: if already bookmarked, removes it; otherwise prompts for
+     * a name (defaulting to the sura) and adds it. The icon reflects the resulting state.
+     */
     private fun toggleBookmark() {
         val page = currentPage()
-        lifecycleScope.launch { setBookmarkIcon(bookmarkRepo.toggle(source.riwaya.dbKey, page)) }
+        lifecycleScope.launch {
+            if (bookmarkRepo.isBookmarked(source.riwaya.dbKey, page)) {
+                bookmarkRepo.remove(source.riwaya.dbKey, page)
+                setBookmarkIcon(false)
+            } else {
+                promptBookmarkName(page)
+            }
+        }
+    }
+
+    /** Asks for a bookmark name (pre-filled with the sura title); an unchanged/blank name → default. */
+    private fun promptBookmarkName(page: Int) {
+        val default = metaMap[page]?.toolbarTitle ?: "صفحة $page"
+        val pad = (24 * resources.displayMetrics.density).toInt()
+        val input = EditText(this).apply {
+            setText(default)
+            setSelection(text.length)
+            isSingleLine = true
+        }
+        val frame = FrameLayout(this).apply { setPadding(pad, pad / 2, pad, 0); addView(input) }
+        MaterialAlertDialogBuilder(this)
+            .setTitle("اسم العلامة")
+            .setView(frame)
+            .setPositiveButton("حفظ") { _, _ ->
+                val entered = input.text.toString().trim()
+                // Keep null when the user accepts the default, so the row stays synced to the sura.
+                val label = entered.takeIf { it.isNotEmpty() && it != default }
+                lifecycleScope.launch {
+                    bookmarkRepo.add(source.riwaya.dbKey, page, label)
+                    setBookmarkIcon(true)
+                }
+            }
+            .setNegativeButton("إلغاء", null)
+            .show()
+    }
+
+    /** Opens the bookmarks sheet (same source/format as the bookmarks screen); a tap jumps to a page. */
+    private fun openBookmarks() {
+        lifecycleScope.launch {
+            val riwaya = source.riwaya.dbKey
+            val list = bookmarkRepo.bookmarks(riwaya).first()
+            val meta = ReaderMeta.loadForRiwaya(this@ReaderActivity, riwaya)
+            val rows = list.map { b ->
+                val m = meta[b.pageNum]
+                BookmarksSheet.Row(
+                    page = b.pageNum,
+                    title = b.label ?: m?.toolbarTitle ?: "صفحة ${b.pageNum}",
+                    subtitle = m?.toolbarSubtitle ?: "",
+                )
+            }
+            BookmarksSheet(this@ReaderActivity).show(rows) { page -> goToPage(page) }
+        }
+    }
+
+    /** Jumps the pager to [page], clamped to the active window. */
+    private fun goToPage(page: Int) {
+        pager.setCurrentItem(positionForPage(page.coerceIn(firstPage, lastPage)), false)
     }
 
     private fun refreshBookmarkIcon(page: Int) {
