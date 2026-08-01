@@ -14,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         PageStartEntity::class, VerseEntity::class, BookmarkEntity::class,
         HeaderGlyphEntity::class,
     ],
-    version      = 5,
+    version      = 6,
     exportSchema = false,
 )
 abstract class MushafDb : RoomDatabase() {
@@ -46,12 +46,19 @@ abstract class MushafDb : RoomDatabase() {
             }
         }
 
+        /** v5→v6: adds the optional user-given [BookmarkEntity.label] (null → default sura name). */
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE mushaf_bookmark ADD COLUMN label TEXT")
+            }
+        }
+
         @Volatile private var instance: MushafDb? = null
 
         fun get(context: Context): MushafDb = instance ?: synchronized(this) {
             instance ?: Room
                 .databaseBuilder(context.applicationContext, MushafDb::class.java, DB_NAME)
-                .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { instance = it }

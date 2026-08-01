@@ -18,15 +18,9 @@ class BookmarkRepository(context: Context) {
     suspend fun isBookmarked(riwaya: String, page: Int): Boolean =
         withContext(Dispatchers.IO) { dao.isBookmarked(riwaya, page) }
 
-    /** Adds or removes the bookmark for [page]; returns the new bookmarked state. */
-    suspend fun toggle(riwaya: String, page: Int): Boolean = withContext(Dispatchers.IO) {
-        if (dao.isBookmarked(riwaya, page)) {
-            dao.deleteBookmark(riwaya, page)
-            false
-        } else {
-            dao.insertBookmark(BookmarkEntity(riwaya, page, System.currentTimeMillis()))
-            true
-        }
+    /** Adds (or replaces) the bookmark for [page] with an optional user [label]. */
+    suspend fun add(riwaya: String, page: Int, label: String?) = withContext(Dispatchers.IO) {
+        dao.insertBookmark(BookmarkEntity(riwaya, page, System.currentTimeMillis(), label))
     }
 
     suspend fun remove(riwaya: String, page: Int) =
