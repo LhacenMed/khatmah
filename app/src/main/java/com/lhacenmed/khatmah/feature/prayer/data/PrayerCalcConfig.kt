@@ -219,16 +219,17 @@ enum class CalcMethod(
 
     /**
      * Mauritania — Muslim World League (MWL).
-     * Offsets tuned against the official published timetable (Nouakchott, June 2024).
-     * The raw MWL astronomical result runs ~5-7 min fast across Mauritania;
-     * these corrections bring it in line with the national timetable.
-     * offsets: fajr=-7, sunrise=-3, dhuhr=-4, asr=-7, maghrib=-5, isha=-4.
+     * Offsets tuned against the official published timetable (Nouakchott, June 2024), then folded
+     * in the on-device per-prayer adjustments verified against the local timetable
+     * (fajr +5, dhuhr +45, asr +6, maghrib +2, isha +5) so MR times are correct by default with
+     * no manual corrections. Base -7,-3,-4,-7,-5,-4 + adjustments = the values below.
+     * offsets: fajr=-2, sunrise=-3, dhuhr=41, asr=-1, maghrib=-3, isha=1.
      */
     MAURITANIA_MWL(
         "MAURITANIA_MWL",
         "Mauritania, Muslim World League (MWL)",
         18.0, IshaMode.Angle(17.0),
-        MethodOffsets(fajr = -7, sunrise = -3, dhuhr = -4, asr = -7, maghrib = -5, isha = -4),
+        MethodOffsets(fajr = -2, sunrise = -3, dhuhr = 41, asr = -1, maghrib = -3, isha = 1),
     ),
 
     /**
