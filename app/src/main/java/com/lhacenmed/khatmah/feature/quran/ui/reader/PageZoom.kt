@@ -47,6 +47,8 @@ class PageZoom(
     private var animator: ValueAnimator? = null
     /** Target (scale, transX, transY) of the running animation, committed when it ends. */
     private var animEnd: Triple<Float, Float, Float>? = null
+    /** True while the double-tap animation runs — draws the snapshot, like a pinch. */
+    private var animating = false
 
     // ── Live pinch state ─────────────────────────────────────────────────────────
     //
@@ -132,7 +134,7 @@ class PageZoom(
     fun draw(canvas: Canvas, content: () -> Unit) {
         if (capturing) { content(); return } // render the raw 1× page into the snapshot bitmap
         val bmp = snapshot
-        if (pinching && bmp != null) {
+        if ((pinching || animating) && bmp != null) {
             snapMatrix.setScale(scale, scale)
             snapMatrix.postTranslate(transX, transY)
             canvas.drawBitmap(bmp, snapMatrix, snapPaint)
@@ -199,37 +201,38 @@ class PageZoom(
     }
 
     /**
-     * Animates to ([s],[tx],[ty]). The page is heavy to rasterise (a full mushaf of custom glyphs),
-     * so instead of re-running the canvas transform every frame — which re-rasterises every glyph at
-     * a new size and drops frames — we freeze the canvas at the start state and animate the view's
-     * own transform on a hardware layer, letting the GPU composite the scale for free. When the
-     * animation ends we commit the final values to the canvas transform and redraw once, crisply.
+     * Animates to ([s],[tx],[ty]) over the full-page [snapshot]. The page is heavy to rasterise (a
+     * full mushaf of custom glyphs), so rather than redraw every glyph each frame we blit the
+     * one-shot 1× snapshot through the canvas transform — exactly like the pinch path. Because the
+     * snapshot holds the *whole* page (not just the currently-visible crop), zooming back out
+     * reveals the off-screen content immediately instead of popping in only when the animation ends.
+     * The final values are committed to the canvas on end and the crisp vector page is drawn once.
      */
     private fun animateTo(s: Float, tx: Float, ty: Float) {
         cancelAnim()
         val s0 = scale; val x0 = transX; val y0 = transY
         if (s0 == s && x0 == tx && y0 == ty) { commit(s, tx, ty); return }
 
+        capture() // full-page 1× snapshot to animate over
+        if (snapshot == null) { commit(s, tx, ty); return } // not laid out → jump to the end state
+
         animEnd = Triple(s, tx, ty)
-        // Pivot at the top-left so the view transform matches the canvas (translate, then scale).
-        target.pivotX = 0f; target.pivotY = 0f
-        target.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        animating = true
         animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = ANIM_MS
             interpolator = DecelerateInterpolator()
             addUpdateListener {
                 val f = it.animatedValue as Float
-                // View transform layered over the frozen canvas state (s0,x0,y0); see commit().
-                val sv = (s0 + (s - s0) * f) / s0
-                target.scaleX = sv
-                target.scaleY = sv
-                target.translationX = (x0 + (tx - x0) * f) - sv * x0
-                target.translationY = (y0 + (ty - y0) * f) - sv * y0
+                // Drive the canvas transform directly; draw() blits the full snapshot through it.
+                scale  = s0 + (s - s0) * f
+                transX = x0 + (tx - x0) * f
+                transY = y0 + (ty - y0) * f
+                target.invalidate()
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     val end = animEnd ?: return
-                    animEnd = null; animator = null
+                    animEnd = null; animator = null; animating = false
                     commit(end.first, end.second, end.third)
                 }
             })
