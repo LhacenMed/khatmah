@@ -223,13 +223,13 @@ enum class CalcMethod(
      * in the on-device per-prayer adjustments verified against the local timetable
      * (fajr +5, dhuhr +45, asr +6, maghrib +2, isha +5) so MR times are correct by default with
      * no manual corrections. Base -7,-3,-4,-7,-5,-4 + adjustments = the values below.
-     * offsets: fajr=-2, sunrise=-3, dhuhr=41, asr=-1, maghrib=-3, isha=1.
+     * offsets: fajr=-2, sunrise=-3, dhuhr=50, asr=5, maghrib=5, isha=6.
      */
     MAURITANIA_MWL(
         "MAURITANIA_MWL",
         "Mauritania, Muslim World League (MWL)",
         18.0, IshaMode.Angle(17.0),
-        MethodOffsets(fajr = -2, sunrise = -3, dhuhr = 41, asr = -1, maghrib = -3, isha = 1),
+        MethodOffsets(fajr = -2, sunrise = -3, dhuhr = 50, asr = 5, maghrib = 5, isha = 6),
     ),
 
     /**
