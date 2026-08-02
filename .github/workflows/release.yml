@@ -53,10 +53,13 @@ jobs:
       apk_url: ${{ steps.manifest.outputs.apk_url }}
     steps:
       - name: Checkout main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
+          # Explicit rather than relying on the default: the later steps push to
+          # main, which needs the token left in the local git config.
+          persist-credentials: true
 
       # Inputs reach the shell through env, never through ${{ }} interpolation
       # into script text — release notes are free-form user input.
@@ -109,20 +112,27 @@ jobs:
           echo "✓ ${NAME}"
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
-      # The runner ships an Android SDK but not necessarily the exact CMake the
-      # native build pins. Accepting licences also lets AGP fetch its NDK.
+      # The runner's Android SDK ships CMake 3.31/4.1, but the native build pins
+      # 3.22.1 (app/src/main/cpp/CMakeLists.txt), so it has to be installed.
+      # Accepting licences also lets AGP fetch an NDK if its default is absent.
       - name: Install native build tools
         run: |
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          yes | sdkmanager "cmake;3.22.1" > /dev/null
+          set -euo pipefail
+          # sdkmanager is not on PATH, and cmdline-tools sit in a version-numbered
+          # directory ("12.0") rather than "latest" — resolve it rather than guess.
+          SDKMANAGER="$(command -v sdkmanager || find "${ANDROID_HOME}/cmdline-tools" -name sdkmanager -type f | sort -r | head -1)"
+          [ -x "$SDKMANAGER" ] || { echo "::error::sdkmanager not found under ${ANDROID_HOME}"; exit 1; }
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          yes | "$SDKMANAGER" "cmake;3.22.1" > /dev/null
+          echo "✓ cmake 3.22.1"
 
       - name: Restore signing keystore
         env:
