@@ -12,7 +12,9 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.animation.DecelerateInterpolator
+import android.widget.OverScroller
 
 /**
  * Reusable pinch-zoom + drag-pan for a reader page, shared by the book and text readers so both
@@ -65,6 +67,25 @@ class PageZoom(
     private val snapMatrix = Matrix()
     private val snapPaint = Paint(Paint.FILTER_BITMAP_FLAG)
 
+    // ── Fling (inertial pan) ──────────────────────────────────────────────────────
+    //
+    // After a fast drag the page keeps moving and decelerates smoothly, like a PDF viewer. Uses
+    // Android's OverScroller — the platform's own time-based, frame-rate-independent fling physics
+    // (the same curve as its scrollable views) — clamped to the pan bounds so it settles at an edge
+    // with no overshoot or bounce.
+    private val scroller = OverScroller(target.context)
+    private val maxFlingVelocity = ViewConfiguration.get(target.context).scaledMaximumFlingVelocity.toFloat()
+    /** Per-frame fling tick (Choreographer-driven), re-posting itself until the scroller settles. */
+    private val flingRunnable = object : Runnable {
+        override fun run() {
+            if (!scroller.computeScrollOffset()) return // fling settled (or was cancelled)
+            transX = scroller.currX.toFloat()
+            transY = scroller.currY.toFloat()
+            target.invalidate()
+            target.postOnAnimation(this)
+        }
+    }
+
     private val detector = GestureDetector(target.context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent) = true
         override fun onSingleTapUp(e: MotionEvent): Boolean { onTap(); return true }
@@ -77,6 +98,11 @@ class PageZoom(
             if (pinching || scaleDetector.isInProgress) return false // a pinch owns the gesture
             if (!isZoomed) return false // not zoomed → let the host scroller / pager handle the drag
             pan(dX, dY)
+            return true
+        }
+        override fun onFling(e1: MotionEvent?, e2: MotionEvent, vX: Float, vY: Float): Boolean {
+            if (pinching || scaleDetector.isInProgress || !isZoomed) return false // fling only while zoomed
+            startFling(vX, vY)
             return true
         }
         override fun onLongPress(e: MotionEvent) = onLongPressAt(toContentX(e.x), toContentY(e.y))
@@ -113,7 +139,10 @@ class PageZoom(
     fun onTouch(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             // A pinch can start from 1×, so grab the gesture as soon as a second finger lands.
-            MotionEvent.ACTION_DOWN -> target.parent?.requestDisallowInterceptTouchEvent(isZoomed)
+            MotionEvent.ACTION_DOWN -> {
+                cancelFling() // a new touch interrupts any inertial fling in progress
+                target.parent?.requestDisallowInterceptTouchEvent(isZoomed)
+            }
             MotionEvent.ACTION_POINTER_DOWN -> target.parent?.requestDisallowInterceptTouchEvent(true)
         }
         scaleDetector.onTouchEvent(event)
@@ -166,6 +195,7 @@ class PageZoom(
 
     fun reset() {
         cancelAnim()
+        cancelFling()
         pinching = false
         snapshot?.recycle(); snapshot = null
         if (scale == 1f && transX == 0f && transY == 0f && target.scaleX == 1f && target.translationX == 0f) return
@@ -191,6 +221,30 @@ class PageZoom(
         clampTo(scale, transX - dX, transY - dY) { tx, ty ->
             transX = tx; transY = ty; target.invalidate()
         }
+    }
+
+    /**
+     * Starts an inertial fling from the current translation with finger velocity ([vX],[vY]),
+     * decelerating via [scroller] and clamped to the pan bounds so it settles cleanly at an edge —
+     * no overshoot or bounce. A no-op when the page can't pan on either axis. Extreme velocities are
+     * capped to the platform maximum so a very fast flick stays controllable.
+     */
+    private fun startFling(vX: Float, vY: Float) {
+        cancelFling()
+        cancelAnim() // a fling supersedes any running double-tap animation
+        val minX = (target.width - target.width * scale).toInt()
+        val minY = (target.height - target.height * scale).toInt()
+        if (minX == 0 && minY == 0) return // nothing pannable → no fling
+        val vx = vX.coerceIn(-maxFlingVelocity, maxFlingVelocity)
+        val vy = vY.coerceIn(-maxFlingVelocity, maxFlingVelocity)
+        scroller.fling(transX.toInt(), transY.toInt(), vx.toInt(), vy.toInt(), minX, 0, minY, 0)
+        target.postOnAnimation(flingRunnable)
+    }
+
+    /** Stops any running fling immediately — a new touch or a bounds change interrupts it. */
+    private fun cancelFling() {
+        if (!scroller.isFinished) scroller.forceFinished(true)
+        target.removeCallbacks(flingRunnable)
     }
 
     /** Clamps ([tx],[ty]) for [s] so the page edges never pull inside the view, then emits it. */
