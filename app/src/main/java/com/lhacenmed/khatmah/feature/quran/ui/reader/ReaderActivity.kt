@@ -194,6 +194,7 @@ class ReaderActivity : AppCompatActivity() {
 
         pager.addOnPageChangeListener(object : ViewPager.SimpleOnPageChangeListener() {
             override fun onPageSelected(position: Int) {
+                if (silentHop) return
                 val page = pageForPosition(position)
                 currentPageNum = page
                 updateMeta(page)
@@ -376,10 +377,35 @@ class ReaderActivity : AppCompatActivity() {
         }
     }
 
-    /** Jumps the pager to [page], clamped to the active window. */
+    /**
+     * Opens [page] with a swipe-like slide, clamped to the active window: the pager first hops
+     * silently to the neighbour the jump arrives from, then animates that last step. Animating the
+     * raw distance instead would blur through hundreds of never-rendered pages, so this keeps every
+     * jump — one page away or three hundred — settling exactly like a finger swipe.
+     */
     private fun goToPage(page: Int) {
-        pager.setCurrentItem(positionForPage(page.coerceIn(firstPage, lastPage)), false)
+        val target = page.coerceIn(firstPage, lastPage)
+        if (target == currentPage()) return
+
+        // Approach a later page from behind and an earlier one from ahead, so the slide runs in the
+        // same direction the reader would have swiped to get there.
+        val from = if (target > currentPage()) target - 1 else target + 1
+        if (from !in firstPage..lastPage) {
+            pager.setCurrentItem(positionForPage(target), true)
+            return
+        }
+        // The hop is a staging move, not a visited page — silence the page-selected side effects
+        // (progress save, hizb toast) for it. setCurrentItem dispatches synchronously, so the flag
+        // covers exactly this call.
+        silentHop = true
+        pager.setCurrentItem(positionForPage(from), false)
+        silentHop = false
+        // One frame later the staged page is laid out, so the slide animates over real content.
+        pager.post { pager.setCurrentItem(positionForPage(target), true) }
     }
+
+    /** True only while the pager is being staged for a [goToPage] slide. */
+    private var silentHop = false
 
     /** Points the toolbar icon at the current page's state in [bookmarkedPages]. */
     private fun syncBookmarkIcon() {

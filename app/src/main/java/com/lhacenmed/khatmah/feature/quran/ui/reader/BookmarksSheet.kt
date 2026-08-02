@@ -35,8 +35,13 @@ class BookmarksSheet(private val context: Context) {
             if (rows.isEmpty()) {
                 addView(hint("لا توجد علامات مرجعية", onVariant, d))
             } else {
+                // Open on dismiss, not on tap: the sheet clears the page first so the reader's jump
+                // animation plays in full view instead of behind a closing scrim.
                 for (row in rows) addView(
-                    rowView(row, onSurface, onVariant, d) { onOpen(row.page); dialog.dismiss() }
+                    rowView(row, onSurface, onVariant, d) {
+                        dialog.setOnDismissListener { onOpen(row.page) }
+                        dialog.dismiss()
+                    }
                 )
             }
         }
