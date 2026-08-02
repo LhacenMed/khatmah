@@ -54,7 +54,6 @@ import com.lhacenmed.khatmah.core.ui.theme.Theme
 import com.lhacenmed.khatmah.core.ui.theme.isAppInDarkTheme
 import com.lhacenmed.khatmah.core.ui.theme.resolveColorScheme
 import com.lhacenmed.khatmah.databinding.ActivityMainBinding
-import android.widget.Toast
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarViewModel
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
@@ -114,24 +113,14 @@ class MainActivity : AppCompatActivity() {
         override fun handleOnBackPressed() = adhkarVm.exitSelectionMode()
     }
 
-    /** True while the "tap back again to exit" window is open (Today tab only). */
-    private var backToExitPending = false
-
     /**
-     * System back when not on the home tab returns to it (AntennaPod's default-page logic);
-     * on the home tab, the first back asks for confirmation and the second exits.
+     * System back on a non-home tab returns to the home tab (AntennaPod's default-page logic). On the
+     * home tab this callback is disabled (see [applyChrome]), so back falls through to the system and
+     * the native predictive-back exit animation runs instead of being intercepted.
      */
-    private val tabBackCallback = object : OnBackPressedCallback(true) {
+    private val tabBackCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
-            when {
-                selectedTab != 0  -> binding.bottomNav.selectedItemId = 1 // home tab (index 0 + 1)
-                backToExitPending -> finish()
-                else              -> {
-                    backToExitPending = true
-                    Toast.makeText(this@MainActivity, R.string.tap_back_again_to_exit, Toast.LENGTH_SHORT).show()
-                    binding.bottomNav.postDelayed({ backToExitPending = false }, EXIT_CONFIRM_WINDOW_MS)
-                }
-            }
+            binding.bottomNav.selectedItemId = 1 // home tab (index 0 + 1)
         }
     }
 
@@ -335,6 +324,9 @@ class MainActivity : AppCompatActivity() {
         bar.subtitle = if (!selecting) tabSpec.subtitle(this) else null
         bar.setDisplayHomeAsUpEnabled(selecting)
         selectionBackCallback.isEnabled = selecting
+        // Intercept back only to return to the home tab; on the home tab leave it to the system so
+        // the native predictive-back exit animation runs.
+        tabBackCallback.isEnabled = selectedTab != 0
 
         // Paint the window background with the active surface colour so the recreate cross-fade
         // (theme / locale change) shows the chrome's colour in the status-bar and nav-strip inset
@@ -459,7 +451,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val KEY_SELECTED_TAB = "selected_tab"
-        private const val EXIT_CONFIRM_WINDOW_MS = 2000L
         private const val ACTION_ICON_DP = 24f // standard toolbar action-icon size
 
         // Contextual (Adhkar selection) menu item ids; offset to avoid clashing with the
