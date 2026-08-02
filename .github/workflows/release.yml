@@ -128,7 +128,11 @@ jobs:
           set -euo pipefail
           # sdkmanager is not on PATH, and cmdline-tools sit in a version-numbered
           # directory ("12.0") rather than "latest" — resolve it rather than guess.
-          SDKMANAGER="$(command -v sdkmanager || find "${ANDROID_HOME}/cmdline-tools" -name sdkmanager -type f | sort -r | head -1)"
+          # No pipeline here on purpose: `find | head` can SIGPIPE the producer,
+          # which `set -o pipefail` would turn into a spurious step failure.
+          SDKMANAGER="$(command -v sdkmanager || true)"
+          [ -n "$SDKMANAGER" ] \
+            || SDKMANAGER="$(find "${ANDROID_HOME}/cmdline-tools" -name sdkmanager -type f -print -quit)"
           [ -x "$SDKMANAGER" ] || { echo "::error::sdkmanager not found under ${ANDROID_HOME}"; exit 1; }
           yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
           yes | "$SDKMANAGER" "cmake;3.22.1" > /dev/null
