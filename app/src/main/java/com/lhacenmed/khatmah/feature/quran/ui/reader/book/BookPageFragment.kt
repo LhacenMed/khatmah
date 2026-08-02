@@ -15,6 +15,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.ui.theme.resolveColorScheme
+import com.lhacenmed.khatmah.feature.quran.data.BookmarkRepository
 import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.quran.data.Riwaya
 import com.lhacenmed.khatmah.feature.quran.data.Qcf4Repository
@@ -25,6 +26,8 @@ import com.lhacenmed.khatmah.feature.quran.ui.reader.ReaderPrefs
 import com.lhacenmed.khatmah.feature.quran.ui.reader.ReaderTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -102,6 +105,15 @@ class BookPageFragment : Fragment() {
                     showPageInfo = d.info
                 }
             }
+        }
+
+        // The ribbon follows the shared bookmark set, so toggling from the toolbar shows/hides it on
+        // this page at once — and offscreen neighbours are already correct when they swipe in.
+        viewLifecycleOwner.lifecycleScope.launch {
+            BookmarkRepository.pages(requireContext(), MushafPrefs.selected.value.riwaya.dbKey)
+                .map { pageNumber in it }
+                .distinctUntilChanged()
+                .collect { pageView?.bookmarked = it }
         }
 
         // Highlight the verse currently being played; harmless on pages that don't own it.

@@ -199,7 +199,7 @@ class ReaderActivity : AppCompatActivity() {
                 updateMeta(page)
                 slider.progress = page - firstPage
                 savePage(page)
-                if (bookmarkable) refreshBookmarkIcon(page)
+                if (bookmarkable) syncBookmarkIcon()
                 showHizbToastFor(page)
             }
         })
@@ -207,7 +207,10 @@ class ReaderActivity : AppCompatActivity() {
         // The initial setCurrentItem above doesn't fire onPageSelected, so seed the page + bookmark
         // state here — otherwise reopening on a bookmarked page shows the outline until the first swipe.
         currentPageNum = startPage
-        if (bookmarkable) refreshBookmarkIcon(startPage)
+        if (bookmarkable) {
+            syncBookmarkIcon()
+            lifecycleScope.launch { bookmarkedPages.collect { syncBookmarkIcon() } }
+        }
         if (popup.isVisible) showPopupFor(firstPage + slider.progress)
     }
 
@@ -277,7 +280,7 @@ class ReaderActivity : AppCompatActivity() {
         // Bookmarks are page-based — book reader only; hide the actions for the text reader.
         menuBookmark = menu.findItem(R.id.menu_bookmark)?.apply { isVisible = bookmarkable }
         menu.findItem(R.id.menu_bookmarks_list)?.isVisible = bookmarkable
-        if (bookmarkable) refreshBookmarkIcon(currentPage())
+        if (bookmarkable) syncBookmarkIcon()
         toolbar.overflowIcon?.setTint(
             MaterialColors.getColor(toolbar, com.google.android.material.R.attr.colorOnSurface)
         )
@@ -306,6 +309,11 @@ class ReaderActivity : AppCompatActivity() {
     // ── Bookmarks (book reader only) ─────────────────────────────────────────────
 
     private val bookmarkRepo by lazy { BookmarkRepository(applicationContext) }
+
+    // The live bookmarked-page set the page ribbons also read — the icon can never drift from them.
+    private val bookmarkedPages by lazy {
+        BookmarkRepository.pages(applicationContext, source.riwaya.dbKey)
+    }
     private val bookmarkable get() = source.mode == ReaderMode.QCF4
     private var menuBookmark: MenuItem? = null
 
@@ -320,13 +328,10 @@ class ReaderActivity : AppCompatActivity() {
      */
     private fun toggleBookmark() {
         val page = currentPage()
-        lifecycleScope.launch {
-            if (bookmarkRepo.isBookmarked(source.riwaya.dbKey, page)) {
-                bookmarkRepo.remove(source.riwaya.dbKey, page)
-                setBookmarkIcon(false)
-            } else {
-                promptBookmarkName(page)
-            }
+        if (page in bookmarkedPages.value) {
+            lifecycleScope.launch { bookmarkRepo.remove(source.riwaya.dbKey, page) }
+        } else {
+            promptBookmarkName(page)
         }
     }
 
@@ -347,10 +352,7 @@ class ReaderActivity : AppCompatActivity() {
                 val entered = input.text.toString().trim()
                 // Keep null when the user accepts the default, so the row stays synced to the sura.
                 val label = entered.takeIf { it.isNotEmpty() && it != default }
-                lifecycleScope.launch {
-                    bookmarkRepo.add(source.riwaya.dbKey, page, label)
-                    setBookmarkIcon(true)
-                }
+                lifecycleScope.launch { bookmarkRepo.add(source.riwaya.dbKey, page, label) }
             }
             .setNegativeButton("إلغاء", null)
             .show()
@@ -379,11 +381,9 @@ class ReaderActivity : AppCompatActivity() {
         pager.setCurrentItem(positionForPage(page.coerceIn(firstPage, lastPage)), false)
     }
 
-    private fun refreshBookmarkIcon(page: Int) {
-        lifecycleScope.launch { setBookmarkIcon(bookmarkRepo.isBookmarked(source.riwaya.dbKey, page)) }
-    }
-
-    private fun setBookmarkIcon(bookmarked: Boolean) {
+    /** Points the toolbar icon at the current page's state in [bookmarkedPages]. */
+    private fun syncBookmarkIcon() {
+        val bookmarked = currentPage() in bookmarkedPages.value
         menuBookmark?.setIcon(if (bookmarked) R.drawable.ic_bookmark else R.drawable.ic_bookmark_border)
     }
 

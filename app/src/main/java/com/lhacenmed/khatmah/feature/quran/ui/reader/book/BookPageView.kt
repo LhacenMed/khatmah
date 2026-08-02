@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.util.AttributeSet
@@ -59,6 +60,17 @@ class BookPageView @JvmOverloads constructor(
         set(value) { if (field != value) { field = value; invalidate() } }
 
     private val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    // ── Bookmark ribbon ──────────────────────────────────────────────────────────
+
+    /** Whether this page carries a bookmark — draws the ribbon at the page's outer top corner. */
+    var bookmarked: Boolean = false
+        set(value) { if (field != value) { field = value; invalidate() } }
+
+    private val ribbonPath = Path()
+    private val ribbonPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    /** Ribbon geometry/shader depend on size, binding side and night mode — rebuilt on demand. */
+    private var ribbonDirty = true
 
     // ── Night-mode brightness (0..255) ───────────────────────────────────────────
 
@@ -292,7 +304,55 @@ class BookPageView @JvmOverloads constructor(
         }
 
         if (showPageInfo) drawPageInfo(canvas, w, h)
+        // Last, so the ribbon always reads as lying on top of the sheet.
+        if (bookmarked && page != null) drawBookmarkRibbon(canvas, w, h)
         }
+    }
+
+    /**
+     * Draws the bookmark ribbon: a red tab hanging from the top of the page's fore-edge (the outer,
+     * non-spine side, so it flips with page parity like the sheet stack) and ending in a swallow
+     * tail. It sits within the fore-edge strip, clear of the page-info header on either side.
+     */
+    private fun drawBookmarkRibbon(canvas: Canvas, w: Float, h: Float) {
+        if (ribbonDirty) { buildRibbon(w, h); ribbonDirty = false }
+        canvas.drawPath(ribbonPath, ribbonPaint)
+    }
+
+    /** Builds the ribbon path + its across-the-width satin gradient for the current bounds. */
+    private fun buildRibbon(w: Float, h: Float) {
+        val stripW = RIBBON_W_DP * density
+        val length = (h * RIBBON_LENGTH_RATIO)
+            .coerceIn(RIBBON_MIN_LEN_DP * density, RIBBON_MAX_LEN_DP * density)
+        val notch = RIBBON_NOTCH_DP * density
+        val inset = RIBBON_EDGE_INSET_DP * density
+        val left = if (stackOnRight) w - inset - stripW else inset
+        val right = left + stripW
+
+        ribbonPath.apply {
+            reset()
+            moveTo(left, 0f)
+            lineTo(right, 0f)
+            lineTo(right, length)
+            lineTo((left + right) / 2f, length - notch)
+            lineTo(left, length)
+            close()
+        }
+
+        // Lit toward the page, deepening toward the outer edge — gives the tab its fold depth.
+        val edge = if (nightMode) RIBBON_EDGE_NIGHT else RIBBON_EDGE_DAY
+        val base = if (nightMode) RIBBON_BASE_NIGHT else RIBBON_BASE_DAY
+        val lit = if (nightMode) RIBBON_LIT_NIGHT else RIBBON_LIT_DAY
+        val x0 = if (stackOnRight) left else right
+        val x1 = if (stackOnRight) right else left
+        ribbonPaint.shader = LinearGradient(
+            x0, 0f, x1, 0f,
+            intArrayOf(lit, base, edge),
+            floatArrayOf(0f, 0.45f, 1f),
+            Shader.TileMode.CLAMP,
+        )
+        // Slightly translucent so the page (and the header glyph it may cross) still reads through.
+        ribbonPaint.alpha = RIBBON_ALPHA
     }
 
     /**
@@ -383,6 +443,9 @@ class BookPageView @JvmOverloads constructor(
     // ── Layout ──────────────────────────────────────────────────────────────────
 
     private fun rebuildLayout() {
+        // Every trigger of a layout rebuild (size, page/parity, night mode) also invalidates the
+        // ribbon's geometry or colours, so one flag here covers them all.
+        ribbonDirty = true
         val p = page
         if (p == null || width == 0 || height == 0) { layout = emptyList(); return }
 
@@ -467,5 +530,21 @@ class BookPageView @JvmOverloads constructor(
 
         // Verse highlight band: fraction of the line slot height inset from top and bottom.
         private const val HIGHLIGHT_V_INSET = 0.02f
+
+        // Bookmark ribbon: a narrow tab riding the fore-edge, sized off the page height so it keeps
+        // its proportions in landscape, and clamped so it never dominates a small or tall page.
+        private const val RIBBON_W_DP = 20f
+        private const val RIBBON_EDGE_INSET_DP = 12f // gap between the ribbon and the page edge
+        private const val RIBBON_LENGTH_RATIO = 0.13f
+        private const val RIBBON_MIN_LEN_DP = 44f
+        private const val RIBBON_MAX_LEN_DP = 88f
+        private const val RIBBON_NOTCH_DP = 7f       // swallow-tail depth
+        private const val RIBBON_ALPHA = 100         // ~82% — lets the page show through
+        private const val RIBBON_LIT_DAY = 0xFFE1443C.toInt()
+        private const val RIBBON_BASE_DAY = 0xFFC62828.toInt()
+        private const val RIBBON_EDGE_DAY = 0xFF8E1B1B.toInt()
+        private const val RIBBON_LIT_NIGHT = 0xFFB63A34.toInt()
+        private const val RIBBON_BASE_NIGHT = 0xFF9E2222.toInt()
+        private const val RIBBON_EDGE_NIGHT = 0xFF6B1414.toInt()
     }
 }
