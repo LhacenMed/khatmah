@@ -24,7 +24,7 @@ import kotlin.math.ln1p
  *
  * Double-tap zooms into the tapped spot (and again to zoom back out); while zoomed a drag pans the
  * page and horizontal paging is suspended ([Zoom]). The single-tap chrome toggle stays immediate —
- * it never waits to disambiguate a double-tap.
+ * it never waits to disambiguate a double-tap; the zoom takes that toggle back via [onTapUndo].
  */
 class BookPageView @JvmOverloads constructor(
     context: Context,
@@ -47,6 +47,9 @@ class BookPageView @JvmOverloads constructor(
 
     /** Tap callback for immersive-chrome toggling. */
     var onTap: (() -> Unit)? = null
+
+    /** Asks the host to undo the last [onTap] — the tap turned out to open a double-tap zoom. */
+    var onTapUndo: (() -> Unit)? = null
 
     /** Long-press callback carrying the (sura, aya) of the pressed word — drives audio playback. */
     var onAyaLongPress: ((sura: Int, aya: Int) -> Unit)? = null
@@ -127,7 +130,13 @@ class BookPageView @JvmOverloads constructor(
      * pans while zoomed). Active only in portrait (fill-parent); landscape uses its own vertical
      * scroller, so the gate is [pageAspect].
      */
-    private val zoom = PageZoom(this, { pageAspect == 0f }, { onTap?.invoke() }, ::longPressAt)
+    private val zoom = PageZoom(
+        this,
+        { pageAspect == 0f },
+        { onTap?.invoke() },
+        { onTapUndo?.invoke() },
+        ::longPressAt,
+    )
 
     /** Long-press resolves the pressed word's (sura, aya); coordinates arrive in page space. */
     private fun longPressAt(x: Float, y: Float) {

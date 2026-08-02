@@ -53,6 +53,7 @@ class BookPageFragment : Fragment() {
             setBrightness(ReaderPrefs.textBrightness.value, ReaderPrefs.backgroundBrightness.value)
             showPageInfo = ReaderPrefs.showPageInfo.value
             onTap = { (activity as? ReaderActivity)?.toggleChrome() }
+            onTapUndo = { (activity as? ReaderActivity)?.undoChromeToggle() }
             onAyaLongPress = { sura, aya -> (activity as? ReaderActivity)?.onAyaLongPress(sura, aya) }
             alpha = 0f // Start transparent for native smooth fade-in
         }

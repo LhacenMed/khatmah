@@ -417,6 +417,13 @@ class ReaderActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Takes back the toggle a page tap just made, because that tap opened a double-tap zoom. The
+     * toggle is a pure flip, so replaying it restores the previous state — and since the bars are
+     * still mid-slide, the animation simply reverses instead of blinking.
+     */
+    fun undoChromeToggle() = toggleChrome()
+
     /** Drives the chrome to [visible] only if it differs from the current state (Quran's toggleActionBarVisibility). */
     private fun toggleChromeVisibility(visible: Boolean) {
         if (visible == !chromeVisible) toggleChrome()

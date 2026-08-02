@@ -25,7 +25,9 @@ import android.widget.OverScroller
  * zoomed. A two-finger pinch scales freely between [MIN_SCALE] and [MAX_SCALE] about the finger
  * focal point; a double-tap is a quick toggle between 1× and [DOUBLE_TAP_SCALE] centred on the
  * tapped spot. The single-tap [onTap] stays immediate — it never waits to disambiguate a
- * double-tap — while a long-press is reported through [onLongPressAt] in content coordinates.
+ * double-tap; if the tap turns out to open a zoom, [onTapUndo] asks the host to take it back, so
+ * the response is instant *and* a double-tap leaves the chrome untouched. A long-press is reported
+ * through [onLongPressAt] in content coordinates.
  *
  * Feed every touch from the host view's `onTouchEvent` into [onTouch]. Zoom only engages while
  * [enabled] (e.g. portrait, where the page fills the viewport); otherwise the host's own scroller
@@ -36,6 +38,7 @@ class PageZoom(
     private val target: View,
     private val enabled: () -> Boolean,
     private val onTap: () -> Unit,
+    private val onTapUndo: () -> Unit,
     private val onLongPressAt: (x: Float, y: Float) -> Unit,
 ) {
     var scale = 1f
@@ -90,7 +93,10 @@ class PageZoom(
         override fun onDown(e: MotionEvent) = true
         override fun onSingleTapUp(e: MotionEvent): Boolean { onTap(); return true }
         override fun onDoubleTap(e: MotionEvent): Boolean {
-            if (!enabled() || pinching) return false
+            if (!enabled() || pinching) return false // no zoom here → the tap keeps what it did
+            // This gesture is a zoom, so the first tap's [onTap] was never meant for the host: take
+            // it back on the second finger-down, while the zoom starts.
+            onTapUndo()
             toggle(e.x, e.y)
             return true
         }

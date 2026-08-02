@@ -35,6 +35,9 @@ import kotlin.math.ln1p
 class TextPageView(context: Context) : LinearLayout(context) {
 
     var onTap: (() -> Unit)? = null
+
+    /** Asks the host to undo the last [onTap] — the tap turned out to open a double-tap zoom. */
+    var onTapUndo: (() -> Unit)? = null
     var onAyaLongPress: ((sura: Int, aya: Int) -> Unit)? = null
 
     private var bodyFace: Typeface? = null
@@ -58,6 +61,7 @@ class TextPageView(context: Context) : LinearLayout(context) {
         this,
         { resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT },
         { onTap?.invoke() },
+        { onTapUndo?.invoke() },
         ::longPressAt,
     )
 

@@ -45,6 +45,7 @@ class TextPageFragment : Fragment() {
             setAccentColor(accentFor(night))
             setBrightness(ReaderPrefs.textBrightness.value, ReaderPrefs.backgroundBrightness.value)
             onTap = { (activity as? ReaderActivity)?.toggleChrome() }
+            onTapUndo = { (activity as? ReaderActivity)?.undoChromeToggle() }
             onAyaLongPress = { sura, aya -> (activity as? ReaderActivity)?.onAyaLongPress(sura, aya) }
             alpha = 0f
         }
