@@ -119,6 +119,11 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          # The action defaults this to true off the default branch, and we
+          # dispatch from the source branch — without this the cache would only
+          # ever be read, and every release would pay for a cold build.
+          cache-read-only: false
 
       # The runner's Android SDK ships CMake 3.31/4.1, but the native build pins
       # 3.22.1 (app/src/main/cpp/CMakeLists.txt), so it has to be installed.
