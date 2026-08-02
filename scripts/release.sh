@@ -1,23 +1,22 @@
 #!/usr/bin/env bash
 #
-# release.sh — smart release pipeline for Khatmah.
+# release.sh — release console for Khatmah.
 #
-# Run from ANY branch (main or dev or feature/*), on ANY device.
-# The script will:
-#   1. Read the current version from app/build.gradle.kts
-#   2. Prompt for bump type (major / minor / patch) and optional pre-release flavour
-#   3. If not on main: sync dev, merge dev → main, perform the bump on main
-#   4. Build signed release APKs
-#   5. Write version.json, commit + push main
-#   6. Create the GitHub release and upload every APK variant
-#      (GitHub then auto-fires .github/workflows/notify-release.yml — push
-#      notifications are handled server-side, no local secrets involved)
-#   7. Rebase the source branch back on top of main (so dev stays in sync)
+# Picks the next version interactively, then hands the actual work to
+# .github/workflows/release.yml. Nothing is built, signed or pushed locally:
+# once the run is dispatched this script is a viewer, and closing the terminal
+# (or losing power) has no effect on the release.
+#
+# Run from ANY branch, on ANY device.
+#   1. Read the current version from origin/main — the authoritative copy
+#   2. Prompt for release type, bump kind and notes
+#   3. Preview + confirm, then dispatch the cloud pipeline
+#   4. Stream the run (Ctrl-C is safe — it detaches, it does not cancel)
 #
 # Usage:
 #   ./scripts/release.sh
 #
-# Requirements: gh (authenticated), jq, perl, and keystore.properties present.
+# Requirements: gh (authenticated) and jq. No keystore, no Android SDK.
 
 set -euo pipefail
 
@@ -31,24 +30,28 @@ source "${SCRIPT_DIR}/lib/git.sh"
 
 GRADLE_FILE="app/build.gradle.kts"
 MAIN_BRANCH="main"
-RELEASE_DIR="app/build/outputs/apk/release"
+WORKFLOW="release.yml"
 
 # ── Preconditions ───────────────────────────────────────────────────────────────
-for cmd in gh jq perl; do
+for cmd in gh jq; do
     command -v "$cmd" >/dev/null || { echo "✗ Required tool not found: ${cmd}"; exit 1; }
 done
 gh auth status >/dev/null 2>&1 || { echo "✗ gh not authenticated — run: gh auth login"; exit 1; }
-[ -f keystore.properties ] || { echo "✗ keystore.properties missing — release APK would be unsigned"; exit 1; }
-[ -f "$GRADLE_FILE"       ] || { echo "✗ ${GRADLE_FILE} not found"; exit 1; }
 
 REPO="$(git::repo_slug)"
 SOURCE_BRANCH="$(git::current_branch)"
 
-# ── Guard: no uncommitted changes ───────────────────────────────────────────────
+# The pipeline builds from origin, so local-only work would silently be left out.
 git::ensure_clean
+git::ensure_pushed "$SOURCE_BRANCH"
 
-# ── Step 1: Read current version ────────────────────────────────────────────────
-version::read "$GRADLE_FILE"
+# ── Step 1: Read current version from origin/main ───────────────────────────────
+git fetch origin "$MAIN_BRANCH" --quiet
+MAIN_GRADLE="$(mktemp)"
+trap 'rm -f "$MAIN_GRADLE"' EXIT
+git show "origin/${MAIN_BRANCH}:${GRADLE_FILE}" > "$MAIN_GRADLE"
+
+version::read "$MAIN_GRADLE"
 CURRENT_NAME="$(version::name "$V_TYPE" "$V_MAJOR" "$V_MINOR" "$V_PATCH" "$V_BUILD")"
 
 echo ""
@@ -59,6 +62,7 @@ echo ""
 echo "  Current version : ${CURRENT_NAME}  (${V_TYPE})"
 echo "  Source branch   : ${SOURCE_BRANCH}"
 echo "  Target branch   : ${MAIN_BRANCH}"
+echo "  Runs on         : GitHub Actions"
 echo ""
 
 # ── Step 2: Choose version type ─────────────────────────────────────────────────
@@ -128,97 +132,51 @@ echo "  │  Repo   : ${REPO}"
 echo "  └───────────────────────────────────────────────┘"
 echo ""
 
-if git::tag_exists "$TAG"; then
-    echo "✗ Release ${TAG} already exists on GitHub — bump to a different version."; exit 1
+if git::release_published "$TAG"; then
+    echo "✗ Release ${TAG} is already published — bump to a different version."; exit 1
 fi
 
 read -rp "  Proceed? [y/N]: " CONFIRM
 [[ "${CONFIRM,,}" == "y" ]] || { echo "  Aborted."; exit 0; }
 
-# ── Step 6: Git workflow — merge source branch into main ─────────────────────────
-if [[ "$SOURCE_BRANCH" != "$MAIN_BRANCH" ]]; then
-    echo ""
-    echo "▶ Preparing branches…"
-    git::sync_branch "$SOURCE_BRANCH"
-    git::sync_branch "$MAIN_BRANCH"
-    git::merge_to_main "$SOURCE_BRANCH" "$MAIN_BRANCH"
-else
-    echo ""
-    echo "▶ Already on ${MAIN_BRANCH} — syncing…"
-    git::sync_branch "$MAIN_BRANCH"
-fi
-
-# ── Step 7: Bump version in build.gradle.kts on main ────────────────────────────
-echo "▶ Bumping version to ${NEW_NAME} in ${GRADLE_FILE}…"
-version::write "$GRADLE_FILE" "$NEW_TYPE" "$V_MAJOR" "$V_MINOR" "$V_PATCH" "$V_BUILD"
-
-version::read "$GRADLE_FILE"
-VERIFY_NAME="$(version::name "$V_TYPE" "$V_MAJOR" "$V_MINOR" "$V_PATCH" "$V_BUILD")"
-if [[ "$VERIFY_NAME" != "$NEW_NAME" ]]; then
-    echo "✗ Version write verification failed (got ${VERIFY_NAME}, expected ${NEW_NAME})"; exit 1
-fi
-echo "  ✓ Verified: ${VERIFY_NAME}"
-
-# ── Step 8: Build signed release APKs ───────────────────────────────────────────
+# ── Step 6: Dispatch the cloud pipeline ──────────────────────────────────────────
+# Remember the newest run id first, so we can identify the one we just created —
+# `gh workflow run` does not return it.
 echo ""
-echo "▶ Building signed release APK(s)…"
-./gradlew clean :app:assembleRelease
+echo "▶ Dispatching ${WORKFLOW}…"
+PREV_RUN="$(gh run list --workflow "$WORKFLOW" --limit 1 --json databaseId --jq '.[0].databaseId // 0')"
 
-# ── Step 9: Read real version from build output ──────────────────────────────────
-META="${RELEASE_DIR}/output-metadata.json"
-[ -f "$META" ] || { echo "✗ ${META} not found — did the build produce a release APK?"; exit 1; }
+gh workflow run "$WORKFLOW" \
+    --ref "$MAIN_BRANCH" \
+    -f release_type="$NEW_TYPE" \
+    -f bump="$BUMP_KIND" \
+    -f notes="$NOTES" \
+    -f source_branch="$SOURCE_BRANCH"
 
-ELEM="$(jq -c 'first(.elements[] | select(.filters == [])) // .elements[0]' "$META")"
-VERSION_CODE="$(jq -r '.versionCode' <<<"$ELEM")"
-UNIVERSAL_APK="${RELEASE_DIR}/$(jq -r '.outputFile' <<<"$ELEM")"
-[ -f "$UNIVERSAL_APK" ] || { echo "✗ Universal APK not found at ${UNIVERSAL_APK}"; exit 1; }
+RUN_ID=""
+for _ in $(seq 1 20); do
+    sleep 2
+    RUN_ID="$(gh run list --workflow "$WORKFLOW" --limit 1 --json databaseId --jq '.[0].databaseId // 0')"
+    [[ "$RUN_ID" != "$PREV_RUN" && "$RUN_ID" != "0" ]] && break
+    RUN_ID=""
+done
 
-APK_URL="https://github.com/${REPO}/releases/download/${TAG}/$(basename "$UNIVERSAL_APK")"
-
-APKS=()
-while IFS= read -r f; do APKS+=("$f"); done \
-    < <(ls -1 "${RELEASE_DIR}/khatmah-${NEW_NAME}-"*.apk 2>/dev/null)
-[ "${#APKS[@]}" -gt 0 ] || { echo "✗ No APKs matched khatmah-${NEW_NAME}-*.apk"; exit 1; }
-echo "  ✓ ${#APKS[@]} APK(s): $(printf '%s ' "${APKS[@]##*/}")"
-
-# ── Step 10: Write version.json ──────────────────────────────────────────────────
-jq -n \
-    --argjson versionCode "$VERSION_CODE" \
-    --arg versionName     "$NEW_NAME" \
-    --arg apkUrl          "$APK_URL" \
-    --arg notes           "$NOTES" \
-    '{versionCode: $versionCode, versionName: $versionName, apkUrl: $apkUrl, notes: $notes}' \
-    > version.json
-echo "▶ Wrote version.json"
-
-# ── Step 11: Commit version bump + manifest, push main ───────────────────────────
-git::commit_and_push "$MAIN_BRANCH" "release: ${TAG}" "$GRADLE_FILE" version.json
-
-# ── Step 12: Create GitHub release, upload APKs ──────────────────────────────────
-# This publish event is what triggers .github/workflows/notify-release.yml on
-# GitHub's servers — push notifications fire automatically from there.
-echo "▶ Creating GitHub release ${TAG}…"
-gh release create "$TAG" \
-    --target "$MAIN_BRANCH" \
-    --title  "$TAG" \
-    --notes  "$NOTES" \
-    "${APKS[@]}"
-
-# ── Step 13: Rebase source branch on main (keep dev in sync) ─────────────────────
-if [[ "$SOURCE_BRANCH" != "$MAIN_BRANCH" ]]; then
-    git::rebase_on_main "$SOURCE_BRANCH" "$MAIN_BRANCH"
+if [[ -z "$RUN_ID" ]]; then
+    echo "  Dispatched, but the run id did not appear in time."
+    echo "  Follow it at: https://github.com/${REPO}/actions/workflows/${WORKFLOW}"
+    exit 0
 fi
 
-# ── Done ─────────────────────────────────────────────────────────────────────────
 echo ""
 echo "┌─────────────────────────────────────────────┐"
-echo "│              ✓ Release complete!             │"
+echo "│        ✓ Release running in the cloud        │"
 echo "└─────────────────────────────────────────────┘"
 echo ""
-echo "  Version   : ${NEW_NAME}"
-echo "  Tag       : ${TAG}"
-echo "  APK URL   : ${APK_URL}"
-echo "  Manifest  : https://raw.githubusercontent.com/${REPO}/${MAIN_BRANCH}/version.json"
-echo "  Branch    : back on ${SOURCE_BRANCH} (rebased on ${MAIN_BRANCH})"
-echo "  Push      : triggered via GitHub Actions (check the Actions tab)"
+echo "  Version : ${NEW_NAME}"
+echo "  Run     : https://github.com/${REPO}/actions/runs/${RUN_ID}"
 echo ""
+echo "  Streaming below — Ctrl-C only detaches this terminal,"
+echo "  the release finishes on GitHub either way."
+echo ""
+
+gh run watch "$RUN_ID" --exit-status || true

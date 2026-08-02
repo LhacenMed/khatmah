@@ -1,10 +1,23 @@
 name: notify-release
 
-# Fires automatically the instant a GitHub release is published — regardless
-# of which machine ran release.sh. No local secrets needed on any device.
+# Two entry points, one implementation:
+#   • workflow_call — release.yml invokes this directly, because a release it
+#     publishes with GITHUB_TOKEN does not fire the `release` event.
+#   • release:published — covers releases published by hand from the UI.
 on:
   release:
     types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+      notes:
+        type: string
+        required: true
+      apk_url:
+        type: string
+        required: true
 
 jobs:
   push-notify:
@@ -14,17 +27,23 @@ jobs:
         env:
           FUNCTIONS_URL: ${{ secrets.SUPABASE_FUNCTIONS_URL }}
           WEBHOOK_SECRET: ${{ secrets.RELEASE_WEBHOOK_SECRET }}
-          TAG_NAME: ${{ github.event.release.tag_name }}
-          NOTES: ${{ github.event.release.body }}
+          # Inputs are set on the workflow_call path and empty on the release
+          # path, where the event payload supplies the same three values.
+          TAG_NAME: ${{ inputs.tag || github.event.release.tag_name }}
+          NOTES: ${{ inputs.notes || github.event.release.body }}
+          INPUT_APK_URL: ${{ inputs.apk_url }}
           ASSETS_JSON: ${{ toJson(github.event.release.assets) }}
         run: |
           VERSION_NAME="${TAG_NAME#v}"
 
           # Prefer the universal APK; fall back to the first asset if naming ever changes.
-          APK_URL="$(echo "$ASSETS_JSON" | jq -r '
-            ([.[] | select(.name | test("universal"))][0].browser_download_url)
-            // .[0].browser_download_url
-          ')"
+          APK_URL="${INPUT_APK_URL}"
+          if [ -z "$APK_URL" ]; then
+            APK_URL="$(echo "$ASSETS_JSON" | jq -r '
+              ([.[] | select(.name | test("universal"))][0].browser_download_url)
+              // .[0].browser_download_url
+            ')"
+          fi
 
           # Build JSON with jq, not string interpolation — safe against quotes/
           # newlines in release notes.

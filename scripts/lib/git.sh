@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-# lib/git.sh — git workflow helpers for the release pipeline.
+# lib/git.sh — git helpers for the release console.
 # Source this file; do not execute directly.
+#
+# The branch mechanics (sync / merge / commit / fast-forward) now live in
+# .github/workflows/release.yml, where they run against a fresh checkout.
+# What remains here is what the local console still needs: identify the repo,
+# and refuse to dispatch a release that would miss local work.
 
 # git::repo_slug -> prints "owner/repo" from the remote URL (supports https and ssh)
 git::repo_slug() {
@@ -22,53 +27,26 @@ git::ensure_clean() {
     fi
 }
 
-# git::sync_branch <branch>
-# Fetches and fast-forwards a local branch to its remote counterpart.
-git::sync_branch() {
+# git::ensure_pushed <branch>
+# Aborts if the branch has commits that origin does not. The pipeline builds
+# from origin, so unpushed commits would be silently absent from the release.
+git::ensure_pushed() {
     local branch="$1"
-    echo "▶ Syncing ${branch} with origin…"
-    git fetch origin "$branch" --quiet
-    git checkout "$branch" --quiet
-    git merge --ff-only "origin/${branch}" --quiet \
-        || { echo "✗ Cannot fast-forward ${branch} — diverged from origin. Resolve manually."; exit 1; }
-}
-
-# git::merge_to_main <source_branch> <main_branch>
-# Merges source_branch into main (fast-forward preferred, merge commit fallback).
-git::merge_to_main() {
-    local src="$1" main="$2"
-    echo "▶ Merging ${src} → ${main}…"
-    git checkout "$main" --quiet
-    git merge --no-edit "$src" --quiet \
-        || { echo "✗ Merge conflict: ${src} → ${main}. Resolve manually then re-run."; exit 1; }
-}
-
-# git::commit_and_push <branch> <message> [files...]
-# Stages the given files, commits, and pushes to origin.
-git::commit_and_push() {
-    local branch="$1" msg="$2"; shift 2
-    git add "$@"
-    if ! git diff --cached --quiet; then
-        git commit -m "$msg" --quiet
-        echo "▶ Committed: ${msg}"
+    git fetch origin "$branch" --quiet 2>/dev/null || {
+        echo "✗ Branch ${branch} does not exist on origin — push it first."
+        exit 1
+    }
+    local ahead
+    ahead="$(git rev-list --count "origin/${branch}..${branch}")"
+    if [[ "$ahead" -gt 0 ]]; then
+        echo "✗ ${branch} is ${ahead} commit(s) ahead of origin — push them first."
+        exit 1
     fi
-    git push origin "$branch" --quiet
-    echo "▶ Pushed ${branch} to origin"
 }
 
-# git::rebase_on_main <source_branch> <main_branch>
-# Rebases source_branch on top of main, then pushes (force-with-lease for safety).
-git::rebase_on_main() {
-    local src="$1" main="$2"
-    echo "▶ Rebasing ${src} on ${main}…"
-    git checkout "$src" --quiet
-    git rebase "$main" --quiet \
-        || { echo "✗ Rebase conflict on ${src}. Resolve manually: git rebase --continue"; exit 1; }
-    git push origin "$src" --force-with-lease --quiet
-    echo "▶ ${src} rebased and pushed"
-}
-
-# git::tag_exists <tag>
-git::tag_exists() {
-    gh release view "$1" >/dev/null 2>&1
+# git::release_published <tag>
+# True only for a published release. A leftover draft from a failed run is
+# reclaimed by the pipeline and must not block a retry.
+git::release_published() {
+    [[ "$(gh release view "$1" --json isDraft --jq .isDraft 2>/dev/null || echo absent)" == "false" ]]
 }
