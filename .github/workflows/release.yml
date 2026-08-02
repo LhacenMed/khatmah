@@ -122,21 +122,12 @@ jobs:
 
       # The runner's Android SDK ships CMake 3.31/4.1, but the native build pins
       # 3.22.1 (app/src/main/cpp/CMakeLists.txt), so it has to be installed.
-      # Accepting licences also lets AGP fetch an NDK if its default is absent.
-      - name: Install native build tools
-        run: |
-          set -euo pipefail
-          # sdkmanager is not on PATH, and cmdline-tools sit in a version-numbered
-          # directory ("12.0") rather than "latest" — resolve it rather than guess.
-          # No pipeline here on purpose: `find | head` can SIGPIPE the producer,
-          # which `set -o pipefail` would turn into a spurious step failure.
-          SDKMANAGER="$(command -v sdkmanager || true)"
-          [ -n "$SDKMANAGER" ] \
-            || SDKMANAGER="$(find "${ANDROID_HOME}/cmdline-tools" -name sdkmanager -type f -print -quit)"
-          [ -x "$SDKMANAGER" ] || { echo "::error::sdkmanager not found under ${ANDROID_HOME}"; exit 1; }
-          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
-          yes | "$SDKMANAGER" "cmake;3.22.1" > /dev/null
-          echo "✓ cmake 3.22.1"
+      # This action is what puts cmdline-tools on PATH — the runner image does
+      # not — and it accepts the SDK licences, which also lets AGP fetch an NDK.
+      - name: Install Android CMake
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'cmake;3.22.1'
 
       - name: Restore signing keystore
         env:

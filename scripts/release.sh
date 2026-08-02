@@ -146,8 +146,13 @@ echo ""
 echo "▶ Dispatching ${WORKFLOW}…"
 PREV_RUN="$(gh run list --workflow "$WORKFLOW" --limit 1 --json databaseId --jq '.[0].databaseId // 0')"
 
+# --ref picks which branch's *workflow definition* runs, not which code is built:
+# the pipeline always checks out main and merges the source branch itself. Using
+# the source branch keeps "the workflow I can see on my branch is the workflow
+# that runs" true — with --ref main, pipeline edits made on dev could never take
+# effect until a release had already shipped them.
 gh workflow run "$WORKFLOW" \
-    --ref "$MAIN_BRANCH" \
+    --ref "$SOURCE_BRANCH" \
     -f release_type="$NEW_TYPE" \
     -f bump="$BUMP_KIND" \
     -f notes="$NOTES" \
