@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Editor body. The title and the Save / Reset actions live in the host Activity's top app bar,
+  so this layout is just the scrolling form.
+
+  One RecyclerView carries everything: the appearance form as a header, one card per dhikr, and
+  the add button as a footer. That keeps a category with many adhkar cheap to open — only the
+  cards on screen are ever inflated — which a single scrolling column could not do.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- The layout manager is declared here rather than assigned in code: a RecyclerView builds
+         LayoutParams through it, so anything inflated against this view before an assignment
+         would crash. Declaring it means it exists from inflation onward, with no order to keep. -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/form"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp"
+        android:visibility="invisible"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/loading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:indeterminate="true" />
+</FrameLayout>

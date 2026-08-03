@@ -334,6 +334,9 @@
     <string name="adhkar_repetitions">Repetitions: %d</string>
     <string name="adhkar_dhikr_n">Dhikr %d</string>
     <string name="adhkar_reset_defaults">Reset to Default</string>
+    <!-- Repetition stepper glyphs: symbols, identical in every locale. -->
+    <string name="adhkar_rep_decrease" translatable="false">−</string>
+    <string name="adhkar_rep_increase" translatable="false">+</string>
 
     <!-- Color picker -->
     <string name="color_picker_title">Pick a color</string>

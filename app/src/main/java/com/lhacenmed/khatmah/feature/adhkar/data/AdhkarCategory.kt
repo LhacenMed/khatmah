@@ -32,7 +32,7 @@ data class AdhkarCategory(
 
 /**
  * Snapshot of a built-in category's original defaults.
- * Used by [AdhkarEditorPage] to determine what has changed and enable "Reset to Default".
+ * Used by [com.lhacenmed.khatmah.feature.adhkar.ui.editor.AdhkarEditorFragment] to determine what has changed and enable "Reset to Default".
  */
 data class BuiltInDefaults(
     val title:     String,

@@ -10,8 +10,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.fragment.app.Fragment
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
-import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarEditorScreen
 import com.lhacenmed.khatmah.feature.adhkar.ui.detail.AdhkarDetailFragment
+import com.lhacenmed.khatmah.feature.adhkar.ui.editor.AdhkarEditorFragment
 import com.lhacenmed.khatmah.feature.debug.DbBrowserScreen
 import com.lhacenmed.khatmah.feature.debug.FileBrowserScreen
 import com.lhacenmed.khatmah.feature.demo.DemoDetailScreen
@@ -229,8 +229,17 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
         override fun title(context: Context) = categoryTitle
         override fun fragment() = AdhkarDetailFragment.newInstance(categoryId, categoryTitle)
     }
-    data class AdhkarEditor(val categoryId: String? = null) : Dest() {
-        override fun screen() = @Composable { AdhkarEditorScreen(categoryId) }
+    /**
+     * Create / edit form. No [categoryId] → create mode, titled "New Adhkar"; an id → edit mode,
+     * titled with the category name, which the caller already has (see [AdhkarDetail]).
+     */
+    data class AdhkarEditor(
+        val categoryId: String? = null,
+        val categoryTitle: String? = null,
+    ) : Dest() {
+        override fun title(context: Context) =
+            categoryTitle ?: context.getString(R.string.add_adhkar)
+        override fun fragment() = AdhkarEditorFragment.newInstance(categoryId)
     }
     data object QadaaHistory : Dest() {
         override val titleRes get() = R.string.qadaa_history

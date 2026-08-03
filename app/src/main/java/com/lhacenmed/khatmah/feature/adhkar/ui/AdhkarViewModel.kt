@@ -23,7 +23,7 @@ data class AdhkarUiState(
     val selectionMode: Boolean = false,
     val selectedIds: Set<String> = emptySet(),
     /**
-     * Incremented on every [reload] so that [com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarDetailPage] can observe
+     * Incremented on every [reload] so that [com.lhacenmed.khatmah.feature.adhkar.ui.detail.AdhkarDetailFragment] can observe
      * changes and re-fetch its dhikr list after an edit or reset.
      */
     val version: Int = 0,
@@ -33,7 +33,7 @@ data class AdhkarUiState(
 }
 
 /**
- * Per-session read progress for the currently open [com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarDetailPage].
+ * Per-session read progress for the currently open [com.lhacenmed.khatmah.feature.adhkar.ui.detail.AdhkarDetailFragment].
  * Keyed by category ID so that opening a different category always starts fresh.
  * Counts persist across configuration changes (VM survives rotation).
  *

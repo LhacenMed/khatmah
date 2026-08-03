@@ -449,7 +449,7 @@ class AdhkarDetailFragment : Fragment(R.layout.adhkar_detail_fragment), MenuProv
 
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean = when (menuItem.itemId) {
         R.id.action_edit -> {
-            nav.go(Dest.AdhkarEditor(categoryId))
+            nav.go(Dest.AdhkarEditor(categoryId, categoryTitle))
             true
         }
         R.id.action_font_size -> {
