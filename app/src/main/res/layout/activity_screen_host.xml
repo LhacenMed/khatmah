@@ -2,7 +2,8 @@
 <!--
   Host for Dest.screen() pages. The MaterialToolbar (shown only when the Dest sets a title)
   gives every detail screen the same native chrome as the tabs, with a platform back arrow
-  that mirrors automatically in RTL. The body is Compose. Status-bar inset is applied in code.
+  that mirrors automatically in RTL. The body container holds either the Dest's Compose content
+  or its native Fragment. Status-bar inset is applied in code.
 -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -22,8 +23,8 @@
         app:titleTextAppearance="@style/ToolbarTitleText"
         app:subtitleTextAppearance="@style/ToolbarSubtitleText" />
 
-    <androidx.compose.ui.platform.ComposeView
-        android:id="@+id/compose_view"
+    <FrameLayout
+        android:id="@+id/body"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />

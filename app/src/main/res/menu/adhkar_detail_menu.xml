@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Actions for the dhikr reader's shared host toolbar: edit the category, and cycle the
+     reading font size. Both stay visible (never in overflow) — they are the reader's only
+     controls and are used mid-reading. Icons are tinted from the app colour scheme in code. -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_edit"
+        android:icon="@drawable/ic_edit"
+        android:title="@string/edit"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_font_size"
+        android:icon="@drawable/ic_format_size"
+        android:title="@string/dhikr_font_size"
+        app:showAsAction="always" />
+</menu>

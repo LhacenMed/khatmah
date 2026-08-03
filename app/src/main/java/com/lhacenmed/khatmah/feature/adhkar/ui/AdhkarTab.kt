@@ -107,7 +107,7 @@ private fun AdhkarScreen(padding: PaddingValues) {
                 selected      = category.id in state.selectedIds,
                 onClick       = {
                     if (state.selectionMode) vm.toggleSelection(category.id)
-                    else nav.go(Dest.AdhkarDetail(category.id))
+                    else nav.go(Dest.AdhkarDetail(category.id, category.title))
                 },
                 onLongClick   = { vm.enterSelectionMode(category.id) },
             )

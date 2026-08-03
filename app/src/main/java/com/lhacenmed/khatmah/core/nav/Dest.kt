@@ -7,10 +7,11 @@ import android.os.Build
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.fragment.app.Fragment
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
-import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarDetailScreen
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarEditorScreen
+import com.lhacenmed.khatmah.feature.adhkar.ui.detail.AdhkarDetailFragment
 import com.lhacenmed.khatmah.feature.debug.DbBrowserScreen
 import com.lhacenmed.khatmah.feature.debug.FileBrowserScreen
 import com.lhacenmed.khatmah.feature.demo.DemoDetailScreen
@@ -57,6 +58,18 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
      * leave this null and use [target] instead.
      */
     open fun screen(): (@Composable () -> Unit)? = null
+
+    /**
+     * Native (View-based) content for host-model screens — the alternative to [screen], for pages
+     * built from XML and platform widgets. Rendered by the same
+     * [com.lhacenmed.khatmah.core.ScreenHostActivity], so such screens also need no Activity class
+     * and no manifest entry. A fragment adds its own toolbar actions via
+     * [androidx.core.view.MenuProvider].
+     */
+    open fun fragment(): Fragment? = null
+
+    /** True for destinations the shared host renders, whichever body kind they use. */
+    val isHosted: Boolean get() = screen() != null || fragment() != null
 
     /**
      * Title for the shared native top bar in [com.lhacenmed.khatmah.core.ScreenHostActivity].
@@ -207,8 +220,14 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
     }
 
     // ── Adhkar / Qadaa ──────────────────────────────────────────────────────────
-    data class AdhkarDetail(val categoryId: String) : Dest() {
-        override fun screen() = @Composable { AdhkarDetailScreen(categoryId) }
+    /**
+     * The dhikr reader — native, and the only source of its own title, which is the category
+     * name. Carrying [categoryTitle] here keeps the host toolbar's title synchronous, so the bar
+     * is complete on the first frame instead of filling in after the database read.
+     */
+    data class AdhkarDetail(val categoryId: String, val categoryTitle: String) : Dest() {
+        override fun title(context: Context) = categoryTitle
+        override fun fragment() = AdhkarDetailFragment.newInstance(categoryId, categoryTitle)
     }
     data class AdhkarEditor(val categoryId: String? = null) : Dest() {
         override fun screen() = @Composable { AdhkarEditorScreen(categoryId) }

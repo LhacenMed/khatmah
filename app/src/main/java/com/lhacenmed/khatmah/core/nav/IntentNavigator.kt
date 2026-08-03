@@ -6,13 +6,14 @@ import androidx.activity.ComponentActivity
 import com.lhacenmed.khatmah.core.ScreenHostActivity
 
 /**
- * Builds the launch [Intent] for a [Dest]. Host-model screens (those with a
- * [screen][Dest.screen]) launch the shared [ScreenHostActivity] carrying the [Dest];
- * legacy screens launch their own [target][Dest.target] with typed [extras][Dest.extras].
+ * Builds the launch [Intent] for a [Dest]. Host-model screens (those with a Compose
+ * [screen][Dest.screen] or a native [fragment][Dest.fragment]) launch the shared
+ * [ScreenHostActivity] carrying the [Dest]; legacy screens launch their own
+ * [target][Dest.target] with typed [extras][Dest.extras].
  * Generic by design — adding a destination never touches this file.
  */
 fun Dest.toIntent(context: Context): Intent =
-    if (screen() != null) {
+    if (isHosted) {
         // Carry the Dest for the host, plus the same flat [extras] — so a screen whose
         // ViewModel reads them from its SavedStateHandle keeps working unchanged.
         Intent(context, ScreenHostActivity::class.java)

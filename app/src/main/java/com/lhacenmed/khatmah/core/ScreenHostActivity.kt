@@ -3,6 +3,8 @@ package com.lhacenmed.khatmah.core
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.widget.FrameLayout
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
@@ -12,9 +14,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.fragment.app.commit
 import com.google.android.material.appbar.MaterialToolbar
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.IntentNavigator
@@ -32,8 +36,12 @@ import com.lhacenmed.khatmah.databinding.ActivityScreenHostBinding
  *
  * Destinations that set a [Dest.titleRes] get the app's native [MaterialToolbar] — the same
  * chrome the tabs use — with a platform back arrow that mirrors automatically in RTL; their
- * composable provides only the body. Destinations without a title render full-screen (legacy
+ * body provides only the content. Destinations without a title render full-screen (legacy
  * pages that still draw their own top bar).
+ *
+ * A body is either Compose ([Dest.screen]) or a native [Dest.fragment]. Fragments contribute
+ * their own toolbar actions through the standard [androidx.core.view.MenuProvider] API, so the
+ * host needs no per-destination action plumbing.
  */
 class ScreenHostActivity : BaseComposeActivity() {
 
@@ -41,7 +49,9 @@ class ScreenHostActivity : BaseComposeActivity() {
         super.onCreate(savedInstanceState)
         @Suppress("DEPRECATION")
         val dest = (intent.getSerializableExtra(EXTRA_DEST) as? Dest) ?: return finish()
-        val content = dest.screen() ?: return finish()
+        val content = dest.screen()
+        val body = dest.fragment()
+        if (content == null && body == null) return finish()
 
         val binding = ActivityScreenHostBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -63,22 +73,38 @@ class ScreenHostActivity : BaseComposeActivity() {
             binding.toolbar.visibility = View.GONE
         }
 
+        if (body != null) {
+            // The FragmentManager restores the body itself after a configuration change.
+            if (savedInstanceState == null) {
+                supportFragmentManager.commit { replace(binding.body.id, body) }
+            }
+            return
+        }
+
+        val screen = content ?: return
         val navigator = IntentNavigator(this)
-        binding.composeView.setContent {
-            Theme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    CompositionLocalProvider(LocalNavigator provides navigator) {
-                        // With the native toolbar above, the body only needs the bottom insets;
-                        // legacy full-screen pages handle their own insets via their Scaffold.
-                        if (hasChrome) {
-                            Box(Modifier.fillMaxSize().navigationBarsPadding().imePadding()) { content() }
-                        } else {
-                            content()
+        val composeView = ComposeView(this).apply {
+            setContent {
+                Theme {
+                    Surface(modifier = Modifier.fillMaxSize()) {
+                        CompositionLocalProvider(LocalNavigator provides navigator) {
+                            // With the native toolbar above, the body only needs the bottom
+                            // insets; legacy full-screen pages handle their own insets via
+                            // their Scaffold.
+                            if (hasChrome) {
+                                Box(Modifier.fillMaxSize().navigationBarsPadding().imePadding()) { screen() }
+                            } else {
+                                screen()
+                            }
                         }
                     }
                 }
             }
         }
+        binding.body.addView(
+            composeView,
+            FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT),
+        )
     }
 
     /**

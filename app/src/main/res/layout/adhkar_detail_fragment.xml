@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Dhikr reader body. The top app bar (title + edit/font-size actions) belongs to the shared
+  ScreenHostActivity, so this layout starts at the progress strip.
+
+  Three bands stacked vertically:
+    progress_header — counter + bar, on surfaceContainer so it reads as chrome, not content.
+    pager_area      — the swipeable dhikr pages, with a bottom scrim fading them into the bar.
+    bottom_bar      — repetition row + primary action; padded for the navigation bar in code.
+
+  All colours come from the app colour scheme at bind time (the same source the host toolbar
+  uses), so a custom palette or dynamic colour applies here too.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Hidden until the dhikr list has loaded, so no empty chrome flashes first. -->
+    <LinearLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="invisible">
+
+        <LinearLayout
+            android:id="@+id/progress_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="16dp">
+
+            <TextView
+                android:id="@+id/progress_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="@style/App.TextAppearance.TitleSmall"
+                tools:text="7/1" />
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/progress_bar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:max="100"
+                app:trackCornerRadius="2dp"
+                app:trackThickness="4dp" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/pager_area"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/pager"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <!-- The only separator between the body and the bar: content dissolves into the
+                 bar's colour. The bar itself casts no shadow — two separators competing is
+                 what leaves a visible seam at the boundary. -->
+            <View
+                android:id="@+id/scrim"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_gravity="bottom" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:id="@+id/bottom_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp">
+
+            <!-- The circle sits at the exact screen centre regardless of the label/button widths,
+                 so it never shifts between adhkar with different repetition counts. -->
+            <FrameLayout
+                android:id="@+id/rep_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/rep_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:paddingHorizontal="12dp"
+                    android:textAppearance="@style/App.TextAppearance.BodyLarge"
+                    tools:text="33 مرة" />
+
+                <com.lhacenmed.khatmah.feature.adhkar.ui.detail.RepCircleView
+                    android:id="@+id/rep_circle"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:layout_gravity="center" />
+
+                <ImageButton
+                    android:id="@+id/share_button"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="end|center_vertical"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/dhikr_share"
+                    android:src="@drawable/ic_share" />
+            </FrameLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/action_button"
+                android:layout_width="match_parent"
+                android:layout_height="45dp"
+                android:layout_marginTop="20dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:textAppearance="@style/App.TextAppearance.BodyLarge"
+                app:cornerRadius="4dp"
+                tools:text="@string/dhikr_read" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/loading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:indeterminate="true" />
+</FrameLayout>

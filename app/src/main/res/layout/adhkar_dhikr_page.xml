@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  One dhikr page. Paragraph views are added to [paragraphs] at bind time — their count and
+  style depend on the dhikr's content blocks, so building them in code keeps one source of
+  truth for the three paragraph styles.
+
+  The bottom padding clears the scrim + bottom bar so the last line is never hidden behind them.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/page_scroll"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:paddingStart="20dp"
+    android:paddingTop="28dp"
+    android:paddingEnd="20dp"
+    android:paddingBottom="80dp"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:id="@+id/paragraphs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+</ScrollView>
