@@ -18,8 +18,8 @@ import com.lhacenmed.khatmah.core.ui.fitTitleText
  * Hosts the reader's settings fragment. Native toolbar with a platform back arrow; the body is
  * [ReaderSettingsFragment].
  *
- * Edge-to-edge: the toolbar covers the status-bar strip (surfaceContainer) and the body sits under
- * the nav bar (surface), so each system-bar strip matches the region it overlays.
+ * Edge-to-edge: the root fills the status-bar strip (surfaceContainer, continuing the toolbar) and
+ * the body sits under the nav bar (surface), so each system-bar strip matches the region it overlays.
  */
 class ReaderSettingsActivity : AppCompatActivity() {
 
@@ -48,8 +48,11 @@ class ReaderSettingsActivity : AppCompatActivity() {
         toolbar.setTitleTextColor(onSurface)
         toolbar.navigationIcon?.setTint(onSurface)
 
-        // Push the toolbar below the status bar and the body content above the nav bar.
-        ViewCompat.setOnApplyWindowInsetsListener(toolbar) { v, insets ->
+        // Push the toolbar below the status bar and the body content above the nav bar. The inset
+        // pads the root, not the toolbar — padding the bar itself would eat into its fixed height
+        // and clip the title; the root's surfaceContainer fills the strip so the bar reads as one.
+        val root = findViewById<View>(R.id.settings_root)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
             v.updatePadding(top = insets.getInsets(WindowInsetsCompat.Type.systemBars()).top)
             insets
         }

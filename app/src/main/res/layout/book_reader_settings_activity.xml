@@ -1,16 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Reader settings shell — native toolbar + fragment container. -->
-<!-- Edge-to-edge: the toolbar covers the status-bar strip (surfaceContainer) and the body
-     extends under the nav bar with the page background (surface), so both system-bar strips
-     match the regions they sit over. Insets are applied in the activity. -->
+<!-- Edge-to-edge: the root fills the status-bar strip (surfaceContainer, continuing the toolbar)
+     and the body extends under the nav bar with the page background (surface), so both system-bar
+     strips match the regions they sit over. Insets are applied in the activity. -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/settings_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="?attr/colorSurface">
+    android:background="?attr/colorSurfaceContainer">
 
+    <!-- Fixed top-app-bar height (matches the reader's bar) so the title never clips: the
+         status-bar inset pads the root, which paints the strip in the toolbar's own colour. -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
