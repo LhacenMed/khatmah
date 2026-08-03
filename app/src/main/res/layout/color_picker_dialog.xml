@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HSV colour picker body, hosted in a MaterialAlertDialog. The saturation/value field takes the
+  bulk of the area because it is the imprecise axis; hue and the hex field are exact inputs and
+  need far less room. Old and new swatches sit side by side so the change is judged as a pair.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp">
+
+    <com.lhacenmed.khatmah.core.ui.color.SatValView
+        android:id="@+id/sat_val"
+        android:layout_width="match_parent"
+        android:layout_height="200dp" />
+
+    <com.lhacenmed.khatmah.core.ui.color.HueSliderView
+        android:id="@+id/hue"
+        android:layout_width="match_parent"
+        android:layout_height="28dp"
+        android:layout_marginTop="12dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- The colour on entry, kept as a reference point while dragging. -->
+        <View
+            android:id="@+id/swatch_old"
+            android:layout_width="40dp"
+            android:layout_height="40dp" />
+
+        <View
+            android:id="@+id/swatch_new"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="12dp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/hex_layout"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_weight="1"
+            android:hint="HEX"
+            app:prefixText="#">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/hex"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textCapCharacters|textNoSuggestions"
+                android:maxLength="6"
+                android:singleLine="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+    </LinearLayout>
+</LinearLayout>
