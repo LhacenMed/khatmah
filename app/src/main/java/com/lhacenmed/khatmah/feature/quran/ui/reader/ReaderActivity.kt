@@ -608,7 +608,7 @@ class ReaderActivity : AppCompatActivity() {
 
     // ── Last-read page (keyed per print, since text and QCF4 paginate differently) ──
 
-    private val readerPrefs get() = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val readerPrefs get() = getSharedPreferences(ReaderProgress.PREFS, Context.MODE_PRIVATE)
 
     private val lastPageKey get() = "$KEY_LAST_PAGE_PREFIX${print.id}"
 
@@ -618,7 +618,33 @@ class ReaderActivity : AppCompatActivity() {
 
     /** Single entry point for persisting progress: the per-session store, else the per-print page. */
     private fun savePage(page: Int) {
-        if (isSession) saveSessionPage(page) else saveLastPage(page - 1)
+        if (isSession) {
+            saveSessionPage(page)
+        } else {
+            saveLastPage(page - 1)
+            saveResumeAnchor(page)
+        }
+    }
+
+    /** Mirrors the page into [ReaderProgress] with its first verse, so the Quran tab can resume. */
+    private fun saveResumeAnchor(page: Int) {
+        val key = firstAyaByPage[page] ?: return
+        ReaderProgress.save(
+            this,
+            print.id,
+            ReaderProgress.Anchor(page, (key ushr 32).toInt(), (key and 0xFFFFFFFFL).toInt()),
+        )
+    }
+
+    /** page (1-based) → its first aya, packed as in [ayaKey]. Inverted once from [ayaPageCache]. */
+    private val firstAyaByPage: Map<Int, Long> by lazy {
+        val out = HashMap<Int, Long>()
+        ayaPageCache?.forEach { (key, index) ->
+            val page = index + 1
+            val first = out[page]
+            if (first == null || key < first) out[page] = key
+        }
+        out
     }
 
     // ── Per-session last-read page (its own key, defaults to the session's first page) ──
@@ -691,7 +717,6 @@ class ReaderActivity : AppCompatActivity() {
         const val EXTRA_END_PAGE = "book_end_page"
         const val EXTRA_SESSION_ID = "book_session_id"
 
-        private const val PREFS = "quran_reader"
         private const val KEY_LAST_PAGE_PREFIX = "last_page_"     // + print id
         private const val KEY_SESSION_PAGE_PREFIX = "session_page_"
         private const val MENU_EDGE_PAD_DP = 8f
