@@ -35,7 +35,7 @@ import com.lhacenmed.khatmah.feature.settings.AboutScreen
 import com.lhacenmed.khatmah.feature.settings.DarkThemeScreen
 import com.lhacenmed.khatmah.feature.settings.LanguageScreen
 import com.lhacenmed.khatmah.feature.settings.ThemeSettingsScreen
-import com.lhacenmed.khatmah.feature.today.FullIndexScreen
+import com.lhacenmed.khatmah.feature.quran.ui.home.FullIndexScreen
 import com.lhacenmed.khatmah.feature.trips.ui.TripRequestsScreen
 import com.lhacenmed.khatmah.onboarding.OnboardingActivity
 

@@ -18,14 +18,6 @@ import kotlinx.coroutines.withContext
 import kotlin.math.ceil
 import kotlin.math.min
 
-/** Sura names + juz + first aya text needed by TodayTab to display session info. */
-data class SessionMeta(
-    val startSuraName: String,
-    val endSuraName:   String,
-    val juzNum:        Int,
-    val firstAyaText:  String,
-)
-
 /** One session row enriched with its start/end sura names for the sessions list. */
 data class SessionRow(
     val entity:        KhatmahSessionEntity,
@@ -68,7 +60,7 @@ class KhatmahRepository(private val context: Context) {
     @Volatile private var cachedNames: Pair<String, Map<Int, String>>? = null
 
     /**
-     * Pre-warms the surah name cache from [MushafDb] so TodayTab loads instantly.
+     * Pre-warms the surah name cache from [MushafDb] so the Quran tab loads instantly.
      * No-op if the DB hasn't been seeded yet (re-queried on next real access).
      */
     suspend fun warmCache() = withContext(Dispatchers.IO) {
@@ -148,17 +140,10 @@ class KhatmahRepository(private val context: Context) {
         khatmahDb.dao().markRead(id)
     }
 
-    suspend fun sessionMeta(startSura: Int, startAya: Int, endSura: Int, riwayaKey: String): SessionMeta =
+    /** Juz' the session starting at [startSura]:[startAya] belongs to — shown on the khatmah strip. */
+    suspend fun sessionJuz(startSura: Int, startAya: Int, riwayaKey: String): Int =
         withContext(Dispatchers.IO) {
-            val names  = suraNames(riwayaKey)
-            val juzNum = mushafDao.divisionForVerse(riwayaKey, DivType.JUZ, startSura, startAya)?.num ?: 1
-            val text   = mushafDao.verse(riwayaKey, startSura, startAya)?.text.orEmpty()
-            SessionMeta(
-                startSuraName = names[startSura].orEmpty(),
-                endSuraName   = names[endSura].orEmpty(),
-                juzNum        = juzNum,
-                firstAyaText  = text,
-            )
+            mushafDao.divisionForVerse(riwayaKey, DivType.JUZ, startSura, startAya)?.num ?: 1
         }
 
     // ── Public calculations (pure, no IO) ─────────────────────────────────────

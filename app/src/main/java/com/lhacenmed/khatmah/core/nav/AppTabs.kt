@@ -5,7 +5,7 @@ import com.lhacenmed.khatmah.feature.demo.DemoTab
 import com.lhacenmed.khatmah.feature.more.MoreTab
 import com.lhacenmed.khatmah.feature.prayer.ui.PrayersTab
 import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaTab
-import com.lhacenmed.khatmah.feature.today.TodayTab
+import com.lhacenmed.khatmah.feature.quran.ui.home.QuranTab
 
 /**
  * Single source of truth for the bottom-navigation tabs, in bar order (left → right).
@@ -16,7 +16,7 @@ import com.lhacenmed.khatmah.feature.today.TodayTab
  * a platform limit of BottomNavigationView.
  */
 val AppTabs: List<AppTab> = listOf(
-    TodayTab,
+    QuranTab,
     AdhkarTab,
     PrayersTab,
     QadaaTab,

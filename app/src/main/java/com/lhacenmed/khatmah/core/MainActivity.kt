@@ -57,7 +57,7 @@ import com.lhacenmed.khatmah.databinding.ActivityMainBinding
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarViewModel
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
-import com.lhacenmed.khatmah.feature.today.TodayViewModel
+import com.lhacenmed.khatmah.feature.quran.ui.home.QuranHomeViewModel
 import com.lhacenmed.khatmah.feature.update.UpdateChecker
 import com.lhacenmed.khatmah.feature.update.UpdateRegistry
 import com.lhacenmed.khatmah.feature.update.UpdateState
@@ -139,13 +139,13 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Hoist TodayViewModel to Activity scope at the earliest moment so its Room flow
+        // Hoist QuranHomeViewModel to Activity scope at the earliest moment so its Room flow
         // is in flight before Compose runs; keep the splash until the first real frame.
-        val todayVm = ViewModelProvider(
+        val homeVm = ViewModelProvider(
             this,
-            TodayViewModel.Factory(applicationContext),
-        )[TodayViewModel::class.java]
-        splashScreen.setKeepOnScreenCondition { !todayVm.splashReady }
+            QuranHomeViewModel.Factory(applicationContext),
+        )[QuranHomeViewModel::class.java]
+        splashScreen.setKeepOnScreenCondition { !homeVm.splashReady }
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)

@@ -1,4 +1,4 @@
-package com.lhacenmed.khatmah.feature.today
+package com.lhacenmed.khatmah.feature.quran.ui.home
 
 import android.content.Context
 import androidx.compose.foundation.clickable

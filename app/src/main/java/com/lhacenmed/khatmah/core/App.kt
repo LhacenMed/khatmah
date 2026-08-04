@@ -73,7 +73,7 @@ class App : Application() {
         // re-surface a persisted prompt offline, and drop anything the running build has caught up to.
         appScope.launch { UpdateManager.restore(this@App) }
 
-        // Pre-warm the Quran sura-name cache so TodayTab loads instantly.
+        // Pre-warm the Quran sura-name cache so the Quran tab loads instantly.
         appScope.launch { KhatmahRepository(this@App).warmCache() }
         // Seed MushafDb from bundled riwaya JSON files (hafs.json + warsh.json in quran.7z).
         MushafInitializer.init(this, appScope)

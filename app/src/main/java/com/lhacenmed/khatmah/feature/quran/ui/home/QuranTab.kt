@@ -1,15 +1,9 @@
-package com.lhacenmed.khatmah.feature.today
+package com.lhacenmed.khatmah.feature.quran.ui.home
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,62 +22,60 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.motion.initialOffset
-import com.lhacenmed.khatmah.core.motion.materialSharedAxisX
-import com.lhacenmed.khatmah.core.motion.materialSharedAxisZ
 import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.Dest
-import com.lhacenmed.khatmah.feature.quran.ui.reader.currentReaderDest
+import com.lhacenmed.khatmah.core.nav.LocalNavigator
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
+import com.lhacenmed.khatmah.feature.quran.data.QuranTextRepository
+import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
+import com.lhacenmed.khatmah.feature.quran.data.db.MushafDb
+import com.lhacenmed.khatmah.feature.quran.data.db.PageStartEntity
+import com.lhacenmed.khatmah.feature.quran.ui.home.QuranHomeViewModel.KhatmahState
+import com.lhacenmed.khatmah.feature.quran.ui.home.components.KhatmahStrip
+import com.lhacenmed.khatmah.feature.quran.ui.home.components.QuickIndexSection
+import com.lhacenmed.khatmah.feature.quran.ui.home.components.ResumeCard
 import com.lhacenmed.khatmah.feature.quran.ui.reader.MushafDownloadDialog
+import com.lhacenmed.khatmah.feature.quran.ui.reader.currentReaderDest
 import com.lhacenmed.khatmah.feature.quran.ui.reader.isQcf4
 import com.lhacenmed.khatmah.feature.quran.ui.reader.readerDestAt
 import com.lhacenmed.khatmah.feature.quran.ui.reader.sessionReaderDest
-import com.lhacenmed.khatmah.core.nav.LocalNavigator
-import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
-import com.lhacenmed.khatmah.feature.quran.data.db.MushafDb
-import com.lhacenmed.khatmah.feature.quran.data.db.PageStartEntity
-import com.lhacenmed.khatmah.feature.quran.data.QuranTextRepository
-import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
-import com.lhacenmed.khatmah.feature.today.components.KhatmahStats
-import com.lhacenmed.khatmah.feature.today.components.NoKhatmahCard
-import com.lhacenmed.khatmah.feature.today.components.AllReadCard
-import com.lhacenmed.khatmah.feature.today.components.QuickIndexSection
-import com.lhacenmed.khatmah.feature.today.components.SessionCard
-import com.lhacenmed.khatmah.feature.today.components.SkeletonCard
-import com.lhacenmed.khatmah.feature.today.components.SkeletonStats
 import com.lhacenmed.khatmah.shared.util.RecentSurahsPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private const val QUICK_SURAH_COUNT = 3
 
-object TodayTab : AppTab(
+/**
+ * The app's home: reading the Quran. The resume card and the surah shortcuts own the screen,
+ * and the khatmah sits in a single strip at the bottom — one tap away, never in the way.
+ */
+object QuranTab : AppTab(
     iconRes  = R.drawable.ic_book,
-    titleRes = R.string.today,
-    route    = "today",
+    titleRes = R.string.quran,
+    route    = "quran",
 ) {
-    @Composable override fun Content(padding: PaddingValues) = TodayScreen(padding)
+    @Composable override fun Content(padding: PaddingValues) = QuranScreen(padding)
 }
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun TodayScreen(padding: PaddingValues) {
+private fun QuranScreen(padding: PaddingValues) {
     val nav      = LocalNavigator.current
     val context  = LocalContext.current
     val activity = LocalActivity.current as ComponentActivity
-    val vm: TodayViewModel = viewModel(activity)
-    val state    by vm.state.collectAsState()
+    val vm: QuranHomeViewModel = viewModel(activity)
+    val resume   by vm.resume.collectAsState()
+    val khatmah  by vm.khatmah.collectAsState()
     val mushaf   by MushafPrefs.selected.collectAsState()
 
     var showDlDialog  by remember { mutableStateOf(false) }
-    var mismatchState by remember { mutableStateOf<TodayViewModel.UiState.Active?>(null) }
+    var mismatchState by remember { mutableStateOf<KhatmahState.Active?>(null) }
 
     // ── Quick index data ──────────────────────────────────────────────────────
     val quranRepo    = remember { QuranTextRepository(context) }
@@ -102,6 +94,12 @@ private fun TodayScreen(padding: PaddingValues) {
         }
         surahPageMap = all.associate { s -> s.num to surahStartPage(pageStarts, s.num) }
         RecentSurahsPrefs.get(context) // seed the recency flow from storage
+    }
+
+    // The splash holds until both halves have real content, so the tab draws in one pass —
+    // no placeholders, no shimmer.
+    if (resume != null && khatmah !is KhatmahState.Loading) {
+        SideEffect { vm.markSplashReady() }
     }
 
     // ── Dialogs ───────────────────────────────────────────────────────────────
@@ -123,121 +121,54 @@ private fun TodayScreen(padding: PaddingValues) {
 
     // ── Layout ────────────────────────────────────────────────────────────────
     Column(Modifier.fillMaxSize().padding(padding)) {
-        // Scrollable body
         LazyColumn(
             modifier            = Modifier.weight(1f).fillMaxWidth(),
             contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            item(key = "card") {
-                AnimatedContent(
-                    targetState  = state,
-                    modifier     = Modifier.clipToBounds(),
-                    contentKey   = { s ->
-                        when (s) {
-                            is TodayViewModel.UiState.Active -> s.session.entity.id
-                            else                             -> s::class
-                        }
-                    },
-                    transitionSpec = {
-                        when {
-                            initialState is TodayViewModel.UiState.Loading ||
-                                    targetState is TodayViewModel.UiState.Loading ->
-                                EnterTransition.None togetherWith ExitTransition.None
-
-                            initialState is TodayViewModel.UiState.Active &&
-                                    targetState is TodayViewModel.UiState.Active ->
-                                materialSharedAxisX(
-                                    initialOffsetX = { (it * initialOffset).toInt() },
-                                    targetOffsetX  = { -(it * initialOffset).toInt() },
-                                )
-
-                            else -> materialSharedAxisZ(forward = true)
-                        }
-                    },
-                    label = "session_card",
-                ) { s ->
-                    when (s) {
-                        is TodayViewModel.UiState.Loading   -> SkeletonCard()
-                        is TodayViewModel.UiState.NoKhatmah -> NoKhatmahCard { nav.go(Dest.NewKhatmah) }
-                        is TodayViewModel.UiState.AllRead   -> AllReadCard(
-                            onDua        = { /* TODO: navigate to dua */ },
-                            onNewKhatmah = { nav.go(Dest.NewKhatmah) },
-                        )
-                        is TodayViewModel.UiState.Active    -> SessionCard(
-                            state      = s,
-                            onMarkRead = { vm.markRead(s.session.entity.id) },
-                            onRead     = {
-                                when {
-                                    !mushaf.isQcf4 ->
-                                        showDlDialog = true
-                                    mushaf.riwaya.dbKey != s.khatmah.riwaya ->
-                                        mismatchState = s
-                                    else ->
-                                        nav.go(
-                                            sessionReaderDest(
-                                                s.session.entity.id,
-                                                s.session.entity.startPage,
-                                                s.session.entity.endPage,
-                                            )
-                                        )
-                                }
-                            },
-                        )
-                    }
+            resume?.let { r ->
+                item(key = "resume") {
+                    ResumeCard(resume = r, onContinue = { nav.go(currentReaderDest()) })
                 }
             }
 
-            // Quick index — shown once surah data is loaded
             if (quickSurahs.isNotEmpty()) {
                 item(key = "quick_index") {
                     QuickIndexSection(
-                        surahs            = quickSurahs,
-                        pageFor           = { surahPageMap[it] ?: 1 },
-                        onContinueReading = { nav.go(currentReaderDest()) },
+                        surahs       = quickSurahs,
+                        pageFor      = { surahPageMap[it] ?: 1 },
                         onSurahClick = { suraNum ->
                             RecentSurahsPrefs.record(context, suraNum)
                             nav.go(readerDestAt(surahPageMap[suraNum] ?: 1, suraNum))
                         },
-                        onFullIndex       = { nav.go(Dest.FullIndex) },
+                        onFullIndex  = { nav.go(Dest.FullIndex) },
                     )
                 }
             }
         }
 
-        // Stats strip — fixed to bottom of screen
-        AnimatedContent(
-            targetState    = state,
-            contentKey     = { s -> s::class },
-            modifier       = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 12.dp),
-            transitionSpec = {
-                when {
-                    initialState is TodayViewModel.UiState.Loading ||
-                            targetState is TodayViewModel.UiState.Loading ->
-                        EnterTransition.None togetherWith ExitTransition.None
-                    else ->
-                        fadeIn(tween(300)) togetherWith fadeOut(tween(300))
-                }
-            },
-            label = "stats_strip",
-        ) { s ->
-            when (s) {
-                is TodayViewModel.UiState.Active  -> {
-                    SideEffect { vm.markSplashReady() }
-                    KhatmahStats(readCount = s.readCount, totalCount = s.khatmah.totalDays)
-                }
-                is TodayViewModel.UiState.AllRead -> {
-                    SideEffect { vm.markSplashReady() }
-                    KhatmahStats(readCount = s.totalDays, totalCount = s.totalDays)
-                }
-                is TodayViewModel.UiState.Loading -> SkeletonStats()
-                else                              -> {
-                    // NoKhatmah — no stats strip; still release the splash.
-                    SideEffect { vm.markSplashReady() }
-                }
+        // Khatmah strip — pinned above the bottom bar, hidden until the khatmah resolves.
+        if (khatmah !is KhatmahState.Loading) {
+            Box(Modifier.padding(horizontal = 16.dp).padding(bottom = 12.dp)) {
+                KhatmahStrip(
+                    state   = khatmah,
+                    onClick = {
+                        val active = khatmah as? KhatmahState.Active
+                        when {
+                            active == null -> nav.go(Dest.NewKhatmah)
+                            // Sessions are page-windowed — only the QCF4 mushaf can honour them.
+                            !mushaf.isQcf4 -> showDlDialog = true
+                            mushaf.riwaya.dbKey != active.khatmah.riwaya -> mismatchState = active
+                            else -> nav.go(
+                                sessionReaderDest(
+                                    active.session.id,
+                                    active.session.startPage,
+                                    active.session.endPage,
+                                )
+                            )
+                        }
+                    },
+                )
             }
         }
     }

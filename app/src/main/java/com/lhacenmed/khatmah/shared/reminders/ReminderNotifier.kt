@@ -245,7 +245,7 @@ object ReminderNotifier {
             else      -> "adhkar"
         }
         is ReminderType.QuranSunnah  -> "main"
-        is ReminderType.DailyKhatmah -> "today"
+        is ReminderType.DailyKhatmah -> "quran"
         is ReminderType.Custom       -> "main"
     }
 

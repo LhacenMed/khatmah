@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Persists the last [MAX] accessed surah numbers in recency order (most recent first).
- * Used to populate the Quick Index section on TodayTab.
+ * Used to populate the Quick Index section on the Quran tab.
  *
  * Exposes [recent] as a [StateFlow] so a [record] from any screen (Today, the full index, …)
  * propagates back to every observer in-process — the Quick Index reorders automatically.

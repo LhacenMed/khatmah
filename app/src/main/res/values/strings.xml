@@ -3,7 +3,7 @@
     <string name="app_name">Khatmah</string>
 
     <!-- Bottom navigation -->
-    <string name="today">Today</string>
+    <string name="quran">Quran</string>
     <string name="adhkar">Adhkar</string>
     <string name="prayers">Prayers</string>
     <string name="index">Index</string>
@@ -539,6 +539,12 @@
     <string name="bookmarks_title">Bookmarks</string>
     <string name="bookmarks_empty">No bookmarks yet. Tap the bookmark icon while reading a page to save it.</string>
     <string name="bookmarks_remove">Remove bookmark</string>
+
+    <!-- Quran tab -->
+    <string name="quran_resume_label">Continue where you left off</string>
+    <string name="quran_sura_title">Surat %1$s</string>
+    <string name="quran_resume_meta">Page %1$d · Juz\' %2$d</string>
+    <string name="khatmah_strip_wird">Juz\' %1$d · %2$d wird left</string>
 
     <string name="today_quick_index">Quick Access</string>
     <string name="today_full_index">Index</string>
