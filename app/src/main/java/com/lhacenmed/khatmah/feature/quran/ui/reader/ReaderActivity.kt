@@ -737,11 +737,14 @@ class ReaderActivity : AppCompatActivity() {
         wirdCompleting = true
 
         if (next == null) {
-            wirdActive = false
-            wall.enabled = false
+            // The khatmah is finished: say so and leave, since there is no next wird to read. The
+            // page stays where the pull left it — the reader is on its way out, not settling back.
             Toast.makeText(this, R.string.wird_khatmah_done, Toast.LENGTH_SHORT).show()
-            lifecycleScope.launch { khatmahRepo.markSessionRead(finished) }
-            return false
+            lifecycleScope.launch {
+                khatmahRepo.markSessionRead(finished)  // awaited: finishing would cancel the write
+                finish()
+            }
+            return true
         }
 
         handOverTo(next)
