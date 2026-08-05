@@ -2,9 +2,6 @@ package com.lhacenmed.khatmah.feature.more
 
 import android.os.Build
 import android.os.Bundle
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
@@ -16,6 +13,8 @@ import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.Reselectable
 import com.lhacenmed.khatmah.core.nav.toIntent
+import androidx.lifecycle.lifecycleScope
+import com.lhacenmed.khatmah.core.ui.collectWhileStarted
 import com.lhacenmed.khatmah.core.ui.components.showTimePicker
 import com.lhacenmed.khatmah.core.ui.tintIcons
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
@@ -157,34 +156,28 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
     /** Session counters, shown as pills on the two session rows. */
     private fun observeSessionCounts() {
         val repo = KhatmahRepository(requireContext())
-        collectWhileStarted {
-            repo.activeSessionCounts().collect { counts ->
-                findPreference<BadgePreference>("previous_sessions")?.count = counts.read
-                findPreference<BadgePreference>("upcoming_sessions")?.count = counts.upcoming
-            }
+        collectWhileStarted(repo.activeSessionCounts()) { counts ->
+            findPreference<BadgePreference>("previous_sessions")?.count = counts.read
+            findPreference<BadgePreference>("upcoming_sessions")?.count = counts.upcoming
         }
     }
 
     /** Switch states and time summaries, so a change made anywhere shows up here. */
     private fun observeReminders() {
-        collectWhileStarted {
-            ReminderPrefs.flow.collect { reminders ->
-                ReminderIds.forEach { id ->
-                    val config = reminders.find { it.id == id }
-                    findPreference<SwitchPreferenceCompat>(id)?.isChecked = config?.enabled == true
-                    findPreference<Preference>("$id.time")?.summary =
-                        config?.let { "%02d:%02d".format(it.timeHour, it.timeMinute) } ?: "--:--"
-                }
+        collectWhileStarted(ReminderPrefs.flow) { reminders ->
+            ReminderIds.forEach { id ->
+                val config = reminders.find { it.id == id }
+                findPreference<SwitchPreferenceCompat>(id)?.isChecked = config?.enabled == true
+                findPreference<Preference>("$id.time")?.summary =
+                    config?.let { "%02d:%02d".format(it.timeHour, it.timeMinute) } ?: "--:--"
             }
         }
     }
 
     /** The selected mushaf, as the print row's summary. */
     private fun observeMushafPrint() {
-        collectWhileStarted {
-            MushafPrefs.selected.collect { print ->
-                findPreference<Preference>("mushaf_print")?.setSummary(print.nameRes)
-            }
+        collectWhileStarted(MushafPrefs.selected) { print ->
+            findPreference<Preference>("mushaf_print")?.setSummary(print.nameRes)
         }
     }
 
@@ -239,9 +232,4 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
         findPreference<Preference>(key)?.setOnPreferenceClickListener { action(); true }
     }
 
-    private fun collectWhileStarted(block: suspend () -> Unit) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) { block() }
-        }
-    }
 }
