@@ -149,6 +149,15 @@ class KhatmahRepository(private val context: Context) {
     }
 
     /**
+     * True while [sessionId] still belongs to the active khatmah. Goes false the moment a new
+     * khatmah is started, which is how the reader knows its open wird has been left behind.
+     */
+    suspend fun isSessionCurrent(sessionId: Long): Boolean = withContext(Dispatchers.IO) {
+        val dao = khatmahDb.dao()
+        dao.khatmahIdOf(sessionId) == dao.activeKhatmahOnce()?.id
+    }
+
+    /**
      * The wird that follows [sessionId] — the khatmah's earliest other unread session, so the
      * reader always moves to the same one the Quran tab's strip will show. Null when none is left.
      * The reader prefetches it, so completing a wird never waits on a query mid-gesture.

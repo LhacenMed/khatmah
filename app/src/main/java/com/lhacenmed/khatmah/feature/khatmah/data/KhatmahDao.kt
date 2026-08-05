@@ -36,6 +36,9 @@ interface KhatmahDao {
     @Query("SELECT isRead FROM khatmah_session WHERE id = :id")
     suspend fun isRead(id: Long): Boolean?
 
+    @Query("SELECT khatmahId FROM khatmah_session WHERE id = :id")
+    suspend fun khatmahIdOf(id: Long): Long?
+
     /** Earliest unread session of [id]'s khatmah, [id] itself aside — the wird that follows it. */
     @Query("""
         SELECT * FROM khatmah_session

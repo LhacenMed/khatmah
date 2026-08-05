@@ -38,6 +38,8 @@ import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.core.nav.Dest
+import com.lhacenmed.khatmah.core.nav.toIntent
 import com.lhacenmed.khatmah.core.ui.UiScale
 import com.lhacenmed.khatmah.core.ui.fitTitleText
 import com.lhacenmed.khatmah.feature.audio.AyaAudioState
@@ -202,6 +204,7 @@ class ReaderActivity : AppCompatActivity() {
         lastPage = if (isSession) sessionEnd else pageCount
         wirdActive = isSession && khatmahRepo.isSessionUnread(sessionId)
         if (wirdActive) nextWird = khatmahRepo.nextWirdAfter(sessionId)
+        invalidateOptionsMenu() // the session resolves after the menu is first built
 
         ayaPageCache = source.ayaPageIndex()
         metaMap = source.pageMeta()
@@ -310,6 +313,8 @@ class ReaderActivity : AppCompatActivity() {
         // Bookmarks are page-based — book reader only; hide the actions for the text reader.
         menuBookmark = menu.findItem(R.id.menu_bookmark)?.apply { isVisible = bookmarkable }
         menu.findItem(R.id.menu_bookmarks_list)?.isVisible = bookmarkable
+        // Starting a khatmah is offered where a wird is being read, not in the open mushaf.
+        menu.findItem(R.id.menu_new_khatmah)?.isVisible = isSession
         if (bookmarkable) syncBookmarkIcon()
         toolbar.overflowIcon?.setTint(
             MaterialColors.getColor(toolbar, com.google.android.material.R.attr.colorOnSurface)
@@ -324,6 +329,7 @@ class ReaderActivity : AppCompatActivity() {
             item.isChecked = ReaderTheme.effectiveNight(this)
             true
         }
+        R.id.menu_new_khatmah -> { startActivity(Dest.NewKhatmah.toIntent(this)); true }
         R.id.menu_search -> { openSearch(); true }
         R.id.menu_settings -> {
             startActivity(Intent(this, ReaderSettingsActivity::class.java))
@@ -489,6 +495,15 @@ class ReaderActivity : AppCompatActivity() {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) barHideHandler.sendEmptyMessageDelayed(MSG_HIDE_BARS, AUTO_HIDE_AFTER_MS)
         else barHideHandler.removeMessages(MSG_HIDE_BARS)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // A khatmah started from this toolbar replaces the one the open wird belongs to; reading on
+        // would finish sessions of a schedule the app has already moved off.
+        if (isSession) lifecycleScope.launch {
+            if (!khatmahRepo.isSessionCurrent(sessionId)) finish()
+        }
     }
 
     override fun onDestroy() {

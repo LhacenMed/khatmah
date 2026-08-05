@@ -17,6 +17,14 @@
         android:title="العلامات المرجعية"
         app:showAsAction="ifRoom" />
 
+    <!-- Session reading only: shown by ReaderActivity when a Khatmah wird is open. -->
+    <item
+        android:id="@+id/menu_new_khatmah"
+        android:icon="@drawable/ic_add"
+        android:title="@string/more_start_new_khatmah"
+        android:visible="false"
+        app:showAsAction="ifRoom" />
+
     <item
         android:id="@+id/menu_search"
         android:icon="@drawable/ic_search"
