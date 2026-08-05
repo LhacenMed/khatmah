@@ -20,6 +20,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.commit
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.color.MaterialColors
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.IntentNavigator
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
@@ -54,6 +55,14 @@ class ScreenHostActivity : BaseComposeActivity() {
 
         val binding = ActivityScreenHostBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // The root wears the bar's colour so the status-bar strip continues the toolbar, which
+        // leaves the body to say where the page itself begins. A Compose body paints that with its
+        // own Surface; a fragment body paints nothing, and without this would show the bar's colour
+        // for its whole height.
+        binding.body.setBackgroundColor(
+            MaterialColors.getColor(binding.body, com.google.android.material.R.attr.colorSurface)
+        )
 
         val title = dest.title(this)
         val hasChrome = title != null
