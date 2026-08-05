@@ -116,6 +116,15 @@ class ReaderActivity : AppCompatActivity() {
     private var firstPage = 1
     private var lastPage = 0
 
+    /**
+     * Whether the open window is a khatmah wird rather than a standalone surah.
+     *
+     * Both are read through the same page window, and both remember their place by [sessionId] —
+     * but only a wird belongs to a khatmah's schedule. Surahs opened on their own (the Quranic
+     * sunan) carry a negative id precisely so they can never be mistaken for one.
+     */
+    private val isKhatmahSession: Boolean get() = isSession && sessionId > 0
+
     // Session reading: progress is remembered per [sessionId], independent of the full last-read page.
     private var isSession = false
     private var sessionId = 0L
@@ -501,8 +510,10 @@ class ReaderActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         // A khatmah started from this toolbar replaces the one the open wird belongs to; reading on
-        // would finish sessions of a schedule the app has already moved off.
-        if (isSession) lifecycleScope.launch {
+        // would finish sessions of a schedule the app has already moved off. Only a khatmah wird
+        // can go stale that way — a surah opened with its own page window answers to no schedule,
+        // and checking it against one would close the reader the moment it opened.
+        if (isKhatmahSession) lifecycleScope.launch {
             if (!khatmahRepo.isSessionCurrent(sessionId)) finish()
         }
     }
