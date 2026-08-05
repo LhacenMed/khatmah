@@ -2,8 +2,8 @@
 <!--
   Native edge-to-edge tab host. MaterialToolbar + BottomNavigationView provide the
   chrome with native gestures, tooltips and transitions. Insets are applied in code
-  (toolbar top, bottom nav bottom) so the Compose content draws edge-to-edge. Tab
-  bodies are Compose, swapped in place inside the single ComposeView.
+  (toolbar top, bottom nav bottom) so the body draws edge-to-edge. Tab bodies are
+  fragments, kept alive and swapped by show/hide inside the single container.
 -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -22,11 +22,24 @@
         app:titleTextAppearance="@style/ToolbarTitleText"
         app:subtitleTextAppearance="@style/ToolbarSubtitleText" />
 
-    <androidx.compose.ui.platform.ComposeView
-        android:id="@+id/compose_view"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1">
+
+        <!-- The active tab's fragment. -->
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/tab_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <!-- The launch-time "update available" prompt, drawn over whichever tab is showing.
+             The last Compose in the shell; it goes when the prompt itself is migrated. -->
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/update_gate"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
 
     <!-- Compact bar (AntennaPod's exact config): the item paddings are what stack icon-on-top /
          label-at-bottom inside the short 64dp height. itemIconSize is capped to 22dp because our

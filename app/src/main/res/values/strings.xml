@@ -59,8 +59,8 @@
 
     <!-- More tab — items -->
     <string name="more_support_khatmah">Support Khatmah</string>
-    <string name="more_previous_sessions">Previous Sessions</string>
-    <string name="more_upcoming_sessions">Upcoming Sessions</string>
+    <string name="more_previous_sessions">Previous Awrad</string>
+    <string name="more_upcoming_sessions">Upcoming Awrad</string>
     <string name="more_bookmark">Bookmark</string>
     <string name="more_surat_kahf">Surat Al-Kahf</string>
     <string name="more_surat_mulk">Surat Al-Mulk</string>

@@ -25,7 +25,6 @@ import com.lhacenmed.khatmah.core.nav.IntentNavigator
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.fitTitleText
 import com.lhacenmed.khatmah.core.ui.theme.Theme
-import com.lhacenmed.khatmah.core.ui.theme.isAppInDarkTheme
 import com.lhacenmed.khatmah.core.ui.theme.resolveColorScheme
 import com.lhacenmed.khatmah.databinding.ActivityScreenHostBinding
 
@@ -67,7 +66,7 @@ class ScreenHostActivity : BaseComposeActivity() {
             // Route the up arrow through the back dispatcher so a page's BackHandler (e.g. a
             // multi-step wizard) intercepts it exactly like system back; otherwise it finishes.
             binding.toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
-            applyChrome(binding.root, binding.toolbar, resolveColorScheme(this, isAppInDarkTheme(this)))
+            applyChrome(binding.root, binding.toolbar, resolveColorScheme(this))
             applyTopInset(binding.root)
         } else {
             binding.toolbar.visibility = View.GONE

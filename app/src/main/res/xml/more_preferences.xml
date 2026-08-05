@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The More tab, built on the androidx Preference framework — the same one the reader settings use,
+  so the rows, categories and dialogs are the platform's own.
+
+  Almost nothing here persists on its own: these rows front stores that already exist
+  (ReminderPrefs, MushafPrefs, LocaleManager), so they are marked non-persistent and MoreTabFragment
+  reads and writes them. The alarm time rows declare a `dependency` on their switch, which is what
+  greys them out when the alarm is off — no code decides that.
+-->
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory android:title="@string/more_support_us">
+        <Preference
+            android:icon="@drawable/ic_favorite"
+            android:key="support_khatmah"
+            android:title="@string/more_support_khatmah" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/more_current_khatmah">
+        <com.lhacenmed.khatmah.feature.more.BadgePreference
+            android:icon="@drawable/ic_skip_previous"
+            android:key="previous_sessions"
+            android:title="@string/more_previous_sessions" />
+
+        <com.lhacenmed.khatmah.feature.more.BadgePreference
+            android:icon="@drawable/ic_skip_next"
+            android:key="upcoming_sessions"
+            android:title="@string/more_upcoming_sessions" />
+
+        <Preference
+            android:icon="@drawable/ic_bookmark"
+            android:key="bookmarks"
+            android:title="@string/more_bookmark" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/more_quranic_sunnahs">
+        <Preference
+            android:icon="@drawable/round_book_24"
+            android:key="surat_kahf"
+            android:title="@string/more_surat_kahf" />
+
+        <Preference
+            android:icon="@drawable/round_book_24"
+            android:key="surat_mulk"
+            android:title="@string/more_surat_mulk" />
+
+        <Preference
+            android:icon="@drawable/round_book_24"
+            android:key="surat_baqarah"
+            android:title="@string/more_surat_baqarah" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/more_settings">
+        <Preference
+            android:icon="@drawable/ic_notifications_active"
+            android:key="daily_alarm"
+            android:title="@string/more_daily_alarm" />
+
+        <Preference
+            android:icon="@drawable/ic_add"
+            android:key="new_khatmah"
+            android:title="@string/more_start_new_khatmah" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/more_prayer_times">
+        <Preference
+            android:icon="@drawable/ic_mosque"
+            android:key="prayer_settings"
+            android:title="@string/more_prayer_times_settings" />
+
+        <Preference
+            android:icon="@drawable/ic_kaaba"
+            android:key="qibla"
+            android:title="@string/more_qibla_direction" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/more_adhkar_alarms">
+        <SwitchPreferenceCompat
+            android:icon="@drawable/ic_wb_sunny"
+            android:key="adhkar:morning"
+            android:persistent="false"
+            android:title="@string/more_day_adhkar_alarm" />
+
+        <Preference
+            android:dependency="adhkar:morning"
+            android:icon="@drawable/ic_schedule"
+            android:key="adhkar:morning.time"
+            android:persistent="false"
+            android:title="@string/more_day_adhkar_time" />
+
+        <SwitchPreferenceCompat
+            android:icon="@drawable/ic_dark_mode"
+            android:key="adhkar:evening"
+            android:persistent="false"
+            android:title="@string/more_night_adhkar_alarm" />
+
+        <Preference
+            android:dependency="adhkar:evening"
+            android:icon="@drawable/ic_schedule"
+            android:key="adhkar:evening.time"
+            android:persistent="false"
+            android:title="@string/more_night_adhkar_time" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/more_sunnahs_alarms">
+        <SwitchPreferenceCompat
+            android:icon="@drawable/ic_notifications"
+            android:key="sunnah:al_mulk"
+            android:persistent="false"
+            android:title="@string/more_al_mulk_alarm" />
+
+        <Preference
+            android:dependency="sunnah:al_mulk"
+            android:icon="@drawable/ic_schedule"
+            android:key="sunnah:al_mulk.time"
+            android:persistent="false"
+            android:title="@string/more_al_mulk_time" />
+
+        <SwitchPreferenceCompat
+            android:icon="@drawable/ic_notifications"
+            android:key="sunnah:al_baqarah"
+            android:persistent="false"
+            android:title="@string/more_al_baqarah_alarm" />
+
+        <Preference
+            android:dependency="sunnah:al_baqarah"
+            android:icon="@drawable/ic_schedule"
+            android:key="sunnah:al_baqarah.time"
+            android:persistent="false"
+            android:title="@string/more_al_baqarah_time" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/more_khatmah_app">
+        <Preference
+            android:icon="@drawable/ic_palette"
+            android:key="theme_settings"
+            android:title="@string/theme_settings" />
+
+        <Preference
+            android:icon="@drawable/ic_book"
+            android:key="mushaf_print"
+            android:title="@string/more_mushaf_print" />
+
+        <!-- summary="%s" makes the framework show the chosen entry, so the row needs no binding
+             beyond having its value set. -->
+        <ListPreference
+            android:icon="@drawable/ic_language"
+            android:key="language"
+            android:persistent="false"
+            android:summary="%s"
+            android:title="@string/more_language"
+            app:useSimpleSummaryProvider="false" />
+
+        <Preference
+            android:icon="@drawable/ic_email"
+            android:key="contact_us"
+            android:title="@string/more_contact_us" />
+
+        <Preference
+            android:icon="@drawable/ic_alternate_email"
+            android:key="twitter"
+            android:title="@string/more_twitter" />
+
+        <Preference
+            android:icon="@drawable/ic_camera_alt"
+            android:key="instagram"
+            android:title="@string/more_instagram" />
+
+        <Preference
+            android:icon="@drawable/ic_share"
+            android:key="share_app"
+            android:title="@string/more_share_app" />
+
+        <Preference
+            android:icon="@drawable/ic_star_border"
+            android:key="rate_khatmah"
+            android:title="@string/more_rate_khatmah" />
+    </PreferenceCategory>
+
+    <!-- Debug tools; MoreTabFragment removes this whole category from release builds. -->
+    <PreferenceCategory
+        android:key="debug"
+        android:title="@string/more_debug">
+
+        <Preference
+            android:icon="@drawable/ic_bug_report"
+            android:key="debug_db"
+            android:title="@string/more_debug_db" />
+
+        <Preference
+            android:icon="@drawable/ic_directions_bus"
+            android:key="trip_requests"
+            android:title="@string/more_trip_requests" />
+
+        <Preference
+            android:icon="@drawable/ic_folder_open"
+            android:key="files_browser"
+            android:title="@string/more_files_browser" />
+    </PreferenceCategory>
+
+    <!-- The app version, as a quiet last line rather than a row you can press. -->
+    <Preference
+        android:key="version"
+        android:layout="@layout/pref_version"
+        android:selectable="false"
+        app:iconSpaceReserved="false" />
+
+</PreferenceScreen>

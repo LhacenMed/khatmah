@@ -7,7 +7,6 @@ import androidx.annotation.RequiresApi
 import coil.Coil
 import coil.ImageLoader
 import coil.decode.SvgDecoder
-import com.google.android.material.color.DynamicColors
 import com.lhacenmed.khatmah.BuildConfig
 import com.lhacenmed.khatmah.feature.debug.buildDynamicColorJson
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
@@ -41,7 +40,8 @@ class App : Application() {
         // init() loads persisted values from SharedPrefs AND calls
         // AppCompatDelegate.setDefaultNightMode — replaces the old apply() call.
         ThemeManager.init(this)
-        DynamicColors.applyToActivitiesIfAvailable(this)
+        // Keeps every Activity on the current palette; each one applies it in onCreate.
+        ThemeManager.attach(this)
         // Must be called before setLocale so the widget's savedTag() always has a value.
         LocaleManager.init(this)
         // Load persisted prayer calculation settings before any UI is created.

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  How the app decides between light and dark: follow the device, or be told. The three options are
+  one choice, so they are laid out together with the chosen one marked rather than hidden behind a
+  dialog. Keys carry no meaning of their own — DarkThemeFragment pairs them with the modes.
+-->
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <com.lhacenmed.khatmah.feature.settings.RadioPreference
+        android:key="mode_system"
+        android:persistent="false"
+        android:title="@string/theme_system"
+        app:iconSpaceReserved="false" />
+
+    <com.lhacenmed.khatmah.feature.settings.RadioPreference
+        android:key="mode_light"
+        android:persistent="false"
+        android:title="@string/theme_light"
+        app:iconSpaceReserved="false" />
+
+    <com.lhacenmed.khatmah.feature.settings.RadioPreference
+        android:key="mode_dark"
+        android:persistent="false"
+        android:title="@string/theme_dark"
+        app:iconSpaceReserved="false" />
+
+    <PreferenceCategory android:title="@string/theme_dark_settings_group">
+        <SwitchPreferenceCompat
+            android:key="high_contrast"
+            android:persistent="false"
+            android:title="@string/theme_high_contrast"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

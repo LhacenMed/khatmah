@@ -25,7 +25,7 @@ import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.nav.LocalTabReselected
-import com.lhacenmed.khatmah.core.nav.AppTab
+import com.lhacenmed.khatmah.core.nav.ComposeTab
 import com.lhacenmed.khatmah.core.nav.TabAction
 import com.lhacenmed.khatmah.core.nav.toIntent
 import com.lhacenmed.khatmah.feature.adhkar.ui.components.AdhkarCard
@@ -34,7 +34,7 @@ private const val SMOOTH_SCROLL_THRESHOLD = 4
 
 // ── Tab registration ──────────────────────────────────────────────────────────
 
-object AdhkarTab : AppTab(
+object AdhkarTab : ComposeTab(
     iconRes  = R.drawable.ic_adhkar,
     titleRes = R.string.adhkar,
     route    = "adhkar",

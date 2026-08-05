@@ -32,9 +32,9 @@ import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.AdhanSou
 import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaHistoryScreen
 import com.lhacenmed.khatmah.feature.quran.ui.reader.ReaderActivity
 import com.lhacenmed.khatmah.feature.settings.AboutScreen
-import com.lhacenmed.khatmah.feature.settings.DarkThemeScreen
+import com.lhacenmed.khatmah.feature.settings.DarkThemeFragment
 import com.lhacenmed.khatmah.feature.settings.LanguageScreen
-import com.lhacenmed.khatmah.feature.settings.ThemeSettingsScreen
+import com.lhacenmed.khatmah.feature.settings.ThemeSettingsFragment
 import com.lhacenmed.khatmah.feature.quran.ui.home.FullIndexScreen
 import com.lhacenmed.khatmah.feature.trips.ui.TripRequestsScreen
 import com.lhacenmed.khatmah.onboarding.OnboardingActivity
@@ -152,13 +152,11 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
     // ── Settings ────────────────────────────────────────────────────────────────
     data object ThemeSettings : Dest() {
         override val titleRes get() = R.string.theme_settings
-        override fun screen() = @Composable {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ThemeSettingsScreen()
-        }
+        override fun fragment() = ThemeSettingsFragment()
     }
     data object DarkTheme : Dest() {
         override val titleRes get() = R.string.theme_dark
-        override fun screen() = @Composable { DarkThemeScreen() }
+        override fun fragment() = DarkThemeFragment()
     }
     data object Language : Dest() {
         override val titleRes get() = R.string.language_settings

@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import android.content.Context
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.AppTab
+import com.lhacenmed.khatmah.core.nav.ComposeTab
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalTabReselected
 import com.lhacenmed.khatmah.core.nav.TabAction
@@ -52,7 +52,7 @@ import java.util.Locale
 
 // ─── Tab registration ─────────────────────────────────────────────────────────
 
-object PrayersTab : AppTab(
+object PrayersTab : ComposeTab(
     iconRes  = R.drawable.ic_mosque,
     titleRes = R.string.prayers,
     route    = "prayers",

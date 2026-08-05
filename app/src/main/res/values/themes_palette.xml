@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The app's colour palettes, light variants. Each overlay redefines only the accent roles
+  (primary / secondary / tertiary and their containers); surfaces, outlines and error roles are
+  inherited from Theme.Material3.DayNight, so a palette can never disagree with the platform on
+  what a surface looks like.
+
+  These overlays are the single definition of a palette. The XML layouts read them through
+  ?attr/…, and Compose reads the same resolved attributes back out of the active theme
+  (see resolveColorScheme), so the two rendering worlds cannot drift.
+
+  ThemeManager applies exactly one of these — or the device's dynamic palette when Material You
+  is enabled and available. The dark variants live in values-night/themes_palette.xml, and the
+  platform picks between them, so no code branches on night mode.
+-->
+<resources>
+
+    <!--
+      Violet is the Material 3 baseline palette, so it overrides nothing: the inherited theme
+      already is this palette. Kept as an entry of its own so the picker's first swatch resolves
+      through the same path as every other one.
+    -->
+    <style name="ThemeOverlay.Khatmah.Palette.Violet" parent="" />
+
+    <style name="ThemeOverlay.Khatmah.Palette.Blue" parent="">
+        <item name="colorPrimary">#FF0061A4</item>
+        <item name="colorOnPrimary">#FFFFFFFF</item>
+        <item name="colorPrimaryContainer">#FFD1E4FF</item>
+        <item name="colorOnPrimaryContainer">#FF001D36</item>
+        <item name="colorSecondary">#FF535F70</item>
+        <item name="colorOnSecondary">#FFFFFFFF</item>
+        <item name="colorSecondaryContainer">#FFD7E3F7</item>
+        <item name="colorOnSecondaryContainer">#FF101C2B</item>
+        <item name="colorTertiary">#FF6B5778</item>
+        <item name="colorOnTertiary">#FFFFFFFF</item>
+        <item name="colorTertiaryContainer">#FFF2DAFF</item>
+        <item name="colorOnTertiaryContainer">#FF251431</item>
+    </style>
+
+    <style name="ThemeOverlay.Khatmah.Palette.Green" parent="">
+        <item name="colorPrimary">#FF006E1C</item>
+        <item name="colorOnPrimary">#FFFFFFFF</item>
+        <item name="colorPrimaryContainer">#FFB6F0AF</item>
+        <item name="colorOnPrimaryContainer">#FF002204</item>
+        <item name="colorSecondary">#FF52634F</item>
+        <item name="colorOnSecondary">#FFFFFFFF</item>
+        <item name="colorSecondaryContainer">#FFD5E8CE</item>
+        <item name="colorOnSecondaryContainer">#FF101F0F</item>
+        <item name="colorTertiary">#FF38656A</item>
+        <item name="colorOnTertiary">#FFFFFFFF</item>
+        <item name="colorTertiaryContainer">#FFBCEBF0</item>
+        <item name="colorOnTertiaryContainer">#FF002023</item>
+    </style>
+
+    <style name="ThemeOverlay.Khatmah.Palette.Orange" parent="">
+        <item name="colorPrimary">#FF8B5000</item>
+        <item name="colorOnPrimary">#FFFFFFFF</item>
+        <item name="colorPrimaryContainer">#FFFFDDB8</item>
+        <item name="colorOnPrimaryContainer">#FF2C1600</item>
+        <item name="colorSecondary">#FF735943</item>
+        <item name="colorOnSecondary">#FFFFFFFF</item>
+        <item name="colorSecondaryContainer">#FFFFDCC1</item>
+        <item name="colorOnSecondaryContainer">#FF2A1707</item>
+        <item name="colorTertiary">#FF57624B</item>
+        <item name="colorOnTertiary">#FFFFFFFF</item>
+        <item name="colorTertiaryContainer">#FFDAE7CA</item>
+        <item name="colorOnTertiaryContainer">#FF151E0D</item>
+    </style>
+
+    <style name="ThemeOverlay.Khatmah.Palette.Pink" parent="">
+        <item name="colorPrimary">#FF8B4458</item>
+        <item name="colorOnPrimary">#FFFFFFFF</item>
+        <item name="colorPrimaryContainer">#FFFFD9E2</item>
+        <item name="colorOnPrimaryContainer">#FF3A0018</item>
+        <item name="colorSecondary">#FF74565F</item>
+        <item name="colorOnSecondary">#FFFFFFFF</item>
+        <item name="colorSecondaryContainer">#FFFFD9E2</item>
+        <item name="colorOnSecondaryContainer">#FF2B151C</item>
+        <item name="colorTertiary">#FF7A5733</item>
+        <item name="colorOnTertiary">#FFFFFFFF</item>
+        <item name="colorTertiaryContainer">#FFFFDCBE</item>
+        <item name="colorOnTertiaryContainer">#FF2D1600</item>
+    </style>
+
+    <!--
+      High contrast deepens the reading surfaces to pure black, which only means anything in the
+      dark theme — so the light variant is deliberately empty and the values-night one carries
+      the override. ThemeManager applies it on top of whichever palette is active.
+    -->
+    <style name="ThemeOverlay.Khatmah.HighContrast" parent="" />
+
+</resources>

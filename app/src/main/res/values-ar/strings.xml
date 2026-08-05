@@ -59,8 +59,8 @@
 
     <!-- More tab — items -->
     <string name="more_support_khatmah">دعم ختمة</string>
-    <string name="more_previous_sessions">الجلسات السابقة</string>
-    <string name="more_upcoming_sessions">الجلسات القادمة</string>
+    <string name="more_previous_sessions">الأوراد السابقة</string>
+    <string name="more_upcoming_sessions">الأوراد القادمة</string>
     <string name="more_bookmark">الإشارة المرجعية</string>
     <string name="more_surat_kahf">سورة الكهف</string>
     <string name="more_surat_mulk">سورة الملك</string>

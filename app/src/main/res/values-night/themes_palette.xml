@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Dark variants of the palettes declared in values/themes_palette.xml. The overlay names match
+  one-for-one, so ThemeManager applies a palette by a single style id and the platform resolves
+  the right variant for the active night mode — no code path branches on light versus dark.
+-->
+<resources>
+
+    <!-- Violet is the Material 3 baseline in dark too, so it overrides nothing. -->
+    <style name="ThemeOverlay.Khatmah.Palette.Violet" parent="" />
+
+    <style name="ThemeOverlay.Khatmah.Palette.Blue" parent="">
+        <item name="colorPrimary">#FF9ECAFF</item>
+        <item name="colorOnPrimary">#FF003258</item>
+        <item name="colorPrimaryContainer">#FF00497D</item>
+        <item name="colorOnPrimaryContainer">#FFD1E4FF</item>
+        <item name="colorSecondary">#FFBBC7DB</item>
+        <item name="colorOnSecondary">#FF253140</item>
+        <item name="colorSecondaryContainer">#FF3B4858</item>
+        <item name="colorOnSecondaryContainer">#FFD7E3F7</item>
+        <item name="colorTertiary">#FFD6BEE4</item>
+        <item name="colorOnTertiary">#FF3B2948</item>
+        <item name="colorTertiaryContainer">#FF523F5F</item>
+        <item name="colorOnTertiaryContainer">#FFF2DAFF</item>
+    </style>
+
+    <style name="ThemeOverlay.Khatmah.Palette.Green" parent="">
+        <item name="colorPrimary">#FF7BDA75</item>
+        <item name="colorOnPrimary">#FF00390A</item>
+        <item name="colorPrimaryContainer">#FF005315</item>
+        <item name="colorOnPrimaryContainer">#FFB6F0AF</item>
+        <item name="colorSecondary">#FFB9CCB3</item>
+        <item name="colorOnSecondary">#FF253422</item>
+        <item name="colorSecondaryContainer">#FF3B4B38</item>
+        <item name="colorOnSecondaryContainer">#FFD5E8CE</item>
+        <item name="colorTertiary">#FFA0CFD4</item>
+        <item name="colorOnTertiary">#FF003739</item>
+        <item name="colorTertiaryContainer">#FF1F4D51</item>
+        <item name="colorOnTertiaryContainer">#FFBCEBF0</item>
+    </style>
+
+    <style name="ThemeOverlay.Khatmah.Palette.Orange" parent="">
+        <item name="colorPrimary">#FFFFB960</item>
+        <item name="colorOnPrimary">#FF4A2800</item>
+        <item name="colorPrimaryContainer">#FF6A3900</item>
+        <item name="colorOnPrimaryContainer">#FFFFDDB8</item>
+        <item name="colorSecondary">#FFE1C0A5</item>
+        <item name="colorOnSecondary">#FF412C19</item>
+        <item name="colorSecondaryContainer">#FF5A422D</item>
+        <item name="colorOnSecondaryContainer">#FFFFDCC1</item>
+        <item name="colorTertiary">#FFBECAB0</item>
+        <item name="colorOnTertiary">#FF293521</item>
+        <item name="colorTertiaryContainer">#FF3F4C36</item>
+        <item name="colorOnTertiaryContainer">#FFDAE7CA</item>
+    </style>
+
+    <style name="ThemeOverlay.Khatmah.Palette.Pink" parent="">
+        <item name="colorPrimary">#FFFFB2C0</item>
+        <item name="colorOnPrimary">#FF5C1132</item>
+        <item name="colorPrimaryContainer">#FF75294B</item>
+        <item name="colorOnPrimaryContainer">#FFFFD9E2</item>
+        <item name="colorSecondary">#FFE2BDCA</item>
+        <item name="colorOnSecondary">#FF432832</item>
+        <item name="colorSecondaryContainer">#FF5C3F49</item>
+        <item name="colorOnSecondaryContainer">#FFFFD9E2</item>
+        <item name="colorTertiary">#FFF0BC8C</item>
+        <item name="colorOnTertiary">#FF482A0A</item>
+        <item name="colorTertiaryContainer">#FF62401F</item>
+        <item name="colorOnTertiaryContainer">#FFFFDCBE</item>
+    </style>
+
+    <!--
+      Pure-black surfaces for OLED reading. Only the two roles the body is painted with are
+      darkened — the containers keep their tonal steps, so cards and the chrome stay legible
+      against the black instead of collapsing into it.
+    -->
+    <style name="ThemeOverlay.Khatmah.HighContrast" parent="">
+        <item name="colorSurface">#FF000000</item>
+        <item name="android:colorBackground">#FF000000</item>
+    </style>
+
+</resources>

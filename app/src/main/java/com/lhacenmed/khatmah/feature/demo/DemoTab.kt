@@ -11,7 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.AppTab
+import com.lhacenmed.khatmah.core.nav.ComposeTab
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 
@@ -19,7 +19,7 @@ import com.lhacenmed.khatmah.core.nav.LocalNavigator
  * Example tab. Its body has a single button that navigates to [Dest.DemoDetail]
  * (rendered by DemoDetailActivity) — showing the full tab → detail-screen flow.
  */
-object DemoTab : AppTab(
+object DemoTab : ComposeTab(
     iconRes  = R.drawable.ic_list,
     titleRes = R.string.demo_tab,
     route    = "demo",

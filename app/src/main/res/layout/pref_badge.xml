@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Count pill for a preference row, sitting where the framework puts a row's widget. Used by the
+  session counters in the More tab; BadgePreference fills in the number.
+-->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/badge"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/pref_badge_bg"
+    android:paddingHorizontal="8dp"
+    android:paddingVertical="2dp"
+    android:textAppearance="?attr/textAppearanceLabelMedium"
+    android:textColor="?attr/colorOnPrimaryContainer"
+    tools:text="12" />

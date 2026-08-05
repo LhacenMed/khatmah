@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.core.nav.AppTab
+import com.lhacenmed.khatmah.core.nav.ComposeTab
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.nav.LocalTabReselected
@@ -415,7 +415,7 @@ private fun FastDebtRow(fast: FastDebt, onMarkDone: () -> Unit) {
 
 // ── Tab entry point ───────────────────────────────────────────────────────────
 
-object QadaaTab : AppTab(
+object QadaaTab : ComposeTab(
     iconRes  = R.drawable.ic_list,
     titleRes = R.string.more_qadaa,
     route    = "qadaa",

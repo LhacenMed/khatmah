@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.lhacenmed.khatmah.core.ui.UiScale
+import com.lhacenmed.khatmah.shared.util.ThemeManager
 
 /**
  * Base for the Compose host Activity ([ScreenHostActivity]). Enables edge-to-edge once and
@@ -19,6 +20,7 @@ open class BaseComposeActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        ThemeManager.applyTo(this)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
     }

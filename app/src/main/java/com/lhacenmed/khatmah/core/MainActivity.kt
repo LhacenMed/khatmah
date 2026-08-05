@@ -5,10 +5,12 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.DrawableWrapper
 import android.os.Build
 import android.os.Bundle
+import android.os.Looper
+import android.os.MessageQueue
 import android.view.Menu
+import android.view.View
 import android.view.MenuItem
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
@@ -16,30 +18,17 @@ import androidx.activity.viewModels
 import androidx.annotation.DrawableRes
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import com.lhacenmed.khatmah.core.ui.SizedDrawable
 import com.lhacenmed.khatmah.core.ui.UiScale
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
+import androidx.fragment.app.commitNow
 import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
@@ -48,11 +37,10 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.AppTabs
 import com.lhacenmed.khatmah.core.nav.IntentNavigator
-import com.lhacenmed.khatmah.core.nav.LocalNavigator
-import com.lhacenmed.khatmah.core.nav.LocalTabReselected
+import com.lhacenmed.khatmah.core.nav.Reselectable
 import com.lhacenmed.khatmah.core.ui.theme.Theme
-import com.lhacenmed.khatmah.core.ui.theme.isAppInDarkTheme
 import com.lhacenmed.khatmah.core.ui.theme.resolveColorScheme
+import com.lhacenmed.khatmah.shared.util.ThemeManager
 import com.lhacenmed.khatmah.databinding.ActivityMainBinding
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarViewModel
@@ -69,18 +57,18 @@ import com.lhacenmed.khatmah.onboarding.OnboardingActivity
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import com.lhacenmed.khatmah.widget.PrayerWidget
 import com.lhacenmed.khatmah.widget.WidgetAction
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 /**
- * Native edge-to-edge tab host. A MaterialToolbar + BottomNavigationView provide the
- * chrome with native gestures, tooltips and transitions; the five tab bodies live in a
- * swipe-disabled [HorizontalPager] so every tab stays composed — switching tabs never
- * disposes/reloads a screen. Detail screens are separate Activities (see [IntentNavigator]).
+ * Native edge-to-edge tab host. A MaterialToolbar + BottomNavigationView provide the chrome with
+ * native gestures, tooltips and transitions; each tab's body is a [Fragment] in a single
+ * container, created on first selection and then kept — switching tabs hides the old body rather
+ * than tearing it down, so a screen is never rebuilt on the way back to it. Detail screens are
+ * separate Activities (see [IntentNavigator]).
  *
- * The XML chrome is recoloured from the Compose [MaterialTheme.colorScheme] (the single
- * source of truth), so dynamic colour, custom palettes and high-contrast all stay in sync.
+ * Colours come from the Activity's own theme, which [ThemeManager] resolves in `onCreate`, so the
+ * chrome, the tab bodies and any Compose left in them are painted from one palette.
  *
  * Tab order: 0 Today · 1 Adhkar · 2 Prayers · 3 Qadaa · 4 More.
  */
@@ -93,10 +81,10 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
-    private var selectedTab by mutableIntStateOf(0)
+    private var selectedTab = 0
 
-    /** Per-tab re-selection signal, emitted when the active tab's bar item is tapped again. */
-    private val reselectFlows = List(AppTabs.size) { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
+    /** The palette in force for this instance; a change to it recreates the Activity. */
+    private val scheme: ColorScheme by lazy { resolveColorScheme(this) }
 
     /** Index of the Adhkar tab — selection mode (the contextual toolbar) is its feature. */
     private val adhkarTabIndex = AppTabs.indexOf(AdhkarTab)
@@ -120,7 +108,7 @@ class MainActivity : AppCompatActivity() {
      */
     private val tabBackCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
-            binding.bottomNav.selectedItemId = 1 // home tab (index 0 + 1)
+            selectTab(0) // home tab
         }
     }
 
@@ -129,6 +117,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
+        // After the splash swaps in the app theme, so the palette layers on top of it.
+        ThemeManager.applyTo(this)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
@@ -164,7 +154,7 @@ class MainActivity : AppCompatActivity() {
         applyInsets()
         buildBottomNav()
         wireBottomNav()
-        binding.bottomNav.selectedItemId = selectedTab + 1
+        selectTab(selectedTab)
         // Deep links apply only on a fresh launch — never override the restored tab on recreate.
         if (savedInstanceState == null) handleLaunchIntent(intent)
         observeSettingsForWidget()
@@ -174,47 +164,128 @@ class MainActivity : AppCompatActivity() {
         // Colour the native chrome + set the title/pill synchronously before the first frame, so a
         // theme switch (Activity recreate) never flashes baseline colours, the app name, or a
         // missing active pill before the Compose effect catches up.
-        applyChrome(resolveColorScheme(this, isAppInDarkTheme(this)), adhkarSelecting)
+        applyChrome(adhkarSelecting)
 
-        val navigator = IntentNavigator(this)
+        // Launch-time "update available" prompt. An AlertDialog, so it draws in its own window
+        // and this view stays empty — taps fall straight through to the tab beneath it.
+        binding.updateGate.setContent {
+            Theme { UpdateGate() }
+        }
 
-        binding.composeView.setContent {
-            Theme {
-                val scheme       = MaterialTheme.colorScheme
-                val adhkarState  by adhkarVm.uiState.collectAsState()
-                val tab          = selectedTab
-                val selecting    = tab == adhkarTabIndex && adhkarState.selectionMode
-
-                // Keep the native chrome in lock-step with the Compose scheme + tab state.
-                LaunchedEffect(scheme, tab, selecting, adhkarState.selectedIds.size) {
-                    applyChrome(scheme, selecting)
-                }
-
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    val pagerState = rememberPagerState(initialPage = tab) { AppTabs.size }
-                    // Tab taps drive the pager; the jump is instant (no swipe, no reload).
-                    LaunchedEffect(tab) {
-                        if (pagerState.currentPage != tab) pagerState.scrollToPage(tab)
-                    }
-                    HorizontalPager(
-                        state                   = pagerState,
-                        modifier                = Modifier.fillMaxSize(),
-                        userScrollEnabled       = false,
-                        beyondViewportPageCount = AppTabs.size - 1, // keep every tab composed
-                        key                     = { it },
-                    ) { page ->
-                        CompositionLocalProvider(
-                            LocalNavigator provides navigator,
-                            LocalTabReselected provides reselectFlows[page],
-                        ) {
-                            AppTabs[page].Content(PaddingValues(0.dp))
-                        }
-                    }
-                    // Launch-time "update available" prompt (own window; overlays every tab).
-                    UpdateGate()
-                }
+        // The contextual toolbar follows Adhkar's selection mode wherever it is driven from —
+        // the tab body, the menu, or system back.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                adhkarVm.uiState.collect { applyChrome(adhkarSelecting) }
             }
         }
+    }
+
+    // ── Tab bodies ────────────────────────────────────────────────────────────
+
+    /** The tab whose body is currently in front, so an unchanged selection costs no transaction. */
+    private var shownRoute: String? = null
+
+    /** Whether the idle-time tab builder is currently registered (see [prewarmTabs]). */
+    private var prewarming = false
+
+    /** Set while the bar is being moved in code, so it is not mistaken for a tap (see [selectTab]). */
+    private var selectingProgrammatically = false
+
+    /**
+     * Brings tab [index] to the front: its body is created the first time it is asked for and
+     * kept from then on, so returning to a tab shows it exactly as it was left. Hidden bodies are
+     * held at STARTED — alive and still collecting, but not treated as the screen in front.
+     *
+     * A deep link can arrive while the state is saved (the app was in the background), when a
+     * transaction would throw. Nothing is lost by returning: [onStart] runs before the user sees
+     * anything and puts the tab up then.
+     */
+    private fun showTab(index: Int) {
+        val target = AppTabs[index]
+        if (supportFragmentManager.isStateSaved || shownRoute == target.route) return
+        shownRoute = target.route
+        // commitNow, not commit: a queued transaction would land a frame or two after the
+        // toolbar, which reads as the bar changing before the body catches up.
+        supportFragmentManager.commitNow {
+            setReorderingAllowed(true)
+            val body = supportFragmentManager.findFragmentByTag(target.route)
+                ?: target.newFragment().also { add(R.id.tab_container, it, target.route) }
+            setMaxLifecycle(body, Lifecycle.State.RESUMED)
+            AppTabs.forEach { tab ->
+                if (tab === target) return@forEach
+                supportFragmentManager.findFragmentByTag(tab.route)
+                    ?.let { setMaxLifecycle(it, Lifecycle.State.STARTED) }
+            }
+        }
+        applyTabVisibility()
+    }
+
+    /**
+     * Shows the selected tab and holds the rest INVISIBLE rather than GONE.
+     *
+     * That distinction is the whole of what prewarming buys. A gone view is never measured, and a
+     * body's content — a Compose composition, a list's first bind — is built when it is measured.
+     * Kept gone, a prewarmed tab is an empty shell that does its real work at the moment it is
+     * shown, which is the delay prewarming exists to remove. Invisible costs a measure pass the
+     * app is idle for anyway, and leaves nothing to do on the tap.
+     *
+     * Reads [selectedTab] rather than taking a target, so it is safe to re-run at any point to
+     * bring the container back in line — which [onStart] does, because a restore reaches
+     * [showTab] before the fragments have views to make visible or not.
+     */
+    private fun applyTabVisibility() {
+        val target = AppTabs[selectedTab]
+        AppTabs.forEach { tab ->
+            val body = supportFragmentManager.findFragmentByTag(tab.route) ?: return@forEach
+            body.view?.visibility = if (tab === target) View.VISIBLE else View.INVISIBLE
+        }
+    }
+
+    /**
+     * Builds the tabs the user hasn't opened yet, one per idle turn of the main thread.
+     *
+     * Only the opening tab is needed for the first frame; building the rest alongside it would
+     * add their inflation to launch for no gain, since nothing can be tapped before that frame is
+     * up. Building them lazily instead just moves the same cost onto the first tap. Idle time is
+     * the third option and the right one: the app is on screen and doing nothing, so the tabs are
+     * ready well before the user reaches them, and every switch is then a show/hide with nothing
+     * to construct.
+     *
+     * One per turn rather than all at once, so a stretch of idle is never spent long enough to
+     * swallow a tap that arrives mid-way.
+     */
+    private val tabPrewarmer = MessageQueue.IdleHandler {
+        val next = AppTabs.firstOrNull { supportFragmentManager.findFragmentByTag(it.route) == null }
+        // Give up the handler when there is nothing left to build, or while transactions are
+        // unavailable — onStart re-registers it. Staying registered through a saved state would
+        // spin against an idle queue for as long as the app sits in the background.
+        if (next == null || supportFragmentManager.isStateSaved) {
+            prewarming = false
+            return@IdleHandler false
+        }
+        supportFragmentManager.commitNow {
+            setReorderingAllowed(true)
+            val body = next.newFragment()
+            add(R.id.tab_container, body, next.route)
+            setMaxLifecycle(body, Lifecycle.State.STARTED)
+        }
+        // A body arrives visible and would sit over the tab in front. commitNow already ran the
+        // transaction, so this lands before the next frame and nothing is ever drawn on top.
+        supportFragmentManager.findFragmentByTag(next.route)?.view?.visibility = View.INVISIBLE
+        true
+    }
+
+    private fun prewarmTabs() {
+        if (prewarming) return
+        prewarming = true
+        Looper.myQueue().addIdleHandler(tabPrewarmer)
+    }
+
+    /** Tells the showing tab its bar item was tapped again; tabs that don't care don't implement it. */
+    private fun reselectTab(index: Int) {
+        val body = supportFragmentManager.findFragmentByTag(AppTabs[index].route)
+        (body as? Reselectable)?.onReselect()
     }
 
     /**
@@ -250,6 +321,22 @@ class MainActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt(KEY_SELECTED_TAB, selectedTab)
+    }
+
+    /**
+     * Puts the selected tab up. Doing it here rather than in `onCreate` covers every route in
+     * with one line — a fresh launch, a restored instance, and a deep link that arrived while
+     * transactions were unavailable.
+     */
+    override fun onStart() {
+        super.onStart()
+        showTab(selectedTab)
+        // Again here, and unconditionally: on a restore the bar is set in onCreate, so showTab has
+        // already run and returned early by the time the fragments are given their views. Only
+        // once those exist can the container be told which one to show. This runs before the first
+        // frame, so a restored screen is never drawn with its tabs stacked.
+        applyTabVisibility()
+        prewarmTabs()
     }
 
     /** Refresh the widget whenever the user leaves the app. */
@@ -299,22 +386,38 @@ class MainActivity : AppCompatActivity() {
     private fun wireBottomNav() {
         binding.bottomNav.setOnItemSelectedListener { item ->
             val next = item.itemId - 1 // ids are tab index + 1
-            if (next == selectedTab) {
-                reselectFlows[next].tryEmit(Unit)
-            } else {
-                if (adhkarVm.uiState.value.selectionMode) adhkarVm.exitSelectionMode()
-                selectedTab = next // recomposes → applyChrome + pager jump
-            }
+            if (adhkarVm.uiState.value.selectionMode) adhkarVm.exitSelectionMode()
+            selectedTab = next
+            showTab(next)
+            applyChrome(adhkarSelecting)
             true
+        }
+        // Re-selection is a separate signal on the platform's own bar, so the tab-change path
+        // above never has to ask whether a tap was really a change.
+        binding.bottomNav.setOnItemReselectedListener {
+            if (!selectingProgrammatically) reselectTab(selectedTab)
         }
     }
 
     /**
-     * Re-applies the toolbar (title/subtitle/colours/up-arrow) and bottom-nav colours from
-     * [scheme], plus the Adhkar selection back-callback and menu. Called from a Compose effect
-     * so it tracks the live colour scheme and tab/selection state.
+     * Moves the bar to [index] without the change reading as a tap.
+     *
+     * Restoring the bar after a recreate — a theme or night-mode change — asks it for the tab that
+     * is already selected, and the bar answers that with a re-selection. Left unguarded, rotating
+     * into dark mode on the Quran tab would count as tapping it twice and open the reader.
      */
-    private fun applyChrome(scheme: ColorScheme, selecting: Boolean) {
+    private fun selectTab(index: Int) {
+        selectingProgrammatically = true
+        binding.bottomNav.selectedItemId = index + 1
+        selectingProgrammatically = false
+    }
+
+    /**
+     * Re-applies the toolbar (title/subtitle/colours/up-arrow) and bottom-nav colours from the
+     * active [scheme], plus the Adhkar selection back-callback and menu. Called whenever the tab
+     * or the selection state changes.
+     */
+    private fun applyChrome(selecting: Boolean) {
         val bar = supportActionBar ?: return
 
         val tabSpec = AppTabs[selectedTab]
@@ -406,12 +509,6 @@ class MainActivity : AppCompatActivity() {
         return SizedDrawable(src, px)
     }
 
-    /** Reports a fixed square intrinsic size; drawing and tinting delegate to [wrapped]. */
-    private class SizedDrawable(wrapped: Drawable, private val sizePx: Int) : DrawableWrapper(wrapped) {
-        override fun getIntrinsicWidth(): Int = sizePx
-        override fun getIntrinsicHeight(): Int = sizePx
-    }
-
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> { adhkarVm.exitSelectionMode(); return true }
@@ -435,7 +532,7 @@ class MainActivity : AppCompatActivity() {
             else                             -> null
         }
         val index = AppTabs.indexOfFirst { it.route == route }
-        if (index >= 0) binding.bottomNav.selectedItemId = index + 1
+        if (index >= 0) selectTab(index)
     }
 
     /** Push a widget update on every settings save while at least STARTED. */

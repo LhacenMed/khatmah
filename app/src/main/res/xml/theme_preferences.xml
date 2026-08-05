@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Appearance. Nothing here persists on its own — ThemeManager owns these choices and applies them
+  to the whole app, so the rows are non-persistent and ThemeSettingsFragment reads and writes it.
+-->
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory android:title="@string/more_settings">
+        <Preference
+            android:key="dark_theme"
+            android:title="@string/theme_dark"
+            app:iconSpaceReserved="false" />
+
+        <!-- Shown only where Material You exists; ThemeSettingsFragment hides it below API 31. -->
+        <SwitchPreferenceCompat
+            android:key="dynamic_color"
+            android:persistent="false"
+            android:summary="@string/theme_dynamic_color_desc"
+            android:title="@string/theme_dynamic_color"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/theme_palette_group">
+        <com.lhacenmed.khatmah.feature.settings.PalettePreference
+            android:key="palette"
+            android:persistent="false"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

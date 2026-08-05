@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A section heading in a preference screen.
+
+  The framework's own category layout indents the title to line up with the rows' icons and leaves
+  a tall gap above it, which reads as the heading floating away from the section it names. This
+  sits the title at the screen's edge — the start edge, so it follows the reading direction — and
+  keeps it close to the divider it belongs to.
+-->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@android:id/title"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingHorizontal="16dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp"
+    android:textAppearance="?attr/textAppearanceTitleSmall"
+    android:textColor="?attr/colorPrimary"
+    tools:text="الإعدادات" />

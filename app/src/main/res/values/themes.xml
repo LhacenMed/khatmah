@@ -4,17 +4,33 @@
     <style name="Theme.Khatmah" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <!-- Global native font -->
-        <item name="android:fontFamily">@font/noto_kufi_regular</item>
-        <item name="fontFamily">@font/noto_kufi_regular</item>
+        <!-- Global native font: the family, so anything outside the type scale still lands on
+             the right weight rather than a synthesised one. -->
+        <item name="android:fontFamily">@font/noto_kufi</item>
+        <item name="fontFamily">@font/noto_kufi</item>
 
-        <!-- Required by PreferenceFragmentCompat (reader settings). -->
-        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
+        <!-- Required by PreferenceFragmentCompat (the More tab, reader settings). -->
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay.Khatmah</item>
 
+        <!-- The app's type scale. Declared here in full — not just for the few styles a layout
+             happened to need — because this is what Compose reads its own typography back out of
+             (see resolveTypography), so a style left undeclared would be a style where the native
+             and Compose halves of the app disagree about the font. -->
+        <item name="textAppearanceDisplayLarge">@style/App.TextAppearance.DisplayLarge</item>
+        <item name="textAppearanceDisplayMedium">@style/App.TextAppearance.DisplayMedium</item>
+        <item name="textAppearanceDisplaySmall">@style/App.TextAppearance.DisplaySmall</item>
+        <item name="textAppearanceHeadlineLarge">@style/App.TextAppearance.HeadlineLarge</item>
+        <item name="textAppearanceHeadlineMedium">@style/App.TextAppearance.HeadlineMedium</item>
+        <item name="textAppearanceHeadlineSmall">@style/App.TextAppearance.HeadlineSmall</item>
         <item name="textAppearanceTitleLarge">@style/App.TextAppearance.TitleLarge</item>
+        <item name="textAppearanceTitleMedium">@style/App.TextAppearance.TitleMedium</item>
         <item name="textAppearanceTitleSmall">@style/App.TextAppearance.TitleSmall</item>
         <item name="textAppearanceBodyLarge">@style/App.TextAppearance.BodyLarge</item>
         <item name="textAppearanceBodyMedium">@style/App.TextAppearance.BodyMedium</item>
+        <item name="textAppearanceBodySmall">@style/App.TextAppearance.BodySmall</item>
+        <item name="textAppearanceLabelLarge">@style/App.TextAppearance.LabelLarge</item>
+        <item name="textAppearanceLabelMedium">@style/App.TextAppearance.LabelMedium</item>
+        <item name="textAppearanceLabelSmall">@style/App.TextAppearance.LabelSmall</item>
     </style>
 
     <!-- App-widget theme for the static initial/preview layout (RemoteViews can't read
@@ -33,12 +49,86 @@
         <item name="android:checkboxStyle">@style/Widget.Khatmah.AnimatedCheckBox</item>
     </style>
 
+    <!--
+      Preference styling, applied through the theme so every preference screen picks it up rather
+      than each one restyling its own categories.
+    -->
+    <style name="PreferenceThemeOverlay.Khatmah" parent="PreferenceThemeOverlay">
+        <item name="preferenceCategoryStyle">@style/Preference.Category.Khatmah</item>
+        <item name="preferenceStyle">@style/Preference.Khatmah</item>
+        <item name="switchPreferenceCompatStyle">@style/Preference.SwitchCompat.Khatmah</item>
+        <item name="checkBoxPreferenceStyle">@style/Preference.CheckBox.Khatmah</item>
+        <item name="dialogPreferenceStyle">@style/Preference.Khatmah</item>
+    </style>
+
+    <!-- One row layout for every preference type, so a switch, a value row and a plain row all
+         share the same height and the same place for their parts. -->
+    <style name="Preference.Khatmah" parent="Preference.Material">
+        <item name="android:layout">@layout/pref_row</item>
+    </style>
+
+    <style name="Preference.SwitchCompat.Khatmah" parent="Preference.SwitchPreferenceCompat.Material">
+        <item name="android:layout">@layout/pref_row</item>
+    </style>
+
+    <!-- The reader's toggles, so its settings keep the same row height as everywhere else. The
+         animated checkbox itself is untouched: it sits in the row's widget frame. -->
+    <style name="Preference.CheckBox.Khatmah" parent="Preference.CheckBoxPreference.Material">
+        <item name="android:layout">@layout/pref_row</item>
+    </style>
+
+    <style name="Preference.Category.Khatmah" parent="Preference.Category.Material">
+        <item name="android:layout">@layout/pref_category</item>
+        <!-- A heading names its section; it is not a row, so it reserves no room for an icon. -->
+        <item name="iconSpaceReserved">false</item>
+    </style>
+
     <style name="Widget.Khatmah.AnimatedCheckBox" parent="Widget.AppCompat.CompoundButton.CheckBox">
         <item name="android:button" tools:ignore="PrivateResource">@drawable/abc_btn_check_material_anim</item>
         <item name="android:buttonTint">@color/reader_checkbox_tint</item>
     </style>
 
+    <!--
+      Each style names its face outright rather than leaning on the family's weights, because
+      weight-by-family only resolves from API 26 and the app supports 24. Emphasis follows the
+      Material 3 scale: titles and labels are medium, everything else regular.
+    -->
+    <style name="App.TextAppearance.DisplayLarge" parent="TextAppearance.Material3.DisplayLarge">
+        <item name="android:fontFamily">@font/noto_kufi_regular</item>
+        <item name="fontFamily">@font/noto_kufi_regular</item>
+    </style>
+
+    <style name="App.TextAppearance.DisplayMedium" parent="TextAppearance.Material3.DisplayMedium">
+        <item name="android:fontFamily">@font/noto_kufi_regular</item>
+        <item name="fontFamily">@font/noto_kufi_regular</item>
+    </style>
+
+    <style name="App.TextAppearance.DisplaySmall" parent="TextAppearance.Material3.DisplaySmall">
+        <item name="android:fontFamily">@font/noto_kufi_regular</item>
+        <item name="fontFamily">@font/noto_kufi_regular</item>
+    </style>
+
+    <style name="App.TextAppearance.HeadlineLarge" parent="TextAppearance.Material3.HeadlineLarge">
+        <item name="android:fontFamily">@font/noto_kufi_regular</item>
+        <item name="fontFamily">@font/noto_kufi_regular</item>
+    </style>
+
+    <style name="App.TextAppearance.HeadlineMedium" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:fontFamily">@font/noto_kufi_regular</item>
+        <item name="fontFamily">@font/noto_kufi_regular</item>
+    </style>
+
+    <style name="App.TextAppearance.HeadlineSmall" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:fontFamily">@font/noto_kufi_regular</item>
+        <item name="fontFamily">@font/noto_kufi_regular</item>
+    </style>
+
     <style name="App.TextAppearance.TitleLarge" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:fontFamily">@font/noto_kufi_medium</item>
+        <item name="fontFamily">@font/noto_kufi_medium</item>
+    </style>
+
+    <style name="App.TextAppearance.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
         <item name="android:fontFamily">@font/noto_kufi_medium</item>
         <item name="fontFamily">@font/noto_kufi_medium</item>
     </style>
@@ -56,6 +146,26 @@
     <style name="App.TextAppearance.BodyMedium" parent="TextAppearance.Material3.BodyMedium">
         <item name="android:fontFamily">@font/noto_kufi_regular</item>
         <item name="fontFamily">@font/noto_kufi_regular</item>
+    </style>
+
+    <style name="App.TextAppearance.BodySmall" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:fontFamily">@font/noto_kufi_regular</item>
+        <item name="fontFamily">@font/noto_kufi_regular</item>
+    </style>
+
+    <style name="App.TextAppearance.LabelLarge" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:fontFamily">@font/noto_kufi_medium</item>
+        <item name="fontFamily">@font/noto_kufi_medium</item>
+    </style>
+
+    <style name="App.TextAppearance.LabelMedium" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:fontFamily">@font/noto_kufi_medium</item>
+        <item name="fontFamily">@font/noto_kufi_medium</item>
+    </style>
+
+    <style name="App.TextAppearance.LabelSmall" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:fontFamily">@font/noto_kufi_medium</item>
+        <item name="fontFamily">@font/noto_kufi_medium</item>
     </style>
 
     <!-- Native chrome typography — one shared size for every top app bar (detail hosts, book
