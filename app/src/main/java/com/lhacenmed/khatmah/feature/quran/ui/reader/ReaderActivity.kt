@@ -620,6 +620,12 @@ class ReaderActivity : AppCompatActivity() {
         if (key == followedKey) return
         followedKey = key
         val page = ayaPageCache?.get(key)?.plus(1) ?: return
+        // A wird ends where its pages end: recitation that runs past the window stops there rather
+        // than reading on into the next session behind a pager that cannot follow it.
+        if (isSession && page > lastPage) {
+            audioController.stop()
+            return
+        }
         val pos = positionForPage(page.coerceIn(firstPage, lastPage))
         if (pos != pager.currentItem) pager.setCurrentItem(pos, true)
     }
