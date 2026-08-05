@@ -9,9 +9,12 @@ import android.os.Message
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.animation.DecelerateInterpolator
+import android.graphics.Canvas
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.SeekBar
 import android.widget.TextView
@@ -20,6 +23,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.edit
+import androidx.core.graphics.createBitmap
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import androidx.core.view.WindowCompat
@@ -29,7 +33,8 @@ import androidx.core.view.updatePadding
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.viewpager.widget.ViewPager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.lhacenmed.khatmah.R
@@ -38,6 +43,8 @@ import com.lhacenmed.khatmah.core.ui.fitTitleText
 import com.lhacenmed.khatmah.feature.audio.AyaAudioState
 import com.lhacenmed.khatmah.feature.audio.GhReader
 import com.lhacenmed.khatmah.feature.audio.GithubAudioRepository
+import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
+import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahSessionEntity
 import com.lhacenmed.khatmah.feature.quran.data.BookmarkRepository
 import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.quran.data.MushafPrint
@@ -53,7 +60,7 @@ import java.lang.ref.WeakReference
 /**
  * Full-screen reader shell — mode-agnostic host for the QCF4 book pages and the native text pages.
  *
- * Hosts a [ViewPager] of page fragments (built by the active [ReaderSource]) with an overlaid
+ * Hosts a [ViewPager2] of page fragments (built by the active [ReaderSource]) with an overlaid
  * surface-coloured toolbar that toggles with the immersive system bars on a page tap. The active
  * print decides the [ReaderSource]; everything mode-specific (page count, aya→page map, per-page
  * meta, page fragment) is routed through it, so this shell never branches on mode.
@@ -67,7 +74,9 @@ class ReaderActivity : AppCompatActivity() {
         super.attachBaseContext(UiScale.wrap(newBase))
     }
 
-    private lateinit var pager: ViewPager
+    private lateinit var rootFrame: FrameLayout
+    private lateinit var pager: ViewPager2
+    private lateinit var wirdWall: WirdWallView
     private lateinit var toolbar: Toolbar
     private lateinit var toolbarArea: FrameLayout
     private lateinit var bottomBar: FrameLayout
@@ -109,6 +118,18 @@ class ReaderActivity : AppCompatActivity() {
     private var isSession = false
     private var sessionId = 0L
 
+    // Wird completion: the end wall exists only while an unread session is open, and
+    // [wirdCompleting] makes the hand-off a one-shot (it stays set until the next wird is known).
+    private var wirdActive = false
+    private var wirdCompleting = false
+
+    // The wird waiting behind the wall — prefetched, so a release hands over immediately instead
+    // of pausing on a query.
+    private var nextWird: KhatmahSessionEntity? = null
+
+    private lateinit var wall: WirdWall
+
+
     // Cached aya→page map (0-based, this source's pagination) for jumping to a search/recitation hit.
     private var ayaPageCache: Map<Long, Int>? = null
 
@@ -137,7 +158,9 @@ class ReaderActivity : AppCompatActivity() {
         print = MushafPrefs.selected.value
         source = readerSourceFor(this, print)
 
+        rootFrame = findViewById(R.id.reader_root)
         pager = findViewById(R.id.book_pager)
+        wirdWall = findViewById(R.id.wird_wall)
         toolbar = findViewById(R.id.toolbar)
         toolbarArea = findViewById(R.id.toolbar_area)
         bottomBar = findViewById(R.id.bottom_bar)
@@ -177,6 +200,8 @@ class ReaderActivity : AppCompatActivity() {
         sessionId = intent.getLongExtra(EXTRA_SESSION_ID, 0L)
         firstPage = if (isSession) sessionStart else 1
         lastPage = if (isSession) sessionEnd else pageCount
+        wirdActive = isSession && khatmahRepo.isSessionUnread(sessionId)
+        if (wirdActive) nextWird = khatmahRepo.nextWirdAfter(sessionId)
 
         ayaPageCache = source.ayaPageIndex()
         metaMap = source.pageMeta()
@@ -187,12 +212,16 @@ class ReaderActivity : AppCompatActivity() {
         val startPage = resolveStartPage().coerceIn(firstPage, lastPage)
 
         // Pager stays LTR; the right-to-left feel comes from the reversed mapping (page = lastPage - position).
-        pager.adapter = ReaderPagerAdapter(supportFragmentManager, lastPage - firstPage + 1, lastPage, source)
+        pager.adapter = ReaderPagerAdapter(this, lastPage - firstPage + 1, lastPage, source)
+        // ViewPager2 keeps only the current page by default; the reader wants its neighbour ready
+        // so a turn never waits on a fragment.
+        pager.offscreenPageLimit = 1
         pager.setCurrentItem(positionForPage(startPage), false)
         setupSlider(startPage)
+        setupWirdWall()
         savePage(startPage) // opening a page is progress even without a swipe
 
-        pager.addOnPageChangeListener(object : ViewPager.SimpleOnPageChangeListener() {
+        pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 if (silentHop) return
                 val page = pageForPosition(position)
@@ -647,6 +676,151 @@ class ReaderActivity : AppCompatActivity() {
         out
     }
 
+    // ── Khatmah wird (page-windowed sessions) ───────────────────────────────────
+
+    private val khatmahRepo by lazy { KhatmahRepository(applicationContext) }
+
+    /**
+     * Hangs the wall off the pager's leading edge. Nothing here touches the pager's own gestures:
+     * the wall is only ever handed the drag the pages could not use, so page turns, taps, zoom and
+     * long-presses carry on untouched.
+     */
+    private fun setupWirdWall() {
+        wall = WirdWall(pager, wirdWall)
+        wall.onCommit = { completeWird() }
+        pagerPages.apply {
+            overScrollMode = View.OVER_SCROLL_ALWAYS
+            edgeEffectFactory = WirdWallEdgeEffectFactory(wall)
+            addOnItemTouchListener(wall)
+        }
+        wall.enabled = wirdActive
+    }
+
+    /** ViewPager2's single child is the RecyclerView holding the pages — and its edge effects. */
+    private val pagerPages get() = pager.getChildAt(0) as RecyclerView
+
+    /**
+     * Completes the open wird. With another wird waiting, the reader hands over to it straight
+     * away; with none, the khatmah is finished, so the wall retires. Marking read happens in the
+     * background either way — the Quran tab's strip follows through its Room flow, and the gesture
+     * never waits on a write.
+     *
+     * @return true only when the hand-off has taken charge of the page. False means the caller
+     *   still owns it and must settle it — including the declined case, which is what used to
+     *   leave the page parked aside until the reader was reopened.
+     */
+    private fun completeWird(): Boolean {
+        if (wirdCompleting) return false
+        val next = nextWird
+        val finished = sessionId
+        wirdCompleting = true
+
+        if (next == null) {
+            wirdActive = false
+            wall.enabled = false
+            Toast.makeText(this, R.string.wird_khatmah_done, Toast.LENGTH_SHORT).show()
+            lifecycleScope.launch { khatmahRepo.markSessionRead(finished) }
+            return false
+        }
+
+        handOverTo(next)
+        lifecycleScope.launch {
+            khatmahRepo.markSessionRead(finished)
+            nextWird = khatmahRepo.nextWirdAfter(next.id)
+            // The wall reopens only once the following wird is known, so a second pull can neither
+            // skip a wird nor land mid-hand-off.
+            wall.enabled = wirdActive
+            wirdCompleting = false
+        }
+        return true
+    }
+
+    /**
+     * Carries the release straight into [session]: the screen as the finger left it is frozen into
+     * an overlay that keeps travelling out, while the pager — rebound to the new window off-screen —
+     * follows it in from the left. Two views moving as one, so the half-pulled end page finishes its
+     * slide and the next wird arrives in the same motion, with no adapter swap ever visible.
+     */
+    private fun handOverTo(session: KhatmahSessionEntity) {
+        val width    = pager.width.toFloat()
+        // The pages are already held aside, so the snapshot carries that offset with it: the
+        // outgoing half starts where it stands and both halves travel the same remaining distance.
+        val pulled   = wall.pullPx
+        val outgoing = freezePager()
+
+        // The pager itself moves for this one animation, so its own gestures are held off until it
+        // is back at rest — a drag over a moving transform is what the wall is careful never to do.
+        wall.enabled = false
+        pager.isUserInputEnabled = false
+
+        bindSession(session)
+
+        val ease = DecelerateInterpolator(SLIDE_TENSION)
+        outgoing?.animate()
+            ?.translationX(width - pulled)
+            ?.setDuration(WIRD_SLIDE_MS)
+            ?.setInterpolator(ease)
+            ?.withEndAction { rootFrame.removeView(outgoing) }
+            ?.start()
+
+        // Starts where the outgoing page's edge is, so both halves travel the same distance and
+        // move as one seam — no gap opens between them, whatever the pull was released at.
+        pager.translationX = pulled - width
+        pager.animate()
+            .translationX(0f)
+            .setDuration(WIRD_SLIDE_MS)
+            .setInterpolator(ease)
+            .withEndAction {
+                pager.isUserInputEnabled = true
+                showWirdToast(session)
+            }
+            .start()
+    }
+
+    /** Snapshots the pager into an overlay above it, so the rebind underneath is never seen. */
+    private fun freezePager(): ImageView? {
+        if (pager.width <= 0 || pager.height <= 0) return null
+        val shot = createBitmap(pager.width, pager.height)
+        pager.draw(Canvas(shot))
+        return ImageView(this).also {
+            it.setImageBitmap(shot)
+            // Directly above the pager — the chrome is elevated, so it still draws on top.
+            rootFrame.addView(it, rootFrame.indexOfChild(pager) + 1, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT,
+            ))
+        }
+    }
+
+    /** Names the wird that just arrived, then gets out of the way. */
+    private fun showWirdToast(session: KhatmahSessionEntity) {
+        Toast.makeText(
+            this,
+            getString(R.string.wird_started, session.dayNumber, session.startPage, session.endPage),
+            Toast.LENGTH_SHORT,
+        ).show()
+    }
+
+    /** Points the pager at [session]'s window: new adapter, slider range, and its remembered page. */
+    private fun bindSession(session: KhatmahSessionEntity) {
+        sessionId = session.id
+        firstPage = session.startPage
+        lastPage = session.endPage
+        val startPage = readSessionPage().coerceIn(firstPage, lastPage)
+
+        // The adapter swap re-selects position 0 (the new end page) — stage the whole rebind
+        // silently, then land on the real page ourselves.
+        silentHop = true
+        pager.adapter = ReaderPagerAdapter(this, lastPage - firstPage + 1, lastPage, source)
+        pager.setCurrentItem(positionForPage(startPage), false)
+        silentHop = false
+
+        setupSlider(startPage)
+        currentPageNum = startPage
+        savePage(startPage)
+        updateMeta(startPage)
+        if (bookmarkable) syncBookmarkIcon()
+    }
+
     // ── Per-session last-read page (its own key, defaults to the session's first page) ──
 
     private fun sessionPageKey() = "$KEY_SESSION_PAGE_PREFIX$sessionId"
@@ -656,13 +830,16 @@ class ReaderActivity : AppCompatActivity() {
     // ── Background sync ─────────────────────────────────────────────────────────
 
     /**
-     * Keeps the ViewPager background synced with the pages' own canvas background, so the app's base
+     * Keeps the pager background synced with the pages' own canvas background, so the app's base
      * theme never bleeds through during fast horizontal swipes (and the transparent text pages show
      * the right parchment/night surface).
      */
     private fun setupBackgroundSync() {
+        // On the root rather than the pager: the wall lives between the two, and a background on
+        // the pager would cover it. This one still backs the gaps between pages, the transparent
+        // text pages, and the space the pager vacates during a wird hand-off.
         val bgDrawable = PagerBackgroundDrawable()
-        pager.background = bgDrawable
+        rootFrame.background = bgDrawable
         lifecycleScope.launch {
             kotlinx.coroutines.flow.combine(
                 ReaderTheme.override,
@@ -718,6 +895,8 @@ class ReaderActivity : AppCompatActivity() {
         const val EXTRA_SESSION_ID = "book_session_id"
 
         private const val KEY_LAST_PAGE_PREFIX = "last_page_"     // + print id
+        private const val WIRD_SLIDE_MS = 320L    // next wird sliding in after a completion
+        private const val SLIDE_TENSION = 1.6f    // eases the slide out like a settling swipe
         private const val KEY_SESSION_PAGE_PREFIX = "session_page_"
         private const val MENU_EDGE_PAD_DP = 8f
         private const val TOOLBAR_ANIM_MS = 250L

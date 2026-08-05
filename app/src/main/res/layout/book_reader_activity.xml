@@ -5,14 +5,24 @@
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/reader_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:keepScreenOn="true">
 
-    <androidx.viewpager.widget.ViewPager
-        android:id="@+id/book_pager"
+    <!-- Behind the pager: uncovered only when the last page of a wird is pulled aside. -->
+    <com.lhacenmed.khatmah.feature.quran.ui.reader.WirdWallView
+        android:id="@+id/wird_wall"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
+
+    <!-- Pinned to LTR: the mushaf's right-to-left order comes from the reversed page mapping in
+         ReaderPagerAdapter, which also puts a wird's end at this pager's leading edge. -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/book_pager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layoutDirection="ltr" />
 
     <FrameLayout
         android:id="@+id/toolbar_area"

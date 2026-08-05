@@ -33,6 +33,18 @@ interface KhatmahDao {
     @Query("UPDATE khatmah_session SET isRead = 1 WHERE id = :id")
     suspend fun markRead(id: Long)
 
+    @Query("SELECT isRead FROM khatmah_session WHERE id = :id")
+    suspend fun isRead(id: Long): Boolean?
+
+    /** Earliest unread session of [id]'s khatmah, [id] itself aside — the wird that follows it. */
+    @Query("""
+        SELECT * FROM khatmah_session
+        WHERE khatmahId = (SELECT khatmahId FROM khatmah_session WHERE id = :id)
+          AND isRead = 0 AND id != :id
+        ORDER BY dayNumber ASC LIMIT 1
+    """)
+    suspend fun nextUnreadAfter(id: Long): KhatmahSessionEntity?
+
     @Query("SELECT COUNT(*) FROM khatmah_session WHERE khatmahId = :khatmahId AND isRead = 1")
     fun readCount(khatmahId: Long): Flow<Int>
 }

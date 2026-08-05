@@ -568,6 +568,11 @@
     <string name="bookmarks_empty">لا توجد علامات مرجعية بعد. اضغط على أيقونة العلامة أثناء قراءة صفحة لحفظها.</string>
     <string name="bookmarks_remove">إزالة العلامة</string>
 
+    <!-- Wird end page (reader) -->
+    <string name="wird_next">الورد التالي</string>
+    <string name="wird_started">الورد %1$d\nصفحة %2$d – %3$d</string>
+    <string name="wird_khatmah_done">تمّت الختمة</string>
+
     <!-- Quran tab -->
     <string name="quran_resume_label">تابع من حيث توقّفت</string>
     <string name="quran_sura_title">سورة %1$s</string>

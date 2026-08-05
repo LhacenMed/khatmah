@@ -140,6 +140,23 @@ class KhatmahRepository(private val context: Context) {
         khatmahDb.dao().markRead(id)
     }
 
+    /**
+     * True when [sessionId] is a real session that hasn't been read yet — the reader offers its
+     * wird-end page only then, so re-reading a finished wird can't mark anything twice.
+     */
+    suspend fun isSessionUnread(sessionId: Long): Boolean = withContext(Dispatchers.IO) {
+        khatmahDb.dao().isRead(sessionId) == false
+    }
+
+    /**
+     * The wird that follows [sessionId] — the khatmah's earliest other unread session, so the
+     * reader always moves to the same one the Quran tab's strip will show. Null when none is left.
+     * The reader prefetches it, so completing a wird never waits on a query mid-gesture.
+     */
+    suspend fun nextWirdAfter(sessionId: Long): KhatmahSessionEntity? = withContext(Dispatchers.IO) {
+        khatmahDb.dao().nextUnreadAfter(sessionId)
+    }
+
     /** Juz' the session starting at [startSura]:[startAya] belongs to — shown on the khatmah strip. */
     suspend fun sessionJuz(startSura: Int, startAya: Int, riwayaKey: String): Int =
         withContext(Dispatchers.IO) {

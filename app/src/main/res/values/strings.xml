@@ -540,6 +540,11 @@
     <string name="bookmarks_empty">No bookmarks yet. Tap the bookmark icon while reading a page to save it.</string>
     <string name="bookmarks_remove">Remove bookmark</string>
 
+    <!-- Wird end page (reader) -->
+    <string name="wird_next">Next wird</string>
+    <string name="wird_started">Wird %1$d\nPage %2$d – %3$d</string>
+    <string name="wird_khatmah_done">Khatmah complete</string>
+
     <!-- Quran tab -->
     <string name="quran_resume_label">Continue where you left off</string>
     <string name="quran_sura_title">Surat %1$s</string>
