@@ -47,7 +47,7 @@ import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
-import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
+import com.lhacenmed.khatmah.core.nav.LocalTabReselected
 import com.lhacenmed.khatmah.core.ui.components.OptionSelectBottomSheet
 import com.lhacenmed.khatmah.core.ui.components.SheetOption
 import com.lhacenmed.khatmah.core.ui.components.showTimePicker
@@ -121,7 +121,7 @@ private fun MoreScreen(padding: PaddingValues) {
 
     val listState   = rememberLazyListState()
     val nav         = LocalNavigator.current
-    val scrollToTop = LocalScrollToTop.current
+    val scrollToTop = LocalTabReselected.current
 
     // ── Quranic sunnah surahs → page-windowed book-reader session (QCF4 only) ──────
     val scope         = rememberCoroutineScope()

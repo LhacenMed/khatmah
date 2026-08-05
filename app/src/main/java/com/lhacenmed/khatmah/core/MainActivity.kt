@@ -49,7 +49,7 @@ import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.AppTabs
 import com.lhacenmed.khatmah.core.nav.IntentNavigator
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
-import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
+import com.lhacenmed.khatmah.core.nav.LocalTabReselected
 import com.lhacenmed.khatmah.core.ui.theme.Theme
 import com.lhacenmed.khatmah.core.ui.theme.isAppInDarkTheme
 import com.lhacenmed.khatmah.core.ui.theme.resolveColorScheme
@@ -95,8 +95,8 @@ class MainActivity : AppCompatActivity() {
 
     private var selectedTab by mutableIntStateOf(0)
 
-    /** Per-tab scroll-to-top signal, emitted when the active tab is reselected. */
-    private val scrollFlows = List(AppTabs.size) { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
+    /** Per-tab re-selection signal, emitted when the active tab's bar item is tapped again. */
+    private val reselectFlows = List(AppTabs.size) { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
 
     /** Index of the Adhkar tab — selection mode (the contextual toolbar) is its feature. */
     private val adhkarTabIndex = AppTabs.indexOf(AdhkarTab)
@@ -205,7 +205,7 @@ class MainActivity : AppCompatActivity() {
                     ) { page ->
                         CompositionLocalProvider(
                             LocalNavigator provides navigator,
-                            LocalScrollToTop provides scrollFlows[page],
+                            LocalTabReselected provides reselectFlows[page],
                         ) {
                             AppTabs[page].Content(PaddingValues(0.dp))
                         }
@@ -300,7 +300,7 @@ class MainActivity : AppCompatActivity() {
         binding.bottomNav.setOnItemSelectedListener { item ->
             val next = item.itemId - 1 // ids are tab index + 1
             if (next == selectedTab) {
-                scrollFlows[next].tryEmit(Unit)
+                reselectFlows[next].tryEmit(Unit)
             } else {
                 if (adhkarVm.uiState.value.selectionMode) adhkarVm.exitSelectionMode()
                 selectedTab = next // recomposes → applyChrome + pager jump

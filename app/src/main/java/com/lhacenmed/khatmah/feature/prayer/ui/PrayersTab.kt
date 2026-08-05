@@ -31,7 +31,7 @@ import android.content.Context
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.Dest
-import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
+import com.lhacenmed.khatmah.core.nav.LocalTabReselected
 import com.lhacenmed.khatmah.core.nav.TabAction
 import com.lhacenmed.khatmah.core.nav.toIntent
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerRepository
@@ -100,7 +100,7 @@ private fun PrayersScreenContent(padding: PaddingValues) {
     val repo       = remember { PrayerRepository(context) }
     val today      = remember { LocalDate.now() }
     val scope      = rememberCoroutineScope()
-    val scrollToTop = LocalScrollToTop.current
+    val scrollToTop = LocalTabReselected.current
 
     // Pager drives date navigation; page PAGER_CENTER = today.
     val pagerState = rememberPagerState(initialPage = PAGER_CENTER) { PAGER_TOTAL }

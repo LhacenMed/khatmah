@@ -24,7 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
-import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
+import com.lhacenmed.khatmah.core.nav.LocalTabReselected
 import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.TabAction
 import com.lhacenmed.khatmah.core.nav.toIntent
@@ -56,7 +56,7 @@ private fun AdhkarScreen(padding: PaddingValues) {
     val nav         = LocalNavigator.current
     val vm: AdhkarViewModel = viewModel(activity)
     val state: AdhkarUiState by vm.uiState.collectAsState()
-    val scrollToTop = LocalScrollToTop.current
+    val scrollToTop = LocalTabReselected.current
     val gridState   = rememberLazyGridState()
 
     // Re-resolve category titles whenever the configuration changes (e.g. locale switch).

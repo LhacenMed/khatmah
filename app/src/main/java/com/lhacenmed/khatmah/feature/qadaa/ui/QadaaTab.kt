@@ -23,7 +23,7 @@ import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
-import com.lhacenmed.khatmah.core.nav.LocalScrollToTop
+import com.lhacenmed.khatmah.core.nav.LocalTabReselected
 import com.lhacenmed.khatmah.core.nav.TabAction
 import com.lhacenmed.khatmah.core.nav.toIntent
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
@@ -42,7 +42,7 @@ fun QadaaScreen(outerPadding: PaddingValues = PaddingValues()) {
     val state by vm.uiState.collectAsState()
     val nav = LocalNavigator.current
     val listState = rememberLazyListState()
-    val scrollToTop = LocalScrollToTop.current
+    val scrollToTop = LocalTabReselected.current
 
     var showAddPrayers by remember { mutableStateOf(false) }
     var showAddFasts by remember { mutableStateOf(false) }

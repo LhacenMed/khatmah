@@ -30,6 +30,7 @@ import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.AppTab
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
+import com.lhacenmed.khatmah.core.nav.LocalTabReselected
 import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.quran.data.QuranTextRepository
 import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
@@ -94,6 +95,13 @@ private fun QuranScreen(padding: PaddingValues) {
         }
         surahPageMap = all.associate { s -> s.num to surahStartPage(pageStarts, s.num) }
         RecentSurahsPrefs.get(context) // seed the recency flow from storage
+    }
+
+    // Tapping the Quran tab while it is already showing means the same thing its hero button does:
+    // back to the mushaf, where reading stopped. There is nothing here worth scrolling to the top.
+    val reselected = LocalTabReselected.current
+    LaunchedEffect(reselected) {
+        reselected.collect { nav.go(currentReaderDest()) }
     }
 
     // The splash holds until both halves have real content, so the tab draws in one pass —
