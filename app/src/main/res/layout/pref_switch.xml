@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The toggle on a switch row.
+
+  The stock widget carries a 48dp minimum height so it can be tapped on its own, which makes every
+  switch row taller than the rows around it. Here the row takes the tap — the switch is not
+  clickable — so that floor is dropped and the height comes from the control itself, letting a
+  switch row sit at exactly the height of a plain one.
+
+  The id is androidx.preference's own: SwitchPreferenceCompat binds the control by it.
+-->
+<androidx.appcompat.widget.SwitchCompat
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/switchWidget"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@null"
+    android:clickable="false"
+    android:focusable="false"
+    android:minHeight="0dp"
+    android:minWidth="0dp"
+    android:padding="0dp"
+    android:scaleX="0.85"
+    android:scaleY="0.85" />

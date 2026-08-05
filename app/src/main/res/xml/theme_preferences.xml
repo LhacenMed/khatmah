@@ -17,7 +17,6 @@
         <SwitchPreferenceCompat
             android:key="dynamic_color"
             android:persistent="false"
-            android:summary="@string/theme_dynamic_color_desc"
             android:title="@string/theme_dynamic_color"
             app:iconSpaceReserved="false" />
     </PreferenceCategory>

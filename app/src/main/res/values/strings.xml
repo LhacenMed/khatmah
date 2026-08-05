@@ -14,6 +14,7 @@
     <string name="theme_system">System Default</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark Theme</string>
+    <string name="theme_mode_group">Theme</string>
     <string name="theme_dark_settings_group">Dark Theme Settings</string>
     <string name="theme_high_contrast">High Contrast</string>
     <string name="theme_high_contrast_desc">Pure black background in dark mode</string>

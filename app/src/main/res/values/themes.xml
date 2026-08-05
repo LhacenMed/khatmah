@@ -69,6 +69,7 @@
 
     <style name="Preference.SwitchCompat.Khatmah" parent="Preference.SwitchPreferenceCompat.Material">
         <item name="android:layout">@layout/pref_row</item>
+        <item name="android:widgetLayout">@layout/pref_switch</item>
     </style>
 
     <!-- The reader's toggles, so its settings keep the same row height as everywhere else. The
