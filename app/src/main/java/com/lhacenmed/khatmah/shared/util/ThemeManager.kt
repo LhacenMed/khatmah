@@ -37,6 +37,14 @@ object ThemeManager {
     private const val KEY_COLOR_INDEX = "color_index"
     private const val KEY_HIGH_CONTRAST = "high_contrast"
 
+    /**
+     * How long a colour change waits, so the control that caused it is seen to move first.
+     *
+     * Short enough to read as the same action rather than a second one: the thumb is well on its
+     * way before the screen repaints, and the repaint still feels like the result of the press.
+     */
+    private const val REPAINT_DELAY_MS = 100L
+
     private val _mode = MutableStateFlow(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
     val mode: StateFlow<Int> = _mode.asStateFlow()
 
@@ -151,10 +159,22 @@ object ThemeManager {
     private fun overlayFor(index: Int): Int =
         paletteOverlays.getOrElse(index) { paletteOverlays[0] }
 
-    /** Records a colour change and repaints the screen the user is looking at. */
+    /**
+     * Records a colour change and repaints the screen the user is looking at.
+     *
+     * The repaint waits a beat. A colour change is nearly always made by pressing a control that
+     * animates — a switch thumb sliding over, a swatch taking its ring — and recreating the
+     * Activity in that same frame swaps the window out before any of it is drawn, so the control
+     * appears to jump. The delay is long enough for the gesture to read and short enough that the
+     * new colours still feel like its result.
+     */
     private fun invalidateTheme() {
         _version.value++
-        resumed.get()?.recreate()
+        val activity = resumed.get() ?: return
+        activity.window.decorView.postDelayed({
+            // The screen may be on its way out by the time this runs.
+            if (!activity.isFinishing && !activity.isDestroyed) activity.recreate()
+        }, REPAINT_DELAY_MS)
     }
 
     private fun prefs(context: Context) =
