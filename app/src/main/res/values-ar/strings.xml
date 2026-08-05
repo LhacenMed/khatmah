@@ -570,6 +570,7 @@
 
     <!-- Wird end page (reader) -->
     <string name="wird_next">الورد التالي</string>
+    <string name="wird_finish_khatmah">إتمام الختمة</string>
     <string name="wird_started">الورد %1$d\nصفحة %2$d – %3$d</string>
     <string name="wird_khatmah_done">تمّت الختمة</string>
 

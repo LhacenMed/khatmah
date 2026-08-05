@@ -42,6 +42,17 @@ class WirdWallView @JvmOverloads constructor(
             invalidate()
         }
 
+    /**
+     * True on the khatmah's final wird, where releasing ends the khatmah rather than opening the
+     * next one. Only the label differs — the gesture is the same either way.
+     */
+    var endsKhatmah: Boolean = false
+        set(value) {
+            if (value == field) return
+            field = value
+            invalidate()
+        }
+
     /** Ring full — releasing now completes the wird. Drives the haptic tick and the halo pulse. */
     private var armed = false
         set(value) {
@@ -138,7 +149,7 @@ class WirdWallView @JvmOverloads constructor(
         arrow.draw(canvas)
 
         canvas.drawText(
-            context.getString(R.string.wird_next),
+            context.getString(if (endsKhatmah) R.string.wird_finish_khatmah else R.string.wird_next),
             cx,
             cy + radius + LABEL_GAP_DP * density,
             labelPaint,

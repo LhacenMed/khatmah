@@ -542,6 +542,7 @@
 
     <!-- Wird end page (reader) -->
     <string name="wird_next">Next wird</string>
+    <string name="wird_finish_khatmah">Finish khatmah</string>
     <string name="wird_started">Wird %1$d\nPage %2$d – %3$d</string>
     <string name="wird_khatmah_done">Khatmah complete</string>
 

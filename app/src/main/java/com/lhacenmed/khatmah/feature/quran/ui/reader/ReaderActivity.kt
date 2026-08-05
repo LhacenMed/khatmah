@@ -204,6 +204,7 @@ class ReaderActivity : AppCompatActivity() {
         lastPage = if (isSession) sessionEnd else pageCount
         wirdActive = isSession && khatmahRepo.isSessionUnread(sessionId)
         if (wirdActive) nextWird = khatmahRepo.nextWirdAfter(sessionId)
+        syncWallLabel()
         invalidateOptionsMenu() // the session resolves after the menu is first built
 
         ayaPageCache = source.ayaPageIndex()
@@ -717,6 +718,11 @@ class ReaderActivity : AppCompatActivity() {
         wall.enabled = wirdActive
     }
 
+    /** What the pull promises: the next wird, or the end of the khatmah when none follows. */
+    private fun syncWallLabel() {
+        wirdWall.endsKhatmah = nextWird == null
+    }
+
     /** ViewPager2's single child is the RecyclerView holding the pages — and its edge effects. */
     private val pagerPages get() = pager.getChildAt(0) as RecyclerView
 
@@ -751,6 +757,7 @@ class ReaderActivity : AppCompatActivity() {
         lifecycleScope.launch {
             khatmahRepo.markSessionRead(finished)
             nextWird = khatmahRepo.nextWirdAfter(next.id)
+            syncWallLabel()
             // The wall reopens only once the following wird is known, so a second pull can neither
             // skip a wird nor land mid-hand-off.
             wall.enabled = wirdActive
