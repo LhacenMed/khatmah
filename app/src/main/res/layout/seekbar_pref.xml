@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Custom widget layout for the brightness SeekBarPreferences — mirrors Quran Android's
-     seekbar_pref: a slider with a live value and an inline preview (text alpha / colour square). -->
+<!-- Custom widget layout for the brightness SeekBarPreferences: a slider with a live value and an
+     optional inline preview — one swatch showing the night text alpha over the background grey. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -46,21 +46,15 @@
             android:gravity="end"
             android:layout_gravity="center_vertical"
             android:textAppearance="?attr/textAppearanceBodyMedium" />
-
-        <View
-            android:id="@+id/preview_square"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:layout_gravity="center_vertical"
-            android:visibility="gone" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/pref_preview"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:paddingVertical="16dp"
         android:text="معاينة"
         android:textSize="18sp" />
 

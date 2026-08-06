@@ -2,7 +2,6 @@ package com.lhacenmed.khatmah.feature.quran.ui.settings
 
 import android.os.Bundle
 import androidx.preference.CheckBoxPreference
-import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.feature.quran.ui.reader.ReaderPrefs
@@ -34,11 +33,16 @@ class ReaderSettingsFragment : PreferenceFragmentCompat() {
             setOnPreferenceChangeListener { _, _ -> ReaderTheme.toggle(ctx); true }
         }
 
-        // ── Brightness sliders — push the committed value into the live reader state. ──
-        findPreference<Preference>("text_brightness")?.setOnPreferenceChangeListener { _, value ->
-            ReaderPrefs.setTextBrightness(ctx, value as Int); true
+        // ── Brightness sliders — push the committed value into the live reader state. Both feed the
+        //    single combined preview hosted by the background slider. ──
+        val bgPref = findPreference<SeekBarBackgroundBrightnessPreference>("bg_brightness")
+        findPreference<SeekBarPreference>("text_brightness")?.apply {
+            onLiveValue = { bgPref?.setPreviewTextAlpha(it) }
+            setOnPreferenceChangeListener { _, value ->
+                ReaderPrefs.setTextBrightness(ctx, value as Int); true
+            }
         }
-        findPreference<Preference>("bg_brightness")?.setOnPreferenceChangeListener { _, value ->
+        bgPref?.setOnPreferenceChangeListener { _, value ->
             ReaderPrefs.setBackgroundBrightness(ctx, value as Int); true
         }
 

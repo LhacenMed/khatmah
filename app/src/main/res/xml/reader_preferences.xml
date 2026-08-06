@@ -15,7 +15,7 @@
             android:title="الوضع الليلي"
             app:iconSpaceReserved="false" />
 
-        <com.lhacenmed.khatmah.feature.quran.ui.settings.SeekBarTextBrightnessPreference
+        <com.lhacenmed.khatmah.feature.quran.ui.settings.SeekBarPreference
             android:key="text_brightness"
             android:defaultValue="180"
             android:max="255"

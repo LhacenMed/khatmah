@@ -11,18 +11,20 @@ import com.lhacenmed.khatmah.R
 
 /**
  * A [Preference] that renders a slider with a live value, ported from Quran Android's
- * SeekBarPreference. The reading-brightness subclasses add an inline preview. The committed value
- * is both persisted (via the preference's key) and reported through [callChangeListener] so the
- * fragment can push it into the reader's live state.
+ * SeekBarPreference. The committed value is both persisted (via the preference's key) and reported
+ * through [callChangeListener] so the fragment can push it into the reader's live state; [onLiveValue]
+ * additionally reports every drag so the combined brightness preview can follow along.
  */
 open class SeekBarPreference(
     context: Context,
     attrs: AttributeSet,
 ) : Preference(context, attrs), SeekBar.OnSeekBarChangeListener {
 
-    protected lateinit var previewText: TextView
-    protected lateinit var previewBox: View
-    private lateinit var valueText: TextView
+    /** Called on every slider movement (not just on commit) — used to drive the shared preview. */
+    var onLiveValue: ((Int) -> Unit)? = null
+
+    protected var previewText: TextView? = null
+    private var valueText: TextView? = null
 
     private val maxValue = attrs.getAttributeIntValue(ANDROID_NS, "max", 100)
     private val default  = attrs.getAttributeIntValue(ANDROID_NS, "defaultValue", 0)
@@ -37,9 +39,8 @@ open class SeekBarPreference(
         val seekBar = holder.findViewById(R.id.seekbar) as SeekBar
         valueText   = holder.findViewById(R.id.value) as TextView
         previewText = holder.findViewById(R.id.pref_preview) as TextView
-        previewBox  = holder.findViewById(R.id.preview_square)
 
-        previewText.visibility = previewVisibility()
+        previewText?.visibility = previewVisibility()
         current = getPersistedInt(default)
         seekBar.max = maxValue
         seekBar.setOnSeekBarChangeListener(this)
@@ -48,8 +49,9 @@ open class SeekBarPreference(
     }
 
     override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-        valueText.text = progress.toString()
+        valueText?.text = progress.toString()
         current = progress
+        onLiveValue?.invoke(progress)
     }
 
     override fun onStartTrackingTouch(seekBar: SeekBar?) {}
@@ -59,7 +61,7 @@ open class SeekBarPreference(
         callChangeListener(current)
     }
 
-    /** Visibility of the "preview" text row under the slider. */
+    /** Visibility of the "preview" row under the slider. */
     protected open fun previewVisibility(): Int = View.GONE
 
     companion object {
