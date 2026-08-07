@@ -4,4 +4,9 @@
          tabs, so every bar (detail hosts, book reader, reader settings) is the same height and a
          stacked title + subtitle always fits without clipping. -->
     <dimen name="top_app_bar_height">64dp</dimen>
+
+    <!-- How much of a preference row its value may take before it truncates. Leaves the title the
+         larger share on the narrowest phone the app supports, which is the point: the title names
+         the setting, the value only answers it. -->
+    <dimen name="pref_value_max_width">140dp</dimen>
 </resources>

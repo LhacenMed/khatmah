@@ -84,7 +84,7 @@
             android:persistent="false"
             android:title="@string/more_day_adhkar_alarm" />
 
-        <Preference
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
             android:dependency="adhkar:morning"
             android:icon="@drawable/ic_schedule"
             android:key="adhkar:morning.time"
@@ -97,7 +97,7 @@
             android:persistent="false"
             android:title="@string/more_night_adhkar_alarm" />
 
-        <Preference
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
             android:dependency="adhkar:evening"
             android:icon="@drawable/ic_schedule"
             android:key="adhkar:evening.time"
@@ -112,7 +112,7 @@
             android:persistent="false"
             android:title="@string/more_al_mulk_alarm" />
 
-        <Preference
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
             android:dependency="sunnah:al_mulk"
             android:icon="@drawable/ic_schedule"
             android:key="sunnah:al_mulk.time"
@@ -125,7 +125,7 @@
             android:persistent="false"
             android:title="@string/more_al_baqarah_alarm" />
 
-        <Preference
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
             android:dependency="sunnah:al_baqarah"
             android:icon="@drawable/ic_schedule"
             android:key="sunnah:al_baqarah.time"
@@ -139,20 +139,18 @@
             android:key="theme_settings"
             android:title="@string/theme_settings" />
 
-        <Preference
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
             android:icon="@drawable/ic_book"
             android:key="mushaf_print"
             android:title="@string/more_mushaf_print" />
 
-        <!-- summary="%s" makes the framework show the chosen entry, so the row needs no binding
-             beyond having its value set. -->
-        <ListPreference
+        <!-- Shows the chosen entry as its value, so the row needs no binding beyond having its
+             value set. -->
+        <com.lhacenmed.khatmah.core.ui.components.ValueListPreference
             android:icon="@drawable/ic_language"
             android:key="language"
             android:persistent="false"
-            android:summary="%s"
-            android:title="@string/more_language"
-            app:useSimpleSummaryProvider="false" />
+            android:title="@string/more_language" />
 
         <Preference
             android:icon="@drawable/ic_email"

@@ -11,6 +11,7 @@ import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.toIntent
 import com.lhacenmed.khatmah.core.ui.collectWhileStarted
+import com.lhacenmed.khatmah.core.ui.components.ValuePreference
 import com.lhacenmed.khatmah.core.ui.tintIcons
 import com.lhacenmed.khatmah.shared.util.ThemeManager
 import kotlinx.coroutines.flow.combine
@@ -56,7 +57,7 @@ class ThemeSettingsFragment : PreferenceFragmentCompat() {
         super.onViewCreated(view, savedInstanceState)
 
         collectWhileStarted(ThemeManager.mode) { mode ->
-            findPreference<Preference>("dark_theme")?.setSummary(modeLabel(mode))
+            findPreference<ValuePreference>("dark_theme")?.value = getString(modeLabel(mode))
         }
         // The two move together: a palette is only marked when the device's own colours are not in
         // force, so they are read as one value rather than as two rows racing each other.

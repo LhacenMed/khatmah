@@ -15,6 +15,7 @@ import com.lhacenmed.khatmah.core.nav.Reselectable
 import com.lhacenmed.khatmah.core.nav.toIntent
 import androidx.lifecycle.lifecycleScope
 import com.lhacenmed.khatmah.core.ui.collectWhileStarted
+import com.lhacenmed.khatmah.core.ui.components.ValuePreference
 import com.lhacenmed.khatmah.core.ui.components.showTimePicker
 import com.lhacenmed.khatmah.core.ui.tintIcons
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
@@ -162,22 +163,22 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
         }
     }
 
-    /** Switch states and time summaries, so a change made anywhere shows up here. */
+    /** Switch states and alarm times, so a change made anywhere shows up here. */
     private fun observeReminders() {
         collectWhileStarted(ReminderPrefs.flow) { reminders ->
             ReminderIds.forEach { id ->
                 val config = reminders.find { it.id == id }
                 findPreference<SwitchPreferenceCompat>(id)?.isChecked = config?.enabled == true
-                findPreference<Preference>("$id.time")?.summary =
+                findPreference<ValuePreference>("$id.time")?.value =
                     config?.let { "%02d:%02d".format(it.timeHour, it.timeMinute) } ?: "--:--"
             }
         }
     }
 
-    /** The selected mushaf, as the print row's summary. */
+    /** The selected mushaf, as the print row's value. */
     private fun observeMushafPrint() {
         collectWhileStarted(MushafPrefs.selected) { print ->
-            findPreference<Preference>("mushaf_print")?.setSummary(print.nameRes)
+            findPreference<ValuePreference>("mushaf_print")?.value = getString(print.nameRes)
         }
     }
 

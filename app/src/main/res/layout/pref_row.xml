@@ -1,16 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  A preference row: icon, title, and the row's current value at the far end.
+  A preference row: icon, title, the row's current value at the far end, and — under the title —
+  the summary explaining the setting.
 
-  The framework stacks the summary under the title, which suits a sentence explaining a setting but
-  not a value — a time, a language, a mushaf name. Set opposite the title, a value reads as the
-  answer to it, and the row stays one line tall instead of two.
+  The two texts answer different questions, so they sit in different places. A value is the answer
+  to the title — a time, a language, a mushaf name — and reads as one line with it. A summary is a
+  sentence about the setting, which belongs under the title where it can run its length without
+  squeezing it. Rows carry either, both, or neither: each slot folds away when empty, so a plain
+  row still stands exactly one line tall.
 
   The ids are the framework's: it binds title, summary, icon and the widget frame by id, so this
   layout can be swapped in for any preference type — plain rows, switches, and the list dialog
-  alike — without any of them knowing.
+  alike — without any of them knowing. The value slot is ours; ValuePreference fills it.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?attr/selectableItemBackground"
@@ -39,25 +43,50 @@
             android:scaleType="fitCenter" />
     </LinearLayout>
 
-    <TextView
-        android:id="@android:id/title"
+    <!-- Title and summary as one block, so the summary is indented with the title rather than
+         with the icon, and the pair takes whatever width the value leaves. -->
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:ellipsize="end"
-        android:maxLines="2"
-        android:textAppearance="?attr/textAppearanceBodyLarge"
-        android:textColor="@color/pref_title_text" />
+        android:orientation="vertical">
 
+        <TextView
+            android:id="@android:id/title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textAppearance="?attr/textAppearanceBodyLarge"
+            android:textColor="@color/pref_title_text"
+            tools:text="عرض معلومات الصفحة" />
+
+        <!-- The framework shows and hides this one itself, from whether the row has a summary. -->
+        <TextView
+            android:id="@android:id/summary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textColor="@color/pref_summary_text"
+            tools:text="رقم الصفحة واسم السورة ورقم الجزء أثناء القراءة" />
+    </LinearLayout>
+
+    <!-- Capped, so a long value gives way rather than crowding the title out of the row; past the
+         cap it truncates. Hidden until a row has a value — see ValuePreference. -->
     <TextView
-        android:id="@android:id/summary"
+        android:id="@+id/value"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
         android:ellipsize="end"
         android:maxLines="1"
+        android:maxWidth="@dimen/pref_value_max_width"
         android:textAppearance="?attr/textAppearanceBodyMedium"
-        android:textColor="@color/pref_summary_text" />
+        android:textColor="@color/pref_summary_text"
+        android:visibility="gone"
+        tools:text="العربية"
+        tools:visibility="visible" />
 
     <!-- Switches, and the count pills on the wird rows, land here. -->
     <LinearLayout

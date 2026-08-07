@@ -8,7 +8,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceCategory android:title="@string/more_settings">
-        <Preference
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
             android:key="dark_theme"
             android:title="@string/theme_dark"
             app:iconSpaceReserved="false" />
