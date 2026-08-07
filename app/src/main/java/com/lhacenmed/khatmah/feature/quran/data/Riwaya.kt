@@ -1,6 +1,7 @@
 package com.lhacenmed.khatmah.feature.quran.data
 
 import android.content.Context
+import androidx.annotation.FontRes
 import androidx.annotation.StringRes
 import com.lhacenmed.khatmah.R
 import java.io.File
@@ -11,9 +12,13 @@ import java.io.File
  * asset locations). Adding a riwaya (e.g. Qaloon) is one [RiwayaConfig] row plus its strings —
  * no new repository, no new download state, no new branch anywhere else.
  */
-enum class Riwaya(@StringRes val nameRes: Int) {
-    HAFS(R.string.riwaya_hafs),
-    WARSH(R.string.riwaya_warsh);
+enum class Riwaya(
+    @StringRes val nameRes: Int,
+    /** Calligraphic body face for this riwaya's plain text — the text reader's font. */
+    @FontRes val bodyFontRes: Int,
+) {
+    HAFS(R.string.riwaya_hafs, R.font.kfgqpc_hafs_uthmanic),
+    WARSH(R.string.riwaya_warsh, R.font.kfgqpc_warsh_uthmanic);
 
     /** Key used in [com.lhacenmed.khatmah.feature.quran.data.db.MushafDb] tables — matches the riwaya field in bundled JSON. */
     val dbKey: String get() = name.lowercase()  // "hafs" | "warsh"

@@ -146,10 +146,8 @@ class BookPageFragment : Fragment() {
                         .toMutableSet()
                         .apply { add("QCF2_QBSML"); add("QCF4_QBSML") }
                     val faces = fontNames.associateWith { repo.typefaceFor(it) }
-                    val fontRes =
-                        if (repo.riwaya == Riwaya.HAFS) R.font.kfgqpc_hafs_uthmanic
-                        else R.font.kfgqpc_warsh_uthmanic
-                    val calligraphic = ResourcesCompat.getFont(ctx, fontRes) ?: Typeface.DEFAULT
+                    val calligraphic =
+                        ResourcesCompat.getFont(ctx, repo.riwaya.bodyFontRes) ?: Typeface.DEFAULT
                     val number = ResourcesCompat.getFont(ctx, R.font.amiri_regular) ?: Typeface.DEFAULT
                     val allMeta = ReaderMeta.loadForRiwaya(ctx, repo.riwaya.dbKey)
                     val meta = allMeta[pageNumber] ?: PageMeta("", 1, pageNumber)

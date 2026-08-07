@@ -98,11 +98,10 @@ class TextPageFragment : Fragment() {
             val loaded = withContext(Dispatchers.IO) {
                 runCatching {
                     val page = src.pageData(pageNumber) ?: return@runCatching null
-                    val bodyRes = if (riwaya == Riwaya.HAFS) R.font.kfgqpc_hafs_uthmanic else R.font.kfgqpc_warsh_uthmanic
                     val headRes = if (riwaya == Riwaya.HAFS) R.font.hafs_sura_name else R.font.warsh_sura_name
                     Loaded(
                         page,
-                        ResourcesCompat.getFont(ctx, bodyRes) ?: Typeface.DEFAULT,
+                        ResourcesCompat.getFont(ctx, riwaya.bodyFontRes) ?: Typeface.DEFAULT,
                         ResourcesCompat.getFont(ctx, headRes) ?: Typeface.DEFAULT,
                         src.basmala,
                     )
