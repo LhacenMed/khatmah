@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A sound choice: press the row to choose it, press the leading button to hear it first.
+
+  That second control is why this row is not `pref_row`. The play button needs a target of its own,
+  and a row layout is also a list view type — keeping it separate means a plain row can never be
+  recycled into one of these and inherit a press that plays a sound.
+
+  Metrics follow pref_row so the two read as one list: the button occupies exactly the width the
+  icon and its padding would have, leaving the title on the same 56dp line as everywhere else.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:gravity="center_vertical"
+    android:minHeight="48dp"
+    android:orientation="horizontal"
+    android:paddingStart="4dp"
+    android:paddingEnd="16dp"
+    android:paddingVertical="10dp">
+
+    <!-- Full row height, so the button is a target rather than a 24dp mark. Its ripple is
+         borderless and only appears once SoundPreference makes it clickable — rows with nothing to
+         preview leave it inert and it reads as a plain state icon. -->
+    <FrameLayout
+        android:id="@+id/preview"
+        android:layout_width="48dp"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="4dp"
+        android:background="?attr/selectableItemBackgroundBorderless">
+
+        <ImageView
+            android:id="@android:id/icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:contentDescription="@null"
+            android:scaleType="fitCenter" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@android:id/title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:textAppearance="?attr/textAppearanceBodyLarge"
+        android:textColor="@color/pref_title_text"
+        tools:text="أذان مكة" />
+
+    <!-- The radio mark lands here, as on any other preference row. -->
+    <LinearLayout
+        android:id="@android:id/widget_frame"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:gravity="center_vertical"
+        android:orientation="vertical" />
+</LinearLayout>

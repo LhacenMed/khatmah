@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  One prayer's reminder: how long before it you are warned, and what announces it.
+
+  Only the fixed choices are declared here. The adhans shipped in assets/ and the files the user has
+  picked are discovered at runtime, so AdhanSoundFragment adds those rows to the two categories
+  below — which is also why the browse row is ordered last rather than merely written last.
+
+  [AdhanPrefs] owns the configuration, so nothing here persists on its own.
+-->
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory android:title="@string/adhan_alarm_before_section">
+        <!-- The framework's own list dialog: seven fixed spans, shown as the row's value. -->
+        <com.lhacenmed.khatmah.core.ui.components.ValueListPreference
+            android:key="pre_alert"
+            android:persistent="false"
+            android:title="@string/adhan_alert_before"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <!-- Title carries the prayer's name, so it is set once the fragment knows which prayer. -->
+    <PreferenceCategory android:key="sounds">
+        <com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.SoundPreference
+            android:icon="@drawable/ic_notifications_off"
+            android:key="sound:off"
+            android:title="@string/adhan_sound_stop" />
+
+        <com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.SoundPreference
+            android:icon="@drawable/ic_volume_off"
+            android:key="sound:silent"
+            android:title="@string/adhan_sound_silent" />
+
+        <com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.SoundPreference
+            android:icon="@drawable/ic_play_arrow"
+            android:key="sound:device"
+            android:title="@string/adhan_sound_device" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="customs"
+        android:title="@string/adhan_sound_custom_section">
+
+        <!-- Ordered past the picked files, which are added to this category as they are found. -->
+        <Preference
+            android:icon="@drawable/ic_folder_open"
+            android:key="browse"
+            android:order="100"
+            android:title="@string/adhan_sound_custom_browse" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Prayer settings, on the androidx Preference framework — the same rows, categories and dialogs the
+  More tab and the reader settings use.
+
+  Nothing here persists on its own: [PrayerSettings] and [OnboardingPrefs] already own these
+  values, so every row is non-persistent and PrayerSettingsFragment reads and writes them.
+
+  The calculation rows are not marked with a `dependency`, because theirs is the inverse of one:
+  they are live only while the automatic settings switch is *off*. The fragment sets that.
+-->
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory android:title="@string/prayer_settings_qibla">
+        <Preference
+            android:key="qibla"
+            android:title="@string/prayer_settings_qibla"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/prayer_settings_reminders">
+        <Preference
+            android:key="adhan_reminders"
+            android:title="@string/prayer_settings_adhan_reminders"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/prayer_settings_location">
+        <!-- Where the times are computed for. It reports rather than leads anywhere — the two rows
+             under it are how the place is changed — so it takes no tap. -->
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:key="location"
+            android:selectable="false"
+            app:iconSpaceReserved="false" />
+
+        <Preference
+            android:key="auto_location"
+            android:title="@string/prayer_settings_auto_location"
+            app:iconSpaceReserved="false" />
+
+        <Preference
+            android:key="manual_location"
+            android:title="@string/prayer_settings_manual_location"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/prayer_settings_calc_section">
+        <SwitchPreferenceCompat
+            android:key="auto_settings"
+            android:persistent="false"
+            android:title="@string/prayer_settings_auto"
+            app:iconSpaceReserved="false" />
+
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:key="calc_method"
+            android:title="@string/prayer_settings_calc_method"
+            app:iconSpaceReserved="false" />
+
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:key="juristic"
+            android:title="@string/prayer_settings_juristic"
+            app:iconSpaceReserved="false" />
+
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:key="dst"
+            android:title="@string/prayer_settings_dst"
+            app:iconSpaceReserved="false" />
+
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:key="corrections"
+            android:title="@string/prayer_settings_corrections"
+            app:iconSpaceReserved="false" />
+
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:key="higher_lat"
+            android:title="@string/prayer_settings_higher_lat"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

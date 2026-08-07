@@ -20,15 +20,15 @@ import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahScreen
 import com.lhacenmed.khatmah.feature.khatmah.ui.SessionsScreen
 import com.lhacenmed.khatmah.feature.quran.ui.bookmarks.BookmarksScreen
 import com.lhacenmed.khatmah.feature.quran.ui.prints.PrintSelectScreen
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsScreen
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsFragment
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.CalcMethodScreen
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.DstScreen
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.HigherLatScreen
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.JuristicScreen
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.ManualCorrectionsScreen
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.qibla.QiblaScreen
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.AdhanRemindersScreen
-import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.AdhanSoundSelectionScreen
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.AdhanRemindersFragment
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.reminders.sound.AdhanSoundFragment
 import com.lhacenmed.khatmah.feature.qadaa.ui.QadaaHistoryScreen
 import com.lhacenmed.khatmah.feature.quran.ui.reader.ReaderActivity
 import com.lhacenmed.khatmah.feature.settings.AboutScreen
@@ -170,7 +170,7 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
     // ── Prayer settings ─────────────────────────────────────────────────────────
     data object PrayerSettings : Dest() {
         override val titleRes get() = R.string.prayer_settings_title
-        override fun screen() = @Composable { PrayerSettingsScreen() }
+        override fun fragment() = PrayerSettingsFragment()
     }
     data object CalcMethod : Dest() {
         override val titleRes get() = R.string.prayer_settings_calc_method
@@ -194,7 +194,7 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
     }
     data object AdhanReminders : Dest() {
         override val titleRes get() = R.string.adhan_reminders_title
-        override fun screen() = @Composable { AdhanRemindersScreen() }
+        override fun fragment() = AdhanRemindersFragment()
     }
     data class AdhanSoundSelection(val prayerId: Int) : Dest() {
         // Dynamic title: "<prayer> adhan" — the prayer name varies with prayerId.
@@ -206,9 +206,7 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
             val prayer = context.getString(names.getOrElse(prayerId) { R.string.prayers })
             return context.getString(R.string.adhan_alarm_title_format, prayer)
         }
-        override fun screen() = @Composable {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) AdhanSoundSelectionScreen(prayerId)
-        }
+        override fun fragment() = AdhanSoundFragment.newInstance(prayerId)
     }
     data object Qibla : Dest() {
         override val titleRes get() = R.string.prayers_qibla

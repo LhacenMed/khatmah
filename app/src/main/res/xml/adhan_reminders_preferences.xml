@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The six prayers and what each one announces itself with. Every row leads to that prayer's own
+  screen, carries its chosen sound as its value, and takes its icon from the state that sound puts
+  it in — AdhanRemindersFragment sets all three.
+
+  [AdhanPrefs] owns the configs, so the rows are non-persistent and hold nothing themselves. Keys
+  are the prayer's index, which is also what the destination takes.
+-->
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory android:title="@string/adhan_reminders_section_title">
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:key="prayer:0"
+            android:title="@string/prayer_fajr" />
+
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:key="prayer:1"
+            android:title="@string/prayer_sunrise" />
+
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:key="prayer:2"
+            android:title="@string/prayer_dhuhr" />
+
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:key="prayer:3"
+            android:title="@string/prayer_asr" />
+
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:key="prayer:4"
+            android:title="@string/prayer_maghrib" />
+
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:key="prayer:5"
+            android:title="@string/prayer_isha" />
+    </PreferenceCategory>
+
+    <!-- A caveat about the rows above, not a row — see pref_footer. -->
+    <Preference
+        android:key="warning"
+        android:layout="@layout/pref_footer"
+        android:selectable="false"
+        android:title="@string/adhan_reminders_warning"
+        app:iconSpaceReserved="false" />
+
+</PreferenceScreen>
