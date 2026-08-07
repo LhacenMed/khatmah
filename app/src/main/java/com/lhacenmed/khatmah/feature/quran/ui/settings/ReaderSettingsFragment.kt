@@ -36,21 +36,24 @@ class ReaderSettingsFragment : PreferenceFragmentCompat() {
             setOnPreferenceChangeListener { _, _ -> ReaderTheme.toggle(ctx); true }
         }
 
-        // ── Brightness sliders — push the committed value into the live reader state. Both feed the
-        //    single combined preview hosted by the background slider. ──
-        val bgPref = findPreference<SeekBarBackgroundBrightnessPreference>("bg_brightness")
+        // ── Brightness sliders — push the committed value into the live reader state, and report
+        //    every drag to the preview below them so the swatch tracks the thumb. ──
+        val preview = findPreference<AyaPreviewPreference>("brightness_preview")
         findPreference<SeekBarPreference>("text_brightness")?.apply {
-            onLiveValue = { bgPref?.setPreviewTextAlpha(it) }
+            onLiveValue = { preview?.textBrightness = it }
             setOnPreferenceChangeListener { _, value ->
                 ReaderPrefs.setTextBrightness(ctx, value as Int); true
             }
         }
-        bgPref?.setOnPreferenceChangeListener { _, value ->
-            ReaderPrefs.setBackgroundBrightness(ctx, value as Int); true
+        findPreference<SeekBarPreference>("bg_brightness")?.apply {
+            onLiveValue = { preview?.backgroundBrightness = it }
+            setOnPreferenceChangeListener { _, value ->
+                ReaderPrefs.setBackgroundBrightness(ctx, value as Int); true
+            }
         }
         // The preview aya: the selected riwaya's QCF4 ligatures when installed, else its text font.
         lifecycleScope.launch {
-            bgPref?.setSample(PreviewAya.load(ctx, MushafPrefs.selected.value.riwaya))
+            preview?.setSample(PreviewAya.load(ctx, MushafPrefs.selected.value.riwaya))
         }
 
         // ── Page-info overlay. ──

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The night-brightness preview row: a sample aya painted in exactly the colours the reader would
+  give it at the two sliders' current values.
+
+  It sits on its own under both sliders rather than inside either, because it answers both of them —
+  hosted by one, it would read as that slider's own output.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingHorizontal="16dp"
+    android:paddingBottom="16dp">
+
+    <com.lhacenmed.khatmah.feature.quran.ui.settings.AyaPreviewView
+        android:id="@+id/preview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp" />
+</FrameLayout>

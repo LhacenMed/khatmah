@@ -22,12 +22,18 @@
             android:dependency="reader_night"
             android:title="سطوع النص" />
 
-        <com.lhacenmed.khatmah.feature.quran.ui.settings.SeekBarBackgroundBrightnessPreference
+        <com.lhacenmed.khatmah.feature.quran.ui.settings.SeekBarPreference
             android:key="bg_brightness"
             android:defaultValue="20"
             android:max="64"
             android:dependency="reader_night"
             android:title="سطوع الخلفية" />
+
+        <!-- Answers both sliders above, so it stands under the pair rather than inside either.
+             Shares their dependency: with night mode off there is no night page to preview. -->
+        <com.lhacenmed.khatmah.feature.quran.ui.settings.AyaPreviewPreference
+            android:key="brightness_preview"
+            android:dependency="reader_night" />
     </PreferenceCategory>
 
     <PreferenceCategory
