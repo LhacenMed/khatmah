@@ -19,9 +19,9 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.setPadding
+import com.lhacenmed.khatmah.feature.quran.ui.reader.NightBrightness
 import com.lhacenmed.khatmah.feature.quran.ui.reader.PageZoom
 import com.lhacenmed.khatmah.feature.quran.ui.reader.toArNums
-import kotlin.math.ln1p
 
 /**
  * Native renderer for one text-reader page — the View port of the former Compose `PageContent`.
@@ -208,8 +208,7 @@ class TextPageView(context: Context) : LinearLayout(context) {
 
     // ── Colours / highlight ─────────────────────────────────────────────────────
 
-    private fun nightAlpha(): Int =
-        (50f * ln1p(bgBrightness.toDouble()).toFloat() + textBrightness).toInt().coerceAtMost(255)
+    private fun nightAlpha(): Int = NightBrightness.textAlpha(textBrightness, bgBrightness)
 
     private fun applyColors() {
         val alpha = nightAlpha()

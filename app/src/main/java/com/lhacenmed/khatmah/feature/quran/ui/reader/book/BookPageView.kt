@@ -14,8 +14,8 @@ import android.view.MotionEvent
 import android.view.View
 import com.lhacenmed.khatmah.feature.quran.data.Riwaya
 import com.lhacenmed.khatmah.feature.quran.data.Qcf4Page
+import com.lhacenmed.khatmah.feature.quran.ui.reader.NightBrightness
 import com.lhacenmed.khatmah.feature.quran.ui.reader.PageZoom
-import kotlin.math.ln1p
 
 /**
  * Custom view that draws one QCF4 mushaf page on the parchment "book" gradient whose binding side
@@ -458,9 +458,8 @@ class BookPageView @JvmOverloads constructor(
         // text is white whose alpha is the text brightness lifted slightly by the background
         // brightness so it never disappears on a dark page.
         if (nightMode) {
-            solidPaint.color = Color.rgb(bgBrightness, bgBrightness, bgBrightness)
-            nightAlpha = (50f * ln1p(bgBrightness.toDouble()).toFloat() + textBrightness)
-                .toInt().coerceAtMost(255)
+            solidPaint.color = NightBrightness.backgroundArgb(bgBrightness)
+            nightAlpha = NightBrightness.textAlpha(textBrightness, bgBrightness)
             nightTextArgb = Color.argb(nightAlpha, 255, 255, 255)
         }
 
