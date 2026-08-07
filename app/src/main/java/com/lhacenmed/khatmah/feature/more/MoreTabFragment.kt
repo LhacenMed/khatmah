@@ -12,10 +12,11 @@ import com.lhacenmed.khatmah.BuildConfig
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.Reselectable
-import com.lhacenmed.khatmah.core.nav.toIntent
 import androidx.lifecycle.lifecycleScope
 import com.lhacenmed.khatmah.core.ui.collectWhileStarted
 import com.lhacenmed.khatmah.core.ui.components.ValuePreference
+import com.lhacenmed.khatmah.core.ui.components.go
+import com.lhacenmed.khatmah.core.ui.components.onClick
 import com.lhacenmed.khatmah.core.ui.components.showTimePicker
 import com.lhacenmed.khatmah.core.ui.tintIcons
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
@@ -224,13 +225,4 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
     }
 
     private fun config(id: String): ReminderConfig? = ReminderPrefs.flow.value.find { it.id == id }
-
-    private fun go(dest: Dest) = startActivity(dest.toIntent(requireContext()))
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private fun onClick(key: String, action: () -> Unit) {
-        findPreference<Preference>(key)?.setOnPreferenceClickListener { action(); true }
-    }
-
 }

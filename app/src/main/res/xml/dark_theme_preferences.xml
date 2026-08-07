@@ -9,19 +9,19 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceCategory android:title="@string/theme_mode_group">
-        <com.lhacenmed.khatmah.feature.settings.RadioPreference
+        <com.lhacenmed.khatmah.core.ui.components.RadioPreference
             android:key="mode_system"
             android:persistent="false"
             android:title="@string/theme_system"
             app:iconSpaceReserved="false" />
 
-        <com.lhacenmed.khatmah.feature.settings.RadioPreference
+        <com.lhacenmed.khatmah.core.ui.components.RadioPreference
             android:key="mode_light"
             android:persistent="false"
             android:title="@string/theme_light"
             app:iconSpaceReserved="false" />
 
-        <com.lhacenmed.khatmah.feature.settings.RadioPreference
+        <com.lhacenmed.khatmah.core.ui.components.RadioPreference
             android:key="mode_dark"
             android:persistent="false"
             android:title="@string/theme_dark"

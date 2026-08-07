@@ -7,6 +7,7 @@ import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SwitchPreferenceCompat
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.ui.collectWhileStarted
+import com.lhacenmed.khatmah.core.ui.components.RadioPreference
 import com.lhacenmed.khatmah.shared.util.ThemeManager
 
 /** The three ways the app can decide between light and dark, paired with their rows. */
