@@ -12,6 +12,7 @@ import com.lhacenmed.khatmah.feature.debug.buildDynamicColorJson
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
 import com.lhacenmed.khatmah.feature.quran.data.MushafInitializer
 import com.lhacenmed.khatmah.feature.update.UpdateManager
+import com.lhacenmed.khatmah.feature.update.UpdatePrefs
 import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanChannels
@@ -71,6 +72,7 @@ class App : Application() {
 
         // Re-hydrate the update flow from the last session: resume a not-yet-installed download,
         // re-surface a persisted prompt offline, and drop anything the running build has caught up to.
+        UpdatePrefs.init(this)
         appScope.launch { UpdateManager.restore(this@App) }
 
         // Pre-warm the Quran sura-name cache so the Quran tab loads instantly.

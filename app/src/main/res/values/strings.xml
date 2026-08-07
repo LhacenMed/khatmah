@@ -659,4 +659,8 @@
     <!-- Release notification -->
     <string name="release_notif_title">Update available</string>
     <string name="release_notif_body">Version %s is ready — tap to download</string>
+    <string name="update_auto_prompt">Update alerts</string>
+    <string name="update_check_now">Check for updates</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_up_to_date">Up to date</string>
 </resources>

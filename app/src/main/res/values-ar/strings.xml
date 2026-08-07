@@ -690,4 +690,8 @@
     <!-- Release notification -->
     <string name="release_notif_title">تحديث متاح</string>
     <string name="release_notif_body">الإصدار %s جاهز — اضغط للتنزيل</string>
+    <string name="update_auto_prompt">تنبيهات التحديثات</string>
+    <string name="update_check_now">التحقق من التحديثات</string>
+    <string name="update_checking">جارٍ التحقق…</string>
+    <string name="update_up_to_date">أنت على أحدث إصدار</string>
 </resources>

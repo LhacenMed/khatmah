@@ -28,6 +28,10 @@ import com.lhacenmed.khatmah.feature.quran.ui.reader.sessionReaderDest
 import com.lhacenmed.khatmah.shared.reminders.ReminderConfig
 import com.lhacenmed.khatmah.shared.reminders.ReminderPrefs
 import com.lhacenmed.khatmah.shared.reminders.ReminderScheduler
+import com.lhacenmed.khatmah.feature.update.UpdateChecker
+import com.lhacenmed.khatmah.feature.update.UpdatePrefs
+import com.lhacenmed.khatmah.feature.update.UpdateRegistry
+import com.lhacenmed.khatmah.feature.update.UpdateStore
 import com.lhacenmed.khatmah.shared.util.LocaleManager
 import kotlinx.coroutines.launch
 
@@ -53,6 +57,12 @@ private val ReminderIds = listOf(
  */
 class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
 
+    /** True while a manual update check is in flight — the row is inert until it answers. */
+    private var checkingUpdate = false
+
+    /** What the check row last reported, kept so a redraw does not wipe it. */
+    private var updateStatus: CharSequence? = null
+
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.more_preferences, rootKey)
 
@@ -60,6 +70,7 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
         bindSunnahSurahs()
         bindLanguage()
         bindReminders()
+        bindUpdates()
 
         findPreference<PreferenceCategory>("debug")?.isVisible = BuildConfig.DEBUG
         findPreference<Preference>("version")?.title =
@@ -77,6 +88,7 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
         observeSessionCounts()
         observeReminders()
         observeMushafPrint()
+        collectWhileStarted(UpdatePrefs.autoPrompt) { showUpdateRows() }
     }
 
     /**
@@ -225,4 +237,60 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
     }
 
     private fun config(id: String): ReminderConfig? = ReminderPrefs.flow.value.find { it.id == id }
+
+    // ── Updates ───────────────────────────────────────────────────────────────
+
+    /**
+     * Two rows for one decision: whether a found update speaks up by itself, and — when it doesn't —
+     * the way to ask it. Only one of them is ever live, because with the alerts on there is nothing
+     * left to ask for.
+     */
+    private fun bindUpdates() {
+        findPreference<SwitchPreferenceCompat>(KEY_UPDATE_AUTO)?.setOnPreferenceChangeListener { _, value ->
+            UpdatePrefs.setAutoPrompt(requireContext(), value as Boolean)
+            true
+        }
+        onClick(KEY_UPDATE_CHECK) { checkForUpdate() }
+    }
+
+    /**
+     * Asks about a newer build — unless one is already known, in which case the answer is in hand
+     * and the dialog opens straight away. That covers the APK downloaded last session and still
+     * waiting to install: it is "available" until the install goes through, so this reopens the
+     * install prompt rather than re-fetching a manifest it already has.
+     */
+    private fun checkForUpdate() {
+        if (UpdateRegistry.available.value != null) return UpdateRegistry.requestPrompt()
+
+        val context = requireContext()
+        checkingUpdate = true
+        showUpdateRows(getString(R.string.update_checking))
+        viewLifecycleOwner.lifecycleScope.launch {
+            val found = UpdateChecker.check()
+            found?.let {
+                UpdateStore.save(context, it)
+                UpdateRegistry.setAvailable(it)
+                UpdateRegistry.requestPrompt()
+            }
+            checkingUpdate = false
+            // A found update speaks for itself through the dialog; only its absence needs saying.
+            showUpdateRows(if (found == null) getString(R.string.update_up_to_date) else null)
+        }
+    }
+
+    /** Both rows from one reading, so neither can be left saying something the other contradicts. */
+    private fun showUpdateRows(status: CharSequence? = updateStatus) {
+        updateStatus = status
+        val auto = UpdatePrefs.autoPrompt.value
+        findPreference<SwitchPreferenceCompat>(KEY_UPDATE_AUTO)?.isChecked = auto
+        findPreference<ValuePreference>(KEY_UPDATE_CHECK)?.apply {
+            isEnabled = !auto && !checkingUpdate
+            value = status
+        }
+    }
+
+    private companion object {
+        const val KEY_UPDATE_AUTO = "update_auto_prompt"
+        const val KEY_UPDATE_CHECK = "update_check"
+    }
 }

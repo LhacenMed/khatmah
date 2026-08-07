@@ -19,8 +19,21 @@ object UpdateRegistry {
     private val _state = MutableStateFlow<UpdateState>(UpdateState.Idle)
     val state: StateFlow<UpdateState> = _state.asStateFlow()
 
+    private val _promptRequest = MutableStateFlow(false)
+
+    /**
+     * Set when something has asked for the update dialog outright — the More tab's manual check.
+     * It overrides [UpdatePrefs.autoPrompt] being off, and re-opens a prompt already dismissed this
+     * session, so asking always gets an answer. Cleared the moment the dialog is closed.
+     */
+    val promptRequest: StateFlow<Boolean> = _promptRequest.asStateFlow()
+
     /** Records that a newer version exists; the UI shows the prompt off this. */
     fun setAvailable(update: AppUpdate) { _available.value = update }
+
+    fun requestPrompt() { _promptRequest.value = true }
+
+    fun clearPromptRequest() { _promptRequest.value = false }
 
     fun update(state: UpdateState) { _state.value = state }
 

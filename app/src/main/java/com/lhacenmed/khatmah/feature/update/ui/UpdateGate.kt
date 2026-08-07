@@ -23,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.feature.update.UpdateInstaller
+import com.lhacenmed.khatmah.feature.update.UpdatePrefs
 import com.lhacenmed.khatmah.feature.update.UpdateRegistry
 import com.lhacenmed.khatmah.feature.update.UpdateService
 import com.lhacenmed.khatmah.feature.update.UpdateState
@@ -34,16 +35,32 @@ import com.lhacenmed.khatmah.shared.util.NetworkMonitor
  * install while mirroring the live [UpdateState]. Dismissing during a download leaves the
  * foreground service running (the notification carries the progress); re-opening the app re-reads
  * the same flow and resumes the dialog where it left off.
+ *
+ * Whether it appears *on its own* is [UpdatePrefs.autoPrompt]'s to say. With that off the update is
+ * still found, saved and staged exactly as before — this simply waits to be asked, which the More
+ * tab's manual check does through [UpdateRegistry.requestPrompt]. Being asked also outranks a
+ * dismissal earlier in the session: asking twice should not be answered with silence.
  */
 @Composable
 fun UpdateGate() {
     val update  by UpdateRegistry.available.collectAsState()
     val state   by UpdateRegistry.state.collectAsState()
+    val auto    by UpdatePrefs.autoPrompt.collectAsState()
+    val asked   by UpdateRegistry.promptRequest.collectAsState()
     val context  = LocalContext.current
     var dismissed by rememberSaveable { mutableStateOf(false) }
 
+    // Being asked for outright clears an earlier dismissal, so the request is never swallowed.
+    LaunchedEffect(asked) { if (asked) dismissed = false }
+
     val available = update ?: return
-    if (dismissed) return
+    if (!asked && (!auto || dismissed)) return
+
+    // Closing the dialog also answers the request that opened it.
+    val dismiss = {
+        dismissed = true
+        UpdateRegistry.clearPromptRequest()
+    }
 
     val downloading = state is UpdateState.Connecting || state is UpdateState.Downloading
 
@@ -74,7 +91,7 @@ fun UpdateGate() {
 
     AlertDialog(
         // A download in flight is non-cancelable from the scrim; the buttons drive it instead.
-        onDismissRequest = { if (!downloading) dismissed = true },
+        onDismissRequest = { if (!downloading) dismiss() },
         title = { Text(stringResource(R.string.update_title)) },
         text = {
             Column {
@@ -134,7 +151,7 @@ fun UpdateGate() {
         },
         dismissButton = {
             if (!downloading) {
-                TextButton(onClick = { dismissed = true }) {
+                TextButton(onClick = dismiss) {
                     Text(stringResource(R.string.update_later))
                 }
             }
