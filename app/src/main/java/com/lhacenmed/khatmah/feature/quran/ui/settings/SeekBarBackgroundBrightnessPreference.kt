@@ -8,10 +8,10 @@ import android.widget.SeekBar
 import androidx.preference.PreferenceViewHolder
 
 /**
- * Background-brightness slider, which also hosts the *combined* night-mode preview: the sample text
+ * Background-brightness slider, which also hosts the *combined* night-mode preview: the sample aya
  * is drawn at the text-brightness alpha over the chosen background grey, so both sliders are judged
  * against each other in a single swatch. The text slider feeds its live value in via
- * [setPreviewTextAlpha].
+ * [setPreviewTextAlpha]; the fragment supplies the aya itself via [setSample].
  */
 class SeekBarBackgroundBrightnessPreference(
     context: Context,
@@ -20,6 +20,7 @@ class SeekBarBackgroundBrightnessPreference(
 
     private var textAlpha = DEFAULT_TEXT_BRIGHTNESS
     private var bgGrey = 0
+    private var sample: List<PreviewRun> = emptyList()
 
     override fun previewVisibility(): Int = View.VISIBLE
 
@@ -27,7 +28,14 @@ class SeekBarBackgroundBrightnessPreference(
         // Pick up the stored text brightness so the preview is correct however the rows bind.
         textAlpha = sharedPreferences?.getInt(TEXT_BRIGHTNESS_KEY, DEFAULT_TEXT_BRIGHTNESS)
             ?: DEFAULT_TEXT_BRIGHTNESS
-        super.onBindViewHolder(holder)
+        super.onBindViewHolder(holder)   // binds the preview, then renders via onProgressChanged
+        preview?.setRuns(sample)
+    }
+
+    /** The resolved preview aya; applied on the next bind if the view isn't attached yet. */
+    fun setSample(runs: List<PreviewRun>) {
+        sample = runs
+        preview?.setRuns(runs)
     }
 
     /** Live text-brightness value from the text slider. */
@@ -43,8 +51,8 @@ class SeekBarBackgroundBrightnessPreference(
     }
 
     private fun renderPreview() {
-        previewText?.apply {
-            setTextColor(Color.argb(textAlpha, 255, 255, 255))
+        preview?.apply {
+            textArgb = Color.argb(textAlpha, 255, 255, 255)
             setBackgroundColor(Color.rgb(bgGrey, bgGrey, bgGrey))
         }
     }

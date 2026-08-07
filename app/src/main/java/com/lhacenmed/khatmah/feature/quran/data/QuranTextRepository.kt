@@ -96,6 +96,10 @@ class QuranTextRepository(context: Context) {
         }
     }
 
+    /** The text of a single verse, or null if it isn't in the DB. */
+    suspend fun verseText(riwaya: String, sura: Int, aya: Int): String? =
+        withContext(Dispatchers.IO) { dao.verse(riwaya, sura, aya)?.text }
+
     /** suraNum → whether a basmala precedes it. Drives where the text reader shows the basmala. */
     suspend fun bismillahMap(riwaya: String): Map<Int, Boolean> = withContext(Dispatchers.IO) {
         dao.surahs(riwaya).associate { it.num to it.bismillahPre }

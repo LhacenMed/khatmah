@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Custom widget layout for the brightness SeekBarPreferences: a slider with a live value and an
-     optional inline preview — one swatch showing the night text alpha over the background grey. -->
+     optional inline preview — one swatch showing the sample aya at the night text alpha over the
+     background grey. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -48,15 +49,12 @@
             android:textAppearance="?attr/textAppearanceBodyMedium" />
     </LinearLayout>
 
-    <TextView
+    <com.lhacenmed.khatmah.feature.quran.ui.settings.AyaPreviewView
         android:id="@+id/pref_preview"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:gravity="center"
-        android:paddingVertical="16dp"
-        android:text="معاينة"
-        android:textSize="18sp" />
+        android:paddingHorizontal="16dp" />
 
     <LinearLayout
         android:id="@android:id/widget_frame"

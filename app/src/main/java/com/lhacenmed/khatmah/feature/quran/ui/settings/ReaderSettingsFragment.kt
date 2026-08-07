@@ -1,11 +1,14 @@
 package com.lhacenmed.khatmah.feature.quran.ui.settings
 
 import android.os.Bundle
+import androidx.lifecycle.lifecycleScope
 import androidx.preference.CheckBoxPreference
 import androidx.preference.PreferenceFragmentCompat
 import com.lhacenmed.khatmah.R
+import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.quran.ui.reader.ReaderPrefs
 import com.lhacenmed.khatmah.feature.quran.ui.reader.ReaderTheme
+import kotlinx.coroutines.launch
 
 /**
  * Native reader settings, built on the androidx Preference framework (Quran Android pattern):
@@ -44,6 +47,10 @@ class ReaderSettingsFragment : PreferenceFragmentCompat() {
         }
         bgPref?.setOnPreferenceChangeListener { _, value ->
             ReaderPrefs.setBackgroundBrightness(ctx, value as Int); true
+        }
+        // The preview aya: the selected riwaya's QCF4 ligatures when installed, else its text font.
+        lifecycleScope.launch {
+            bgPref?.setSample(PreviewAya.load(ctx, MushafPrefs.selected.value.riwaya))
         }
 
         // ── Page-info overlay. ──

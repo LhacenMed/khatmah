@@ -23,7 +23,7 @@ open class SeekBarPreference(
     /** Called on every slider movement (not just on commit) — used to drive the shared preview. */
     var onLiveValue: ((Int) -> Unit)? = null
 
-    protected var previewText: TextView? = null
+    protected var preview: AyaPreviewView? = null
     private var valueText: TextView? = null
 
     private val maxValue = attrs.getAttributeIntValue(ANDROID_NS, "max", 100)
@@ -38,9 +38,9 @@ open class SeekBarPreference(
         super.onBindViewHolder(holder)
         val seekBar = holder.findViewById(R.id.seekbar) as SeekBar
         valueText   = holder.findViewById(R.id.value) as TextView
-        previewText = holder.findViewById(R.id.pref_preview) as TextView
+        preview     = holder.findViewById(R.id.pref_preview) as AyaPreviewView
 
-        previewText?.visibility = previewVisibility()
+        preview?.visibility = previewVisibility()
         current = getPersistedInt(default)
         seekBar.max = maxValue
         seekBar.setOnSeekBarChangeListener(this)
@@ -61,7 +61,7 @@ open class SeekBarPreference(
         callChangeListener(current)
     }
 
-    /** Visibility of the "preview" row under the slider. */
+    /** Visibility of the preview row under the slider. */
     protected open fun previewVisibility(): Int = View.GONE
 
     companion object {

@@ -6,7 +6,7 @@ data class Qcf4Word(
     val char:     String,
     val font:     String,
     val text:     String,
-    val type:     String,         // "word" | "end" | "surah_header" | "bismillah"
+    val type:     String,         // "word" | "word_with_mark" | "aya_end" | "surah_header" | "bismillah"
     val verseKey: String?,        // "sura:aya" — null for headers
     val sura:     Int?,
     val position: Int?,
