@@ -116,12 +116,10 @@ class BookPageFragment : Fragment() {
                 .collect { pageView?.bookmarked = it }
         }
 
-        // Highlight the verse currently being played; harmless on pages that don't own it.
+        // Highlight the marked verse — the one playing, or the one arrived at; harmless on pages
+        // that don't own it.
         viewLifecycleOwner.lifecycleScope.launch {
-            (requireActivity() as ReaderActivity).audioState.collect { st ->
-                pageView?.selectedAya =
-                    if (st.active && st.suraNum > 0) st.suraNum to st.ayaNum else null
-            }
+            (requireActivity() as ReaderActivity).highlightedAya.collect { pageView?.selectedAya = it }
         }
     }
 

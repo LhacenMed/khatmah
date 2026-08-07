@@ -118,6 +118,9 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
      * (1-based) target a verse — used by the text reader (different pagination) and as a fallback;
      * 0/0 resumes the last-read page. [startPage]..[endPage] (1-based, inclusive) restrict the QCF4
      * reader to a single Khatmah session's pages; [sessionId] keys that session's remembered page.
+     *
+     * [highlight] asks the reader to mark [suraNum]:[ayaNum] on arrival — for a target that begins
+     * mid-page, like a juz' or a hizb, where the page alone does not say where to start reading.
      */
     data class Reader(
         val page: Int = 0,
@@ -126,11 +129,13 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
         val startPage: Int = 0,
         val endPage: Int = 0,
         val sessionId: Long = 0,
+        val highlight: Boolean = false,
     ) : Dest(ReaderActivity::class.java) {
         override fun extras(intent: Intent) {
             intent.putExtra(ReaderActivity.EXTRA_PAGE, page)
             intent.putExtra(ReaderActivity.EXTRA_SURA, suraNum)
             intent.putExtra(ReaderActivity.EXTRA_AYA, ayaNum)
+            intent.putExtra(ReaderActivity.EXTRA_HIGHLIGHT, highlight)
             if (startPage > 0 && endPage > 0) {
                 intent.putExtra(ReaderActivity.EXTRA_START_PAGE, startPage)
                 intent.putExtra(ReaderActivity.EXTRA_END_PAGE, endPage)

@@ -19,10 +19,15 @@ fun currentReaderDest(suraNum: Int = 0): Dest = Dest.Reader(suraNum = suraNum)
  * Reader destination that opens at a specific location. QCF4 opens at the exact [page]; the text
  * reader (different pagination) opens at [suraNum]/[ayaNum] instead. Index entry points (a surah, or
  * a juz' that starts mid-surah) pass both so either mode lands in the same place.
+ *
+ * The verse rides along in both modes even though QCF4 navigates by page, because [highlight] needs
+ * something to mark. The reader reads the page first, so carrying it changes nothing about where
+ * either mode opens.
  */
-fun readerDestAt(page: Int, suraNum: Int, ayaNum: Int = 1): Dest =
-    if (MushafPrefs.selected.value.isQcf4) Dest.Reader(page = page)
-    else Dest.Reader(suraNum = suraNum, ayaNum = ayaNum)
+fun readerDestAt(page: Int, suraNum: Int, ayaNum: Int = 1, highlight: Boolean = false): Dest =
+    if (MushafPrefs.selected.value.isQcf4)
+        Dest.Reader(page = page, suraNum = suraNum, ayaNum = ayaNum, highlight = highlight)
+    else Dest.Reader(suraNum = suraNum, ayaNum = ayaNum, highlight = highlight)
 
 /**
  * The reader destination for a single Khatmah session ([startPage]..[endPage], 1-based inclusive;

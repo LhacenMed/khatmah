@@ -56,7 +56,12 @@ import com.lhacenmed.khatmah.feature.quran.ui.reciter.ReaderAudioBar
 import com.lhacenmed.khatmah.feature.quran.ui.reciter.ReaderAudioViewModel
 import com.lhacenmed.khatmah.feature.quran.ui.search.ReaderSearchActivity
 import com.lhacenmed.khatmah.feature.quran.ui.settings.ReaderSettingsActivity
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 
@@ -103,6 +108,26 @@ class ReaderActivity : AppCompatActivity() {
 
     /** Exposes the playback state so each page fragment can highlight the playing verse. */
     val audioState get() = audioController.state
+
+    /**
+     * The verse asked for on the way in, when the caller wanted it marked — an index row opening a
+     * juz' or a hizb, which begins mid-page. Cleared as soon as the reader leaves that page: the
+     * mark answers "where does it start", and once you have turned away the question is answered.
+     */
+    private val arrivalAya = MutableStateFlow<Pair<Int, Int>?>(null)
+
+    /**
+     * The verse the reader marks, from whichever of its two sources is speaking.
+     *
+     * Playback wins while it is running — it moves verse by verse and is the more urgent reading —
+     * and the arrival mark stands the rest of the time. One flow rather than two, so a page draws
+     * one highlight and never has to arbitrate between them.
+     */
+    val highlightedAya: StateFlow<Pair<Int, Int>?> by lazy {
+        combine(audioState, arrivalAya) { audio, arrival ->
+            if (audio.active && audio.suraNum > 0) audio.suraNum to audio.ayaNum else arrival
+        }.stateIn(lifecycleScope, SharingStarted.Eagerly, null)
+    }
 
     /** Last verse the page-follow acted on (packed sura:aya), so we react only when it changes. */
     private var followedKey = 0L
@@ -241,6 +266,8 @@ class ReaderActivity : AppCompatActivity() {
                 if (silentHop) return
                 val page = pageForPosition(position)
                 currentPageNum = page
+                // Turning the page answers what the arrival mark was there to say.
+                if (page != startPage) arrivalAya.value = null
                 updateMeta(page)
                 slider.progress = page - firstPage
                 savePage(page)
@@ -249,6 +276,7 @@ class ReaderActivity : AppCompatActivity() {
             }
         })
         updateMeta(startPage)
+        seedArrivalAya()
         // The initial setCurrentItem above doesn't fire onPageSelected, so seed the page + bookmark
         // state here — otherwise reopening on a bookmarked page shows the outline until the first swipe.
         currentPageNum = startPage
@@ -257,6 +285,13 @@ class ReaderActivity : AppCompatActivity() {
             lifecycleScope.launch { bookmarkedPages.collect { syncBookmarkIcon() } }
         }
         if (popup.isVisible) showPopupFor(firstPage + slider.progress)
+    }
+
+    /** Takes up the verse the caller asked to have marked, if it asked for one. */
+    private fun seedArrivalAya() {
+        if (!intent.getBooleanExtra(EXTRA_HIGHLIGHT, false)) return
+        val sura = intent.getIntExtra(EXTRA_SURA, 0)
+        if (sura > 0) arrivalAya.value = sura to intent.getIntExtra(EXTRA_AYA, 0).coerceAtLeast(1)
     }
 
     /** The page to open on: session resume, an explicit page (QCF4), a sura/aya target, or last read. */
@@ -934,6 +969,7 @@ class ReaderActivity : AppCompatActivity() {
         const val EXTRA_PAGE = "book_page"           // QCF4 explicit page, 1-based
         const val EXTRA_SURA = "reader_sura"         // text target sura (1-based)
         const val EXTRA_AYA = "reader_aya"           // text target aya (1-based)
+        const val EXTRA_HIGHLIGHT = "reader_highlight" // mark EXTRA_SURA:EXTRA_AYA on arrival
         const val EXTRA_START_PAGE = "book_start_page" // session window, 1-based, inclusive
         const val EXTRA_END_PAGE = "book_end_page"
         const val EXTRA_SESSION_ID = "book_session_id"
