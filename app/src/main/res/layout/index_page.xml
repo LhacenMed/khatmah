@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One tab's list. Nothing else: the index either has loaded for every tab or for none, so the
+     waiting state is the whole page's and is drawn once over the pager. -->
+<androidx.recyclerview.widget.RecyclerView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/list"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:scrollbars="none"
+    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />

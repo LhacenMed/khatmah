@@ -35,7 +35,7 @@ import com.lhacenmed.khatmah.feature.settings.AboutScreen
 import com.lhacenmed.khatmah.feature.settings.DarkThemeFragment
 import com.lhacenmed.khatmah.feature.settings.LanguageScreen
 import com.lhacenmed.khatmah.feature.settings.ThemeSettingsFragment
-import com.lhacenmed.khatmah.feature.quran.ui.home.FullIndexScreen
+import com.lhacenmed.khatmah.feature.quran.ui.home.FullIndexFragment
 import com.lhacenmed.khatmah.feature.trips.ui.TripRequestsScreen
 import com.lhacenmed.khatmah.onboarding.OnboardingActivity
 
@@ -108,7 +108,7 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
     }
     data object FullIndex : Dest() {
         override val titleRes get() = R.string.full_index_title
-        override fun screen() = @Composable { FullIndexScreen() }
+        override fun fragment() = FullIndexFragment()
     }
     /**
      * The native (View-based) reader — targets its own [ReaderActivity] rather than the Compose

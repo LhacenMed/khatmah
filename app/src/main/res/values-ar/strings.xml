@@ -591,6 +591,10 @@
     <string name="full_index_tab_surahs">السور</string>
     <string name="full_index_tab_ajza">الأجزاء</string>
     <string name="full_index_juz">الجزء %d</string>
+    <string name="full_index_tab_ahzab">الأحزاب</string>
+    <string name="full_index_hizb">الحزب %d</string>
+    <string name="full_index_search">البحث في الفهرس</string>
+    <string name="full_index_search_hint">اسم السورة أو الحزب</string>
 
     <!-- ── Qadaa feature ──────────────────────────────────────────────────── -->
     <string name="qadaa_history">السجل</string>

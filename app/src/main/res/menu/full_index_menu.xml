@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Index toolbar action: search.
+
+  A collapsible action view, so expanding it is what hides the title and gives the field the whole
+  bar — the platform does that itself, and the same gesture in reverse gives the title back. Nothing
+  in the page below has to know the search is open.
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_search"
+        android:icon="@drawable/ic_search"
+        android:title="@string/full_index_search"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        app:showAsAction="always|collapseActionView" />
+</menu>

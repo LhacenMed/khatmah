@@ -560,6 +560,10 @@
     <string name="full_index_tab_surahs">Surahs</string>
     <string name="full_index_tab_ajza">Juz</string>
     <string name="full_index_juz">Juz %d</string>
+    <string name="full_index_tab_ahzab">Hizbs</string>
+    <string name="full_index_hizb">Hizb %d</string>
+    <string name="full_index_search">Search the index</string>
+    <string name="full_index_search_hint">Surah name or hizb</string>
 
     <!-- ── Qadaa feature ──────────────────────────────────────────────────── -->
     <string name="qadaa_history">History</string>
