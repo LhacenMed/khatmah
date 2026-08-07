@@ -75,7 +75,7 @@ class QuranTextRepository(context: Context) {
     suspend fun allAyas(riwaya: String): List<QuranAya> = withContext(Dispatchers.IO) {
         val verses  = dao.verses(riwaya)               // sorted by sura, aya
         val names   = dao.surahs(riwaya).associate { it.num to it.name }
-        val juzList = dao.divisions(riwaya, DivType.JUZ) // sorted by sura, aya
+        val juzList = dao.divisions(DivisionsRiwaya, DivType.JUZ) // sorted by sura, aya
 
         var juzIdx = 0
         verses.map { v ->

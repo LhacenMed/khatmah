@@ -2,6 +2,7 @@ package com.lhacenmed.khatmah.feature.quran.ui.reader
 
 import android.content.Context
 import com.lhacenmed.khatmah.feature.quran.data.DivType
+import com.lhacenmed.khatmah.feature.quran.data.DivisionsRiwaya
 import com.lhacenmed.khatmah.feature.quran.data.db.MushafDb
 
 /**
@@ -33,9 +34,6 @@ sealed class HizbEvent(open val juz: Int, open val hizb: Int) {
  */
 object HizbIndex {
 
-    /** Rub'-al-hizb boundaries are only trustworthy in the Hafs seed data — see class doc. */
-    private const val RUB_SOURCE_RIWAYA = "hafs"
-
     @Volatile
     private var cache: Pair<String, Map<Int, HizbEvent>>? = null
 
@@ -44,7 +42,7 @@ object HizbIndex {
         cache?.let { (key, map) -> if (key == riwayaKey) return map }
 
         val dao = MushafDb.get(context.applicationContext).dao()
-        val rubs = dao.divisions(RUB_SOURCE_RIWAYA, DivType.RUB) // 240 rows, ordered by num
+        val rubs = dao.divisions(DivisionsRiwaya, DivType.RUB) // 240 rows, ordered by num
 
         val map = HashMap<Int, HizbEvent>(rubs.size)
         for (rub in rubs) {

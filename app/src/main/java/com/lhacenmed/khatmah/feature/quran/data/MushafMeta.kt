@@ -16,6 +16,19 @@ object DivType {
     const val THUMN = "thumn"  // thumn al-hizb (1/8 hizb) — Warsh masahif only
 }
 
+/**
+ * The riwaya whose division markers are read, whatever mushaf is being shown.
+ *
+ * Hafs, always. Warsh's own rows in `mushaf_division` are known to be inaccurate, and a juz' or a
+ * hizb is not a property of a riwaya in the first place — it is a division of the same aya sequence
+ * both riwayat carry, so one set of markers is the truth for both.
+ *
+ * Only the *markers* come from here. Each one's page is still resolved against the mushaf actually
+ * selected, which paginates on its own (see `docs/riwaya_data.md`), so a division lands on the right
+ * page of whatever is open. Point this back at the selected riwaya once the Warsh data is corrected.
+ */
+const val DivisionsRiwaya = "hafs"
+
 // ── Arabic normalizer (used for search pre-indexing) ──────────────────────────
 
 /**
