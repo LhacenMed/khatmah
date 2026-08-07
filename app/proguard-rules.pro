@@ -43,3 +43,7 @@
 # Without this, R8 minifies multiple tabs to the same name (e.g. "s8"), causing LazyLayout key crashes.
 -keepnames class * extends com.lhacenmed.khatmah.core.nav.AppTab
 -keepnames class * extends com.lhacenmed.khatmah.core.nav.AppPage
+
+# AppCompat resolves viewInflaterClass by name from the theme, so R8 sees no reference to it.
+# Without this the whole app falls back to the default inflater on release builds.
+-keep class com.lhacenmed.khatmah.core.ui.TooltipFontViewInflater { public <init>(); }

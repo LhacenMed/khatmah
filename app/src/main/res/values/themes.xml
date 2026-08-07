@@ -8,6 +8,9 @@
              the right weight rather than a synthesised one. -->
         <item name="android:fontFamily">@font/noto_kufi</item>
         <item name="fontFamily">@font/noto_kufi</item>
+        <!-- …with one exception: the system's long-press tooltips, which this inflater hands back
+             to the platform font. A tooltip is chrome the OS draws, not the app's own voice. -->
+        <item name="viewInflaterClass">com.lhacenmed.khatmah.core.ui.TooltipFontViewInflater</item>
 
         <!-- Required by PreferenceFragmentCompat (the More tab, reader settings). -->
         <item name="preferenceTheme">@style/PreferenceThemeOverlay.Khatmah</item>
