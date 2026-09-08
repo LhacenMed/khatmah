@@ -20,6 +20,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import com.lhacenmed.khatmah.shared.reminders.SunnahSurah
 import com.lhacenmed.khatmah.shared.util.ThemeManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -715,7 +716,12 @@ class ReaderActivity : AppCompatActivity() {
 
     private fun saveLastPage(index: Int) = readerPrefs.edit { putInt(lastPageKey, index) }
 
-    /** Single entry point for persisting progress: the per-session store, else the per-print page. */
+    /**
+     * Single entry point for persisting progress: the per-session store, else the per-print page.
+     *
+     * Each also records which reading it belongs to, so carrying on later returns to the one that
+     * was open rather than to whichever store happens to be asked for.
+     */
     private fun savePage(page: Int) {
         if (isSession) {
             saveSessionPage(page)
@@ -723,7 +729,22 @@ class ReaderActivity : AppCompatActivity() {
             saveLastPage(page - 1)
             saveResumeAnchor(page)
         }
+        ReaderProgress.saveLastReading(this, lastReading)
     }
+
+    /**
+     * Which reading is on screen. A window with a khatmah id is a wird; a negative one is the
+     * per-surah position a sunnah surah is opened with (see MoreTabFragment), and its magnitude is
+     * the surah's number.
+     */
+    private val lastReading: ReaderProgress.LastReading
+        get() = when {
+            !isSession       -> ReaderProgress.LastReading.Mushaf
+            isKhatmahSession -> ReaderProgress.LastReading.Wird
+            else -> SunnahSurah.ofNumber((-sessionId).toInt())
+                ?.let(ReaderProgress.LastReading::Sunnah)
+                ?: ReaderProgress.LastReading.Mushaf
+        }
 
     /** Mirrors the page into [ReaderProgress] with its first verse, so the Quran tab can resume. */
     private fun saveResumeAnchor(page: Int) {

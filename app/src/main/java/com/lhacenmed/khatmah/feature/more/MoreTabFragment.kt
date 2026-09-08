@@ -21,13 +21,11 @@ import com.lhacenmed.khatmah.core.ui.components.showTimePicker
 import com.lhacenmed.khatmah.core.ui.tintIcons
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
 import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
-import com.lhacenmed.khatmah.feature.quran.data.QuranTextRepository
-import com.lhacenmed.khatmah.feature.quran.data.RiwayaConfig
-import com.lhacenmed.khatmah.feature.quran.ui.reader.isQcf4
-import com.lhacenmed.khatmah.feature.quran.ui.reader.sessionReaderDest
+import com.lhacenmed.khatmah.feature.quran.ui.reader.sunnahReaderDest
 import com.lhacenmed.khatmah.shared.reminders.ReminderConfig
 import com.lhacenmed.khatmah.shared.reminders.ReminderPrefs
 import com.lhacenmed.khatmah.shared.reminders.ReminderScheduler
+import com.lhacenmed.khatmah.shared.reminders.SunnahSurah
 import com.lhacenmed.khatmah.feature.update.UpdateChecker
 import com.lhacenmed.khatmah.feature.update.UpdatePrefs
 import com.lhacenmed.khatmah.feature.update.UpdateRegistry
@@ -122,9 +120,9 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
     }
 
     private fun bindSunnahSurahs() {
-        onClick("surat_kahf")    { openSunnah(18) }
-        onClick("surat_mulk")    { openSunnah(67) }
-        onClick("surat_baqarah") { openSunnah(2) }
+        onClick("surat_kahf")    { openSunnah(SunnahSurah.AlKahf) }
+        onClick("surat_mulk")    { openSunnah(SunnahSurah.AlMulk) }
+        onClick("surat_baqarah") { openSunnah(SunnahSurah.AlBaqarah) }
     }
 
     /**
@@ -198,23 +196,18 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
     // ── Actions ───────────────────────────────────────────────────────────────
 
     /**
-     * Opens a sunnah surah as a session windowed to that surah's pages. Only a QCF4 print ships
-     * the page images a window needs, so anything else is turned back at the door.
+     * Opens a sunnah surah as a session windowed to that surah's pages.
+     *
+     * Public because a sunnah reminder leads here too: the row and the notification are two ways
+     * of asking for the same read. A print that cannot be windowed — not QCF4, or QCF4 with no
+     * pages on disk for this riwaya yet — lands on the download dialog rather than doing nothing,
+     * which would leave the row looking broken.
      */
-    private fun openSunnah(surahNum: Int) {
-        val print = MushafPrefs.selected.value
-        if (!print.isQcf4) return showDownloadDialog()
+    fun openSunnah(surah: SunnahSurah) {
         val context = requireContext()
-        viewLifecycleOwner.lifecycleScope.launch {
-            val ayaCount = RiwayaConfig.of(print.riwaya).ayaCount(surahNum)
-            val range = QuranTextRepository(context)
-                .pageRangeForSurah(print.riwaya.dbKey, surahNum, ayaCount)
-            // A print can be QCF4 and still have no pages on disk for this riwaya yet. Returning
-            // quietly would leave the row looking broken — a tap that does nothing at all — so an
-            // unresolvable range lands on the same dialog as an unsuitable print.
-            if (range == null) return@launch showDownloadDialog()
-            // Negative session id keeps a per-surah reading position, never colliding with khatmah ids.
-            go(sessionReaderDest(-surahNum.toLong(), range.first, range.last))
+        lifecycleScope.launch {
+            val dest = sunnahReaderDest(context, surah) ?: return@launch showDownloadDialog()
+            go(dest)
         }
     }
 

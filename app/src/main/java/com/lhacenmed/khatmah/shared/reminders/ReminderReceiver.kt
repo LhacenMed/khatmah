@@ -129,13 +129,6 @@ class ReminderReceiver : BroadcastReceiver() {
         return if (res != 0) context.getString(res) else context.getString(R.string.adhkar)
     }
 
-    private fun sunnahName(context: Context, surahKey: String): String {
-        val res = when (surahKey) {
-            "al_kahf"    -> R.string.more_surat_kahf
-            "al_mulk"    -> R.string.more_surat_mulk
-            "al_baqarah" -> R.string.more_surat_baqarah
-            else         -> 0
-        }
-        return if (res != 0) context.getString(res) else context.getString(R.string.app_name)
-    }
+    private fun sunnahName(context: Context, surahKey: String): String =
+        context.getString(SunnahSurah.of(surahKey)?.nameRes ?: R.string.app_name)
 }

@@ -36,8 +36,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.lhacenmed.khatmah.R
 import com.lhacenmed.khatmah.core.nav.AppTabs
+import com.lhacenmed.khatmah.core.nav.Dest
 import com.lhacenmed.khatmah.core.nav.IntentNavigator
 import com.lhacenmed.khatmah.core.nav.Reselectable
+import com.lhacenmed.khatmah.core.nav.toIntent
 import com.lhacenmed.khatmah.core.ui.theme.Theme
 import com.lhacenmed.khatmah.core.ui.theme.resolveColorScheme
 import com.lhacenmed.khatmah.shared.util.ThemeManager
@@ -46,6 +48,8 @@ import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarViewModel
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.feature.quran.ui.home.QuranHomeViewModel
+import com.lhacenmed.khatmah.feature.quran.ui.home.QuranTab
+import com.lhacenmed.khatmah.feature.quran.ui.home.QuranTabFragment
 import com.lhacenmed.khatmah.feature.update.UpdateChecker
 import com.lhacenmed.khatmah.feature.update.UpdateRegistry
 import com.lhacenmed.khatmah.feature.update.UpdateState
@@ -55,9 +59,14 @@ import com.lhacenmed.khatmah.shared.util.NetworkMonitor
 import com.lhacenmed.khatmah.BuildConfig
 import com.lhacenmed.khatmah.onboarding.OnboardingActivity
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
+import com.lhacenmed.khatmah.feature.more.MoreTab
+import com.lhacenmed.khatmah.feature.more.MoreTabFragment
+import com.lhacenmed.khatmah.shared.reminders.ReminderRoute
+import com.lhacenmed.khatmah.shared.reminders.SunnahSurah
 import com.lhacenmed.khatmah.widget.PrayerWidget
 import com.lhacenmed.khatmah.widget.WidgetAction
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -135,7 +144,10 @@ class MainActivity : AppCompatActivity() {
             this,
             QuranHomeViewModel.Factory(applicationContext),
         )[QuranHomeViewModel::class.java]
-        splashScreen.setKeepOnScreenCondition { !homeVm.splashReady }
+        // Only the home tab is worth holding the splash for. A deep link that opens on another
+        // tab has nothing to wait for — and would wait forever, since the flag is raised by the
+        // home tab's body, which such a launch never puts up.
+        splashScreen.setKeepOnScreenCondition { selectedTab == 0 && !homeVm.splashReady }
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -337,6 +349,9 @@ class MainActivity : AppCompatActivity() {
         // frame, so a restored screen is never drawn with its tabs stacked.
         applyTabVisibility()
         prewarmTabs()
+        // Last: a deep link held from onCreate needs the tab body it opens over to have its view,
+        // which the dispatch above is what provides.
+        openPendingDeepLink()
     }
 
     /** Refresh the widget whenever the user leaves the app. */
@@ -523,16 +538,83 @@ class MainActivity : AppCompatActivity() {
 
     // ── Widget / reminder deep links ──────────────────────────────────────────
 
-    /** Routes a widget/reminder tap to the matching tab. */
+    /**
+     * Routes a widget/reminder tap. A route usually names a tab and means "show it"; the two in
+     * [ReminderRoute] name a screen that opens on top of its tab, because the reminder is about
+     * that screen — a wird reminder means "read today's wird", not "here is the Quran tab".
+     */
     private fun handleLaunchIntent(intent: Intent?) {
         if (!::binding.isInitialized) return
         val route = when (intent?.action) {
             WidgetAction.OPEN_PRAYERS        -> "prayers"
             "com.lhacenmed.khatmah.REMINDER" -> intent.getStringExtra("route")
             else                             -> null
+        } ?: return
+
+        val adhkarCategory = ReminderRoute.adhkarDetailCategory(route)
+        val sunnahSurah    = ReminderRoute.sunnahSurah(route)
+        when {
+            adhkarCategory != null      -> openAdhkarDetail(adhkarCategory)
+            sunnahSurah != null         -> openSunnah(sunnahSurah)
+            route == ReminderRoute.WIRD -> openWird()
+            else -> AppTabs.indexOfFirst { it.route == route }
+                .takeIf { it >= 0 }
+                ?.let(::selectTab)
         }
-        val index = AppTabs.indexOfFirst { it.route == route }
-        if (index >= 0) selectTab(index)
+    }
+
+    /** A deep link's screen, held until its tab body is on screen — see [openOnTab]. */
+    private var pendingDeepLink: (() -> Unit)? = null
+
+    /**
+     * Shows tab [index], then opens [screen] over it.
+     *
+     * A deep link arriving in `onCreate` finds its tab body added but not yet given a view — the
+     * fragments are put up in [onStart] — so asking one to open a screen there reaches it before
+     * it can answer. [screen] therefore waits for [onStart]; a link arriving later, with the app
+     * already up, has nothing to wait for and runs at once.
+     */
+    private fun openOnTab(index: Int, screen: () -> Unit) {
+        selectTab(index)
+        pendingDeepLink = screen
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) openPendingDeepLink()
+    }
+
+    private fun openPendingDeepLink() {
+        val screen = pendingDeepLink ?: return
+        pendingDeepLink = null
+        screen()
+    }
+
+    /**
+     * Brings the More tab up — where the sunnah surahs live — and asks it to open [surah], the
+     * same way its own row does, guards and download dialog included.
+     */
+    private fun openSunnah(surah: SunnahSurah) = openOnTab(AppTabs.indexOf(MoreTab)) {
+        (supportFragmentManager.findFragmentByTag(MoreTab.route) as? MoreTabFragment)
+            ?.openSunnah(surah)
+    }
+
+    /**
+     * Brings the Quran tab up and asks it to open today's wird — the tab itself owns what a wird
+     * tap means, down to the dialogs for a mushaf that cannot show one.
+     */
+    private fun openWird() = openOnTab(AppTabs.indexOf(QuranTab)) {
+        (supportFragmentManager.findFragmentByTag(QuranTab.route) as? QuranTabFragment)?.openWird()
+    }
+
+    /**
+     * Brings the Adhkar tab up and opens one category over it. The category's name is part of the
+     * destination — it is the screen's toolbar title — so this waits for [adhkarVm] to have the
+     * list: a moment on a cold launch, already there otherwise. A category deleted since the
+     * reminder was set simply leaves the tab showing.
+     */
+    private fun openAdhkarDetail(categoryId: String) = openOnTab(adhkarTabIndex) {
+        lifecycleScope.launch {
+            val category = adhkarVm.uiState.first { !it.isLoading }
+                .categories.firstOrNull { it.id == categoryId } ?: return@launch
+            startActivity(Dest.AdhkarDetail(category.id, category.title).toIntent(this@MainActivity))
+        }
     }
 
     /** Push a widget update on every settings save while at least STARTED. */

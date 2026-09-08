@@ -240,13 +240,15 @@ object ReminderNotifier {
         is ReminderType.Prayer       -> "prayers"
         // Morning and evening adhkar deep-link directly to their detail pages.
         is ReminderType.Adhkar       -> when (type.categoryId) {
-            "morning" -> "adhkar_detail/morning"
-            "evening" -> "adhkar_detail/evening"
-            else      -> "adhkar"
+            "morning", "evening" -> ReminderRoute.adhkarDetail(type.categoryId)
+            else                 -> "adhkar"
         }
-        is ReminderType.QuranSunnah  -> "main"
-        is ReminderType.DailyKhatmah -> "quran"
-        is ReminderType.Custom       -> "main"
+        // A sunnah reminder is a call to read that surah, so it opens the surah itself.
+        is ReminderType.QuranSunnah  ->
+            SunnahSurah.of(type.surahKey)?.let(ReminderRoute::sunnah) ?: "quran"
+        // A wird reminder is a call to read it, so it opens the wird itself, not the tab it sits on.
+        is ReminderType.DailyKhatmah -> ReminderRoute.WIRD
+        is ReminderType.Custom       -> "quran"
     }
 
     private fun build(

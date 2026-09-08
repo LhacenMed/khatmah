@@ -23,13 +23,16 @@ import com.lhacenmed.khatmah.feature.quran.data.SurahInfo
 import com.lhacenmed.khatmah.feature.quran.data.db.MushafDb
 import com.lhacenmed.khatmah.feature.quran.data.db.PageStartEntity
 import com.lhacenmed.khatmah.feature.quran.ui.home.QuranHomeViewModel.KhatmahState
+import com.lhacenmed.khatmah.feature.quran.ui.reader.ReaderProgress
 import com.lhacenmed.khatmah.feature.quran.ui.reader.currentReaderDest
 import com.lhacenmed.khatmah.feature.quran.ui.reader.isQcf4
 import com.lhacenmed.khatmah.feature.quran.ui.reader.readerDestAt
 import com.lhacenmed.khatmah.feature.quran.ui.reader.sessionReaderDest
+import com.lhacenmed.khatmah.feature.quran.ui.reader.sunnahReaderDest
 import com.lhacenmed.khatmah.shared.util.RecentSurahsPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -113,11 +116,39 @@ class QuranTabFragment : Fragment(), Reselectable {
     }
 
     /**
-     * Tapping the Quran tab while it is already showing means the same thing its hero button
-     * does: back to the mushaf, where reading stopped. There is nothing here worth scrolling to.
+     * Tapping the Quran tab while it is already showing means "back to what I was reading". There
+     * is nothing on this screen worth scrolling to, and which reading that is is not this screen's
+     * to decide: [ReaderProgress] recorded it when the reader saved its place, and every reading
+     * the app offers is resumed the same way — through the case for it below.
      */
     override fun onReselect() {
-        go(currentReaderDest())
+        lifecycleScope.launch { resumeLastReading() }
+    }
+
+    /**
+     * Reopens the last reading, worked out afresh: a wird follows the khatmah's schedule and a
+     * surah's pages follow the selected print, so neither is replayed from what was stored.
+     *
+     * Both can also stop being reachable — a khatmah is finished, a print can no longer be
+     * windowed — and then reading falls back to the mushaf rather than to a dead end.
+     */
+    private suspend fun resumeLastReading() {
+        when (val last = ReaderProgress.lastReading(requireContext())) {
+            ReaderProgress.LastReading.Mushaf -> go(currentReaderDest())
+
+            ReaderProgress.LastReading.Wird ->
+                if (vm.khatmah.first { it !is KhatmahState.Loading } is KhatmahState.Active) {
+                    // The tab's own strip decides what opening a wird means, guards included.
+                    openKhatmah()
+                } else {
+                    go(currentReaderDest())
+                }
+
+            is ReaderProgress.LastReading.Sunnah ->
+                sunnahReaderDest(requireContext(), last.surah)
+                    ?.let(::go)
+                    ?: showDownloadDialog()
+        }
     }
 
     // ── State ─────────────────────────────────────────────────────────────────
@@ -140,6 +171,19 @@ class QuranTabFragment : Fragment(), Reselectable {
     // ── Navigation ────────────────────────────────────────────────────────────
 
     private fun go(dest: Dest) = startActivity(dest.toIntent(requireContext()))
+
+    /**
+     * The same as the strip's tap, for a caller that arrives before the screen has settled — the
+     * wird reminder, which reaches MainActivity while the khatmah is still being read. Asked then,
+     * [openKhatmah] would take "still loading" for "no khatmah" and offer to start one, so this
+     * waits for the answer first.
+     */
+    fun openWird() {
+        lifecycleScope.launch {
+            vm.khatmah.first { it !is KhatmahState.Loading }
+            openKhatmah()
+        }
+    }
 
     /**
      * The strip's tap: read the current wird, or start a khatmah when there is none. Sessions are
