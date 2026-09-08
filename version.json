@@ -1,6 +1,6 @@
 {
-  "versionCode": 10308,
-  "versionName": "1.3.6",
-  "apkUrl": "https://github.com/LhacenMed/khatmah/releases/download/v1.3.6/khatmah-1.3.6-universal.apk",
-  "notes": "Bug fixes and improvements."
+  "versionCode": 10309,
+  "versionName": "1.3.7",
+  "apkUrl": "https://github.com/LhacenMed/khatmah/releases/download/v1.3.7/khatmah-1.3.7-universal.apk",
+  "notes": "The prayer widget now follows the app's theme and language, and reminders open the reading they're about."
 }
