@@ -6,27 +6,21 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.content.res.Configuration
 import android.graphics.Typeface
 import android.os.Build
 import android.os.SystemClock
 import android.text.Spannable
 import android.text.SpannableString
+import android.text.TextUtils
 import android.text.style.StyleSpan
 import android.view.View
 import android.widget.RemoteViews
 import androidx.annotation.RequiresApi
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.GlanceTheme
 import androidx.glance.LocalContext
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.AndroidRemoteViews
@@ -73,17 +67,16 @@ class PrayerWidget : GlanceAppWidget() {
     }
 
     /**
-     * Dynamic Material 3 colors (ARGB) resolved once per render and fed to the
-     * RemoteViews panels — the only layer [GlanceTheme.colors] cannot reach.
+     * How the widget is painted and worded, resolved once per render.
      *
-     * [panel]/[onPanel]     → countdown panel surface + its text/icon (primaryContainer)
-     * [onSurface]/[accent]  → prayer-list text, normal + highlighted (onSecondaryContainer / primary)
+     * [palette] is the app's own, [strings] a context carrying the app's language — a widget is
+     * drawn outside any Activity, so the per-app locale has to be applied by hand — and [isRtl]
+     * the direction that language reads in, which decides which side each panel takes.
      */
-    private data class WidgetColors(
-        val panel:     Int,
-        val onPanel:   Int,
-        val onSurface: Int,
-        val accent:    Int,
+    private data class Style(
+        val palette: WidgetPalette,
+        val strings: Context,
+        val isRtl:   Boolean,
     )
 
     companion object {
@@ -165,9 +158,21 @@ class PrayerWidget : GlanceAppWidget() {
         // by wrapping Fajr's epoch to tomorrow when all of today's prayers are in the past.
         if (todayPrayers.isNotEmpty()) scheduleNextAlarm(context, todayPrayers)
 
+        val style = resolveStyle(context)
         provideContent {
-            GlanceTheme { Content(displayPrayers, countdown) }
+            Content(displayPrayers, countdown, style)
         }
+    }
+
+    /** Reads the app's palette and language once, so every panel is drawn from the same answer. */
+    private fun resolveStyle(context: Context): Style {
+        val strings = LocaleManager.applyTo(context)
+        val locale  = strings.resources.configuration.locales[0]
+        return Style(
+            palette = widgetPalette(context),
+            strings = strings,
+            isRtl   = TextUtils.getLayoutDirectionFromLocale(locale) == View.LAYOUT_DIRECTION_RTL,
+        )
     }
 
     // ── Alarm scheduling ──────────────────────────────────────────────────────
@@ -252,7 +257,7 @@ class PrayerWidget : GlanceAppWidget() {
     // ── Root layout ───────────────────────────────────────────────────────────
 
     @Composable
-    private fun Content(prayers: List<PrayerTime>, countdown: Countdown?) {
+    private fun Content(prayers: List<PrayerTime>, countdown: Countdown?, style: Style) {
         val context = LocalContext.current
 
         val openPrayersAction = actionStartActivity(
@@ -262,38 +267,32 @@ class PrayerWidget : GlanceAppWidget() {
             }
         )
 
+        val surface = GlanceModifier.fillMaxSize()
+            .cornerRadius(CORNER_RADIUS)
+            .background(style.palette.surface.asColorProvider())
+            .clickable(openPrayersAction)
+
         if (prayers.isEmpty() || countdown == null) {
-            Box(
-                modifier         = GlanceModifier.fillMaxSize()
-                    .cornerRadius(CORNER_RADIUS)
-                    .background(GlanceTheme.colors.secondaryContainer)
-                    .clickable(openPrayersAction),
-                contentAlignment = Alignment.Center,
-            ) {
+            Box(modifier = surface, contentAlignment = Alignment.Center) {
                 Text(
-                    text  = "Open the app to set your location",
-                    style = TextStyle(color = GlanceTheme.colors.onSecondaryContainer, fontSize = 30.sp),
+                    text  = style.strings.getString(R.string.widget_no_location),
+                    style = TextStyle(
+                        color    = style.palette.onSurface.asColorProvider(),
+                        fontSize = 30.sp,
+                    ),
                 )
             }
             return
         }
 
-        val isRtl = LocaleManager.savedTag(context)?.startsWith("ar") == true
-
-        Row(
-            modifier          = GlanceModifier.fillMaxSize()
-                .cornerRadius(CORNER_RADIUS)
-                .background(GlanceTheme.colors.secondaryContainer)
-                .clickable(openPrayersAction),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(modifier = surface, verticalAlignment = Alignment.CenterVertically) {
             val side = GlanceModifier.defaultWeight().fillMaxHeight()
-            if (isRtl) {
-                PrayerList(prayers, countdown.prayer.name, isRtl, side)
-                CountdownPanel(countdown, side)
+            if (style.isRtl) {
+                PrayerList(prayers, countdown.prayer.name, style, side)
+                CountdownPanel(countdown, style, side)
             } else {
-                CountdownPanel(countdown, side)
-                PrayerList(prayers, countdown.prayer.name, isRtl, side)
+                CountdownPanel(countdown, style, side)
+                PrayerList(prayers, countdown.prayer.name, style, side)
             }
         }
     }
@@ -301,19 +300,16 @@ class PrayerWidget : GlanceAppWidget() {
     // ── Countdown panel ───────────────────────────────────────────────────────
 
     @Composable
-    private fun CountdownPanel(countdown: Countdown, modifier: GlanceModifier) {
+    private fun CountdownPanel(countdown: Countdown, style: Style, modifier: GlanceModifier) {
         val context = LocalContext.current
-        val isRtl   = LocaleManager.savedTag(context)?.startsWith("ar") == true
-        val bgRes   = if (isRtl) R.drawable.widget_countdown_rtl_bg
+        val bgRes   = if (style.isRtl) R.drawable.widget_countdown_rtl_bg
         else       R.drawable.widget_countdown_ltr_bg
 
-        val prayerLabel = prayerName(countdown.prayer.name, context, isRtl)
-        val label = when {
-            countdown is Countdown.ElapsedSince && isRtl  -> "مضى على $prayerLabel"
-            countdown is Countdown.ElapsedSince            -> "Since $prayerLabel"
-            isRtl                                          -> "باقي على $prayerLabel"
-            else                                           -> "Till $prayerLabel"
-        }
+        val prayerLabel = prayerName(countdown.prayer.name, style.strings)
+        val label = style.strings.getString(
+            if (countdown is Countdown.ElapsedSince) R.string.widget_since else R.string.widget_till,
+            prayerLabel,
+        )
 
         // ElapsedSince: Chronometer counts up from (now - elapsed).
         // CountingDown: Chronometer counts down from (now + remaining).
@@ -324,28 +320,29 @@ class PrayerWidget : GlanceAppWidget() {
                 SystemClock.elapsedRealtime() + countdown.msRemaining to true
         }
 
-        val colors = resolveColors(context)
+        val palette = style.palette
 
         AndroidRemoteViews(
             modifier    = modifier,
             remoteViews = RemoteViews(context.packageName, R.layout.widget_countdown).apply {
-                // Rounded shape + dynamic tint on API 31+; flat dynamic fill below.
+                // Rounded shape + tint on API 31+, where both variants ride along; flat fill below.
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     setInt(R.id.countdown_root, "setBackgroundResource", bgRes)
                     setColorStateList(
                         R.id.countdown_root, "setBackgroundTintList",
-                        ColorStateList.valueOf(colors.panel),
+                        ColorStateList.valueOf(palette.panel.day),
+                        ColorStateList.valueOf(palette.panel.night),
                     )
                 } else {
-                    setInt(R.id.countdown_root, "setBackgroundColor", colors.panel)
+                    setDayNightColor(R.id.countdown_root, "setBackgroundColor", palette.panel, palette.night)
                 }
                 setImageViewResource(R.id.prayer_icon, prayerIcon(countdown.prayer.name))
-                setInt(R.id.prayer_icon, "setColorFilter", colors.onPanel)
+                setDayNightColor(R.id.prayer_icon, "setColorFilter", palette.onPanel, palette.night)
                 setTextViewText(R.id.prayer_label, label)
-                setTextColor(R.id.prayer_label, colors.onPanel)
+                setDayNightColor(R.id.prayer_label, "setTextColor", palette.onPanel, palette.night)
                 setChronometer(R.id.chrono, chronometerBase, null, true)
                 setChronometerCountDown(R.id.chrono, countingDown)
-                setTextColor(R.id.chrono, colors.onPanel)
+                setDayNightColor(R.id.chrono, "setTextColor", palette.onPanel, palette.night)
             },
         )
     }
@@ -356,27 +353,27 @@ class PrayerWidget : GlanceAppWidget() {
     private fun PrayerList(
         prayers:       List<PrayerTime>,
         highlightName: String,
-        isRtl:         Boolean,
+        style:         Style,
         modifier:      GlanceModifier,
     ) {
         val context = LocalContext.current
-        val colors  = resolveColors(context)
+        val palette = style.palette
         AndroidRemoteViews(
             modifier    = modifier,
             remoteViews = RemoteViews(context.packageName, R.layout.widget_prayer_list).apply {
                 prayers.forEachIndexed { i, prayer ->
                     val isHighlight = prayer.name == highlightName
-                    val color       = if (isHighlight) colors.accent else colors.onSurface
-                    val nameText    = prayerName(prayer.name, context, isRtl)
+                    val color       = if (isHighlight) palette.accent else palette.onSurface
+                    val nameText    = prayerName(prayer.name, style.strings)
                     val timeText    = prayer.time.format(TIME_FMT)
 
-                    val leftText  = if (isRtl) timeText else nameText
-                    val rightText = if (isRtl) nameText else timeText
+                    val leftText  = if (style.isRtl) timeText else nameText
+                    val rightText = if (style.isRtl) nameText else timeText
 
                     setTextViewText(LEFT_IDS[i],  if (isHighlight) boldOf(leftText)  else leftText)
                     setTextViewText(RIGHT_IDS[i], if (isHighlight) boldOf(rightText) else rightText)
-                    setTextColor(LEFT_IDS[i],  color)
-                    setTextColor(RIGHT_IDS[i], color)
+                    setDayNightColor(LEFT_IDS[i],  "setTextColor", color, palette.night)
+                    setDayNightColor(RIGHT_IDS[i], "setTextColor", color, palette.night)
                     setViewVisibility(ROW_IDS[i], View.VISIBLE)
                 }
                 for (i in prayers.size until ROW_IDS.size) {
@@ -389,45 +386,17 @@ class PrayerWidget : GlanceAppWidget() {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /**
-     * Resolves the dynamic Material 3 scheme exactly the way [GlanceTheme] does:
-     * device dynamic colors on API 31+, the Material baseline below — honoring the
-     * current night-mode setting. Keeps the RemoteViews panels in lock-step with the
-     * Glance composables, which read [GlanceTheme.colors].
+     * The prayer's name in the app's language. [strings] carries that language (see [Style]), so
+     * the name follows the app rather than the device — the two need not agree.
      */
-    private fun resolveColors(context: Context): WidgetColors {
-        val night = (context.resources.configuration.uiMode and
-            Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-
-        val scheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (night) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        } else {
-            if (night) darkColorScheme() else lightColorScheme()
-        }
-
-        return WidgetColors(
-            panel     = scheme.primaryContainer.toArgb(),
-            onPanel   = scheme.onPrimaryContainer.toArgb(),
-            onSurface = scheme.onSecondaryContainer.toArgb(),
-            accent    = scheme.primary.toArgb(),
-        )
-    }
-
-    /**
-     * Returns the localized prayer name.
-     * Uses the string resource (Arabic when [isRtl], English otherwise) so the
-     * result is correct regardless of which process is running the widget.
-     */
-    private fun prayerName(name: String, context: Context, isRtl: Boolean): String {
-        if (!isRtl) return name
-        return when (name.lowercase()) {
-            "fajr"    -> context.getString(R.string.prayer_fajr)
-            "sunrise" -> context.getString(R.string.prayer_sunrise)
-            "dhuhr"   -> context.getString(R.string.prayer_dhuhr)
-            "asr"     -> context.getString(R.string.prayer_asr)
-            "maghrib" -> context.getString(R.string.prayer_maghrib)
-            "isha"    -> context.getString(R.string.prayer_isha)
-            else      -> name
-        }
+    private fun prayerName(name: String, strings: Context): String = when (name.lowercase()) {
+        "fajr"    -> strings.getString(R.string.prayer_fajr)
+        "sunrise" -> strings.getString(R.string.prayer_sunrise)
+        "dhuhr"   -> strings.getString(R.string.prayer_dhuhr)
+        "asr"     -> strings.getString(R.string.prayer_asr)
+        "maghrib" -> strings.getString(R.string.prayer_maghrib)
+        "isha"    -> strings.getString(R.string.prayer_isha)
+        else      -> name
     }
 
     private fun boldOf(text: String): SpannableString =

@@ -25,10 +25,14 @@ import com.lhacenmed.khatmah.shared.reminders.ReminderScheduler
 import com.lhacenmed.khatmah.shared.util.AppPrefs
 import com.lhacenmed.khatmah.shared.util.LocaleManager
 import com.lhacenmed.khatmah.shared.util.ThemeManager
+import androidx.glance.appwidget.updateAll
+import com.lhacenmed.khatmah.widget.PrayerWidget
 import com.lhacenmed.khatmah.widget.PrayerWidgetWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 class App : Application() {
@@ -60,6 +64,7 @@ class App : Application() {
         AdhanChannels.sync(this)
         ReminderScheduler.scheduleAll(this)
         PrayerWidgetWorker.enqueue(this)
+        keepWidgetOnAppAppearance()
         // Register SVG decoder so FlagCDN SVGs render via AsyncImage.
         // Coil's default disk + memory cache handles flag caching automatically.
         Coil.setImageLoader {
@@ -89,6 +94,24 @@ class App : Application() {
                     ?.writeText(json)
                 Log.d("DynamicColors", json)
             }
+        }
+    }
+
+    /**
+     * Redraws the prayer widget whenever the app's appearance changes.
+     *
+     * An Activity is recreated on a palette, night-mode or language change and picks the new one
+     * up on the way back in. The widget cannot: it lives in the launcher, and its colours and its
+     * language are resolved at the moment it is built — so a change only reaches it when
+     * something asks for a redraw. Nothing else does; the periodic worker would take up to
+     * fifteen minutes to notice.
+     */
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun keepWidgetOnAppAppearance() {
+        appScope.launch {
+            combine(ThemeManager.version, ThemeManager.mode, LocaleManager.tag) { _, _, _ -> }
+                .drop(1) // the combined current state, which the widget already shows
+                .collect { PrayerWidget().updateAll(this@App) }
         }
     }
 }

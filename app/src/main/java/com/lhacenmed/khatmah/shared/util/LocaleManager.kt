@@ -5,6 +5,9 @@ import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.core.content.edit
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
 
 object LocaleManager {
@@ -14,6 +17,15 @@ object LocaleManager {
 
     // Stored once in App.onCreate so setLocale can persist without a context param.
     private var appContext: Context? = null
+
+    private val _tag = MutableStateFlow<String?>(null)
+
+    /**
+     * The chosen language tag; null = follow system. Activities are recreated on a change by
+     * AppCompat, so this is for the surfaces it cannot reach — the widget, which is drawn by the
+     * launcher and has to be told to redraw.
+     */
+    val tag: StateFlow<String?> = _tag.asStateFlow()
 
     /**
      * Call once from App.onCreate before any locale is applied.
@@ -31,12 +43,14 @@ object LocaleManager {
             val tag = if (current.isEmpty) null else current[0]?.toLanguageTag()
             prefs.edit { putString(KEY, tag) }
         }
+        _tag.value = savedTag(context)
     }
 
     // null = follow system
     fun setLocale(tag: String?) {
         appContext?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             ?.edit { putString(KEY, tag) }
+        _tag.value = tag?.takeIf { it.isNotEmpty() }
         val list = if (tag.isNullOrEmpty()) LocaleListCompat.getEmptyLocaleList()
         else LocaleListCompat.forLanguageTags(tag)
         AppCompatDelegate.setApplicationLocales(list)

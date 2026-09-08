@@ -187,6 +187,11 @@
     <string name="prayer_maghrib">المغرب</string>
     <string name="prayer_isha">العشاء</string>
 
+    <!-- Home-screen widget -->
+    <string name="widget_no_location">افتح التطبيق لتحديد موقعك</string>
+    <string name="widget_till">باقي على %1$s</string>
+    <string name="widget_since">مضى على %1$s</string>
+
     <!-- Hijri calendar -->
     <string name="hijri_year_suffix">هـ</string>
     <string-array name="hijri_months">

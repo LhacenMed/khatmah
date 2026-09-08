@@ -60,6 +60,9 @@ object ThemeManager {
     /** Bumped on every colour change; an Activity themed at an older value is out of date. */
     private val _version = MutableStateFlow(0)
 
+    /** Observable [_version], for anything painted outside an Activity — the widget. */
+    val version: StateFlow<Int> = _version.asStateFlow()
+
     /** The version each live Activity was themed at. Weak, so it never holds one alive. */
     private val themedAt = WeakHashMap<Activity, Int>()
 
