@@ -20,7 +20,10 @@ data class TableData(
     val columns: List<ColumnMeta>,
     val rows: List<List<String?>>,
     val totalRows: Int,
-)
+) {
+    /** True once every row of the table has been read in. */
+    val isFullyLoaded: Boolean get() = rows.size >= totalRows
+}
 
 data class DbBrowserState(
     val dbNames: List<String> = emptyList(),
@@ -29,14 +32,21 @@ data class DbBrowserState(
     val selectedTable: String? = null,
     val tableData: TableData? = null,
     val isLoading: Boolean = false,
+    val isLoadingMore: Boolean = false,
     val error: String? = null,
 )
 @SuppressLint("StaticFieldLeak")
 class DbBrowserViewModel(private val context: Context) : ViewModel() {
 
     companion object {
-        private const val MAX_ROWS   = 500
-        private val KNOWN_DBS        = listOf("khatmah.db", "mushaf.db", "qadaa.db")
+        /**
+         * Rows per read. Small enough that a table opens instantly however big it is, and large
+         * enough that scrolling stays ahead of the reader.
+         */
+        private const val PAGE_SIZE = 200
+
+        /** What SQLite keeps beside a database. None of them is one. */
+        private val SIDECAR_SUFFIXES = listOf("-journal", "-wal", "-shm")
     }
 
     private val _state = MutableStateFlow(DbBrowserState())
@@ -44,8 +54,7 @@ class DbBrowserViewModel(private val context: Context) : ViewModel() {
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            val available = KNOWN_DBS.filter { resolveDbFile(it) != null }
-            _state.update { it.copy(dbNames = available) }
+            _state.update { it.copy(dbNames = installedDatabases()) }
         }
     }
 
@@ -79,7 +88,15 @@ class DbBrowserViewModel(private val context: Context) : ViewModel() {
 
     fun selectTable(name: String) {
         val dbName = _state.value.selectedDb ?: return
-        _state.update { it.copy(selectedTable = name, tableData = null, isLoading = true, error = null) }
+        _state.update {
+            it.copy(
+                selectedTable = name,
+                tableData     = null,
+                isLoading     = true,
+                isLoadingMore = false,
+                error         = null,
+            )
+        }
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
                 val file = resolveDbFile(dbName) ?: error("Not found: $dbName")
@@ -91,13 +108,7 @@ class DbBrowserViewModel(private val context: Context) : ViewModel() {
                     }
                     val total = db.rawQuery("SELECT COUNT(*) FROM \"$name\"", null)
                         .use { c -> if (c.moveToFirst()) c.getInt(0) else 0 }
-                    val rows = mutableListOf<List<String?>>()
-                    db.rawQuery("SELECT * FROM \"$name\" LIMIT $MAX_ROWS", null).use { c ->
-                        val n = c.columnCount
-                        while (c.moveToNext())
-                            rows += List(n) { i -> if (c.isNull(i)) null else c.getString(i) }
-                    }
-                    TableData(cols, rows, total)
+                    TableData(cols, readRows(db, name, offset = 0), total)
                 }
             }.fold(
                 onSuccess = { data -> _state.update { it.copy(tableData = data, isLoading = false) } },
@@ -106,7 +117,74 @@ class DbBrowserViewModel(private val context: Context) : ViewModel() {
         }
     }
 
+    /**
+     * Reads the next page onto the end of the table on screen.
+     *
+     * Called as the last rows come into view, so it is asked far more often than it has work to
+     * do: a page already on its way, or a table with nothing left, answers by doing nothing.
+     */
+    fun loadMoreRows() {
+        val current = _state.value
+        val shown   = current.tableData ?: return
+        val dbName  = current.selectedDb ?: return
+        val table   = current.selectedTable ?: return
+        if (current.isLoadingMore || shown.isFullyLoaded) return
+
+        _state.update { it.copy(isLoadingMore = true) }
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val file = resolveDbFile(dbName) ?: error("Not found: $dbName")
+                openReadOnly(file) { db -> readRows(db, table, offset = shown.rows.size) }
+            }.fold(
+                onSuccess = { more ->
+                    _state.update { s ->
+                        val onScreen = s.tableData
+                        // The reader may have moved to another table while this page was in
+                        // flight. Its rows belong to a table no longer on screen, and so does its
+                        // claim on the guard: whoever is loading now still holds that.
+                        if (s.selectedTable != table || onScreen == null) s
+                        else s.copy(
+                            tableData     = onScreen.copy(rows = onScreen.rows + more),
+                            isLoadingMore = false,
+                        )
+                    }
+                },
+                onFailure = { e ->
+                    _state.update { s ->
+                        if (s.selectedTable != table) s
+                        else s.copy(isLoadingMore = false, error = e.message)
+                    }
+                },
+            )
+        }
+    }
+
     // ── Private ───────────────────────────────────────────────────────────────
+
+    /**
+     * Every database this app has actually created.
+     *
+     * Read from disk rather than named in a list here, because a list here is a list someone has
+     * to remember to extend — and the database added last is exactly the one worth looking at.
+     */
+    private fun installedDatabases(): List<String> =
+        context.databaseList()
+            .filterNot { name -> SIDECAR_SUFFIXES.any(name::endsWith) }
+            .sorted()
+
+    /**
+     * One page of rows, in the order the table itself keeps them.
+     *
+     * Unordered on purpose: an ORDER BY would change which rows a page contains, and there is no
+     * column every table has to order by.
+     */
+    private fun readRows(db: SQLiteDatabase, table: String, offset: Int): List<List<String?>> =
+        db.rawQuery("SELECT * FROM \"$table\" LIMIT $PAGE_SIZE OFFSET $offset", null).use { c ->
+            buildList {
+                val n = c.columnCount
+                while (c.moveToNext()) add(List(n) { i -> if (c.isNull(i)) null else c.getString(i) })
+            }
+        }
 
     private fun resolveDbFile(name: String): File? {
         val file = context.getDatabasePath(name)

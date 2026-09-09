@@ -6,6 +6,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lhacenmed.khatmah.core.nav.LocalNavigator
 import com.lhacenmed.khatmah.core.ui.components.AppTopBar
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,7 +70,7 @@ fun DbBrowserScreen() {
                 )
             },
         ) { padding ->
-            DbContentArea(state = state, padding = padding)
+            DbContentArea(state = state, padding = padding, onLoadMore = vm::loadMoreRows)
         }
     }
 }
@@ -177,7 +179,7 @@ private fun DbDropdown(dbNames: List<String>, selected: String?, onSelect: (Stri
 // ── Content area ──────────────────────────────────────────────────────────────
 
 @Composable
-private fun DbContentArea(state: DbBrowserState, padding: PaddingValues) {
+private fun DbContentArea(state: DbBrowserState, padding: PaddingValues, onLoadMore: () -> Unit) {
     Box(
         modifier         = Modifier.fillMaxSize().padding(padding),
         contentAlignment = Alignment.Center,
@@ -186,8 +188,9 @@ private fun DbContentArea(state: DbBrowserState, padding: PaddingValues) {
             state.isLoading     -> CircularProgressIndicator()
             state.error != null -> ErrorMessage(state.error)
             state.tableData != null -> TableView(
-                data      = state.tableData,
-                tableName = state.selectedTable ?: "",
+                data       = state.tableData,
+                tableName  = state.selectedTable ?: "",
+                onLoadMore = onLoadMore,
             )
             state.selectedDb != null -> HintText("Select a table from the drawer →")
             else -> HintText("Open the drawer to select a database")
@@ -227,8 +230,11 @@ private val NUM_COL_W = 44.dp   // row-index column
 private val CELL_H    = 36.dp
 private val HEADER_H  = 48.dp
 
+/** How close to the last row the reader gets before the next page is asked for. */
+private const val PREFETCH_ROWS = 20
+
 @Composable
-private fun TableView(data: TableData, tableName: String) {
+private fun TableView(data: TableData, tableName: String, onLoadMore: () -> Unit) {
     if (data.columns.isEmpty()) {
         HintText("Table is empty or has no columns")
         return
@@ -240,16 +246,29 @@ private fun TableView(data: TableData, tableName: String) {
     val headerBg   = MaterialTheme.colorScheme.surfaceContainer
     val altRowBg   = MaterialTheme.colorScheme.surfaceContainerLow
     val hScroll    = rememberScrollState()
+    val listState  = rememberLazyListState()
+
+    // Fetch the next page while the end is still below the fold, so scrolling never stops at a
+    // boundary. Restarted by every page that arrives, which is what keeps it going when one page
+    // does not reach past the bottom of the screen.
+    LaunchedEffect(listState, data.rows.size) {
+        snapshotFlow {
+            val layout = listState.layoutInfo
+            (layout.visibleItemsInfo.lastOrNull()?.index ?: 0) >=
+                layout.totalItemsCount - PREFETCH_ROWS
+        }
+            .distinctUntilChanged()
+            .collect { isNearEnd -> if (isNearEnd) onLoadMore() }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Row count banner
-        val isCapped = data.totalRows > data.rows.size
+        // Row count banner. One line either way, so the table below it never shifts.
         Text(
-            text     = if (isCapped) "Showing ${data.rows.size} of ${data.totalRows} rows"
-            else "${data.totalRows} row${if (data.totalRows != 1) "s" else ""}",
+            text     = if (data.isFullyLoaded)
+                "${data.totalRows} row${if (data.totalRows != 1) "s" else ""}"
+            else "${data.rows.size} of ${data.totalRows} rows",
             style    = MaterialTheme.typography.labelSmall,
-            color    = if (isCapped) MaterialTheme.colorScheme.error
-            else MaterialTheme.colorScheme.onSurfaceVariant,
+            color    = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
         )
 
@@ -258,7 +277,7 @@ private fun TableView(data: TableData, tableName: String) {
                 .fillMaxSize()
                 .horizontalScroll(hScroll),
         ) {
-            LazyColumn(modifier = Modifier.width(totalWidth)) {
+            LazyColumn(state = listState, modifier = Modifier.width(totalWidth)) {
 
                 // ── Sticky header ─────────────────────────────────────────────
                 stickyHeader {
@@ -313,20 +332,17 @@ private fun TableView(data: TableData, tableName: String) {
                     }
                 }
 
-                // ── Cap notice ────────────────────────────────────────────────
-                if (isCapped) {
+                // ── The next page, on its way ────────────────────────────────
+                // Exactly one row tall, so the rows that replace it arrive without a jump.
+                if (!data.isFullyLoaded) {
                     item {
                         Box(
-                            modifier         = Modifier
-                                .width(totalWidth)
-                                .background(MaterialTheme.colorScheme.errorContainer)
-                                .padding(vertical = 10.dp),
+                            modifier         = Modifier.width(totalWidth).height(CELL_H),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(
-                                text  = "⚠ Showing first ${data.rows.size} of ${data.totalRows} rows",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
+                            CircularProgressIndicator(
+                                modifier    = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
                             )
                         }
                     }
