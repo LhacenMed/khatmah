@@ -3,7 +3,10 @@ package com.lhacenmed.khatmah.feature.update.ui
 import android.os.Build
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -18,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -54,6 +58,9 @@ fun UpdateGate() {
     LaunchedEffect(asked) { if (asked) dismissed = false }
 
     val available = update ?: return
+    // The language the app is actually being read in — the per-app locale where one is set, the
+    // device's otherwise. Untranslated releases fall back to the notes as written.
+    val notes = available.notesIn(LocalConfiguration.current.locales[0].language)
     if (!asked && (!auto || dismissed)) return
 
     // Closing the dialog also answers the request that opened it.
@@ -96,12 +103,15 @@ fun UpdateGate() {
         text = {
             Column {
                 Text(stringResource(R.string.update_message, available.versionName))
-                if (available.notes.isNotBlank()) {
-                    Text(
-                        text     = available.notes,
-                        style    = MaterialTheme.typography.bodySmall,
-                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp),
+                if (notes.isNotBlank()) {
+                    // Bounded and scrollable: notes now run to several lines, and a long one
+                    // would otherwise push the buttons off the bottom of the dialog.
+                    ReleaseNotes(
+                        markdown = notes,
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .heightIn(max = 240.dp)
+                            .verticalScroll(rememberScrollState()),
                     )
                 }
                 when (val s = state) {

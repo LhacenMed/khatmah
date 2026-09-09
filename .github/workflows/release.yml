@@ -23,9 +23,13 @@ on:
         options: [patch, minor, major, build]
         default: patch
       notes:
-        description: Release notes
+        description: Release notes (markdown)
         type: string
         default: Bug fixes and improvements.
+      notes_ar:
+        description: Release notes in Arabic (optional; empty falls back to the above)
+        type: string
+        default: ''
       source_branch:
         description: Branch to merge into main
         type: string
@@ -185,11 +189,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.version.outputs.tag }}
           NOTES: ${{ inputs.notes }}
+          NOTES_AR: ${{ inputs.notes_ar }}
         run: |
           set -euo pipefail
           # Reclaim a draft left behind by a previous failed run.
           gh release delete "$TAG" --yes --cleanup-tag > /dev/null 2>&1 || true
           printf '%s\n' "$NOTES" > "${RUNNER_TEMP}/notes.md"
+          # Both languages on the release page, under a rule. Readers choose for
+          # themselves here, unlike the app, which knows which one they read.
+          if [ -n "$NOTES_AR" ]; then
+            printf '\n---\n\n%s\n' "$NOTES_AR" >> "${RUNNER_TEMP}/notes.md"
+          fi
           gh release create "$TAG" \
             --draft \
             --target "$MAIN_BRANCH" \
@@ -221,17 +231,24 @@ jobs:
         env:
           TAG: ${{ steps.version.outputs.tag }}
           NOTES: ${{ inputs.notes }}
+          NOTES_AR: ${{ inputs.notes_ar }}
         run: |
           set -euo pipefail
           NAME="${{ steps.version.outputs.name }}"
           APK_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${{ steps.apks.outputs.universal }}"
 
+          # `notes` stays a plain string whatever else is added — installed clients
+          # read it directly, and a shape they cannot parse leaves them with a blank
+          # update prompt. Translations ride beside it, and the key is left out
+          # entirely when there are none.
           jq -n \
             --argjson versionCode "${{ steps.apks.outputs.version_code }}" \
             --arg versionName "$NAME" \
             --arg apkUrl "$APK_URL" \
             --arg notes "$NOTES" \
-            '{versionCode: $versionCode, versionName: $versionName, apkUrl: $apkUrl, notes: $notes}' \
+            --arg notesAr "$NOTES_AR" \
+            '{versionCode: $versionCode, versionName: $versionName, apkUrl: $apkUrl, notes: $notes}
+             + (if $notesAr == "" then {} else {notesByLanguage: {ar: $notesAr}} end)' \
             > version.json
 
           git add "$GRADLE_FILE" version.json

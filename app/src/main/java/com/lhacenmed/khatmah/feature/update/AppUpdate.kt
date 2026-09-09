@@ -11,31 +11,50 @@ import org.json.JSONObject
  * ```json
  * { "versionCode": 10001, "versionName": "1.0.1",
  *   "apkUrl": "https://github.com/.../releases/download/v1.0.1/khatmah-1.0.1.apk",
- *   "notes": "What's new…" }
+ *   "notes": "What's new…",
+ *   "notesByLanguage": { "ar": "…" } }
  * ```
+ *
+ * [notes] stays a plain string and carries the notes as written, whatever translations exist
+ * beside it: every installed build reads that key directly, so a shape an older one cannot parse
+ * would leave it showing an update with nothing said about it.
  */
 data class AppUpdate(
     val versionCode: Int,
     val versionName: String,
     val apkUrl: String,
     val notes: String,
+    val notesByLanguage: Map<String, String> = emptyMap(),
 ) {
+    /**
+     * The notes in [language], falling back to [notes] when the release was not translated into
+     * it — which is also every release published before translations existed.
+     */
+    fun notesIn(language: String): String = notesByLanguage[language] ?: notes
+
     /** Serializes back to the manifest shape so [UpdateStore] can persist it across launches. */
     fun toJson(): String = JSONObject()
         .put("versionCode", versionCode)
         .put("versionName", versionName)
         .put("apkUrl", apkUrl)
         .put("notes", notes)
+        .put("notesByLanguage", JSONObject(notesByLanguage))
         .toString()
 
     companion object {
         fun fromJson(json: String): AppUpdate = JSONObject(json).run {
             AppUpdate(
-                versionCode = getInt("versionCode"),
-                versionName = getString("versionName"),
-                apkUrl      = getString("apkUrl"),
-                notes       = optString("notes"),
+                versionCode     = getInt("versionCode"),
+                versionName     = getString("versionName"),
+                apkUrl          = getString("apkUrl"),
+                notes           = optString("notes"),
+                notesByLanguage = optJSONObject("notesByLanguage").toStringMap(),
             )
+        }
+
+        private fun JSONObject?.toStringMap(): Map<String, String> {
+            if (this == null) return emptyMap()
+            return keys().asSequence().associateWith { getString(it) }
         }
     }
 }

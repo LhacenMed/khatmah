@@ -48,7 +48,9 @@ git::ensure_pushed "$SOURCE_BRANCH"
 # ── Step 1: Read current version from origin/main ───────────────────────────────
 git fetch origin "$MAIN_BRANCH" --quiet
 MAIN_GRADLE="$(mktemp)"
-trap 'rm -f "$MAIN_GRADLE"' EXIT
+NOTES_DIR="$(mktemp -d)"
+NOTES_FILE="${NOTES_DIR}/RELEASE_NOTES.md"
+trap 'rm -f "$MAIN_GRADLE"; rm -rf "$NOTES_DIR"' EXIT
 git show "origin/${MAIN_BRANCH}:${GRADLE_FILE}" > "$MAIN_GRADLE"
 
 version::read "$MAIN_GRADLE"
@@ -117,9 +119,51 @@ NEW_NAME="$(version::name "$NEW_TYPE" "$V_MAJOR" "$V_MINOR" "$V_PATCH" "$V_BUILD
 TAG="v${NEW_NAME}"
 
 # ── Step 4: Release notes ────────────────────────────────────────────────────────
-echo ""
-read -rp "  Release notes [Bug fixes and improvements.]: " NOTES
-NOTES="${NOTES:-Bug fixes and improvements.}"
+# Written in an editor rather than at the prompt: notes are markdown, run to several
+# lines, and carry an optional Arabic translation. One file holds both languages, so
+# they are written and reviewed side by side and cannot drift apart.
+AR_MARKER="[ar]"
+CUT_MARKER="[cut]"
+
+# Everything above the Arabic marker (english) or below it (arabic), stopping at the
+# cut. The help text lives below that cut rather than behind a comment prefix,
+# because the comment prefix would have to be "#" and "#" is a markdown heading.
+notes_section() {
+    awk -v ar="$AR_MARKER" -v cut="$CUT_MARKER" -v want="$1" '
+        { line = $0; gsub(/^[ 	]+|[ 	]+$/, "", line) }
+        line == cut { exit }
+        line == ar  { seen = 1; next }
+        (want == "arabic") != (seen == 1) { next }
+        # Blank lines are held back until real content follows them, so the
+        # padding the template leaves at either end never reaches the notes.
+        line == "" { if (started) pending++; next }
+        { while (pending-- > 0) print ""; pending = 0; started = 1; print }
+    ' "$NOTES_FILE"
+}
+
+cat > "$NOTES_FILE" <<TEMPLATE
+
+
+${AR_MARKER}
+
+
+${CUT_MARKER}
+Release notes for ${TAG}.
+
+Write the English notes above the ${AR_MARKER} line and the Arabic below it.
+Markdown is supported: ## headings, - bullets and **bold** all render in the
+app's update dialog and on the GitHub release page.
+
+The Arabic section is optional — leave it empty and Arabic readers see the
+English notes. Everything from ${CUT_MARKER} down is ignored, and saving with
+no English notes aborts the release.
+TEMPLATE
+
+eval "$(git var GIT_EDITOR) \"\$NOTES_FILE\""
+
+NOTES="$(notes_section english)"
+NOTES_AR="$(notes_section arabic)"
+[[ -n "$NOTES" ]] || { echo "  Aborted — no release notes written."; exit 0; }
 
 # ── Step 5: Preview + confirm ────────────────────────────────────────────────────
 echo ""
@@ -127,8 +171,13 @@ echo "  ┌── Release Preview ───────────────�
 echo "  │  ${CURRENT_NAME}  →  ${NEW_NAME}"
 echo "  │  Tag    : ${TAG}"
 echo "  │  Type   : ${NEW_TYPE}"
-echo "  │  Notes  : ${NOTES}"
 echo "  │  Repo   : ${REPO}"
+echo "  ├── Notes ─────────────────────────────────────┤"
+sed 's/^/  │  /' <<< "$NOTES"
+if [[ -n "$NOTES_AR" ]]; then
+    echo "  ├── Notes (ar) ────────────────────────────────┤"
+    sed 's/^/  │  /' <<< "$NOTES_AR"
+fi
 echo "  └───────────────────────────────────────────────┘"
 echo ""
 
@@ -151,12 +200,15 @@ PREV_RUN="$(gh run list --workflow "$WORKFLOW" --limit 1 --json databaseId --jq 
 # the source branch keeps "the workflow I can see on my branch is the workflow
 # that runs" true — with --ref main, pipeline edits made on dev could never take
 # effect until a release had already shipped them.
-gh workflow run "$WORKFLOW" \
-    --ref "$SOURCE_BRANCH" \
-    -f release_type="$NEW_TYPE" \
-    -f bump="$BUMP_KIND" \
-    -f notes="$NOTES" \
-    -f source_branch="$SOURCE_BRANCH"
+jq -n \
+    --arg release_type  "$NEW_TYPE" \
+    --arg bump          "$BUMP_KIND" \
+    --arg notes         "$NOTES" \
+    --arg notes_ar      "$NOTES_AR" \
+    --arg source_branch "$SOURCE_BRANCH" \
+    '{release_type: $release_type, bump: $bump, notes: $notes,
+      notes_ar: $notes_ar, source_branch: $source_branch}' \
+  | gh workflow run "$WORKFLOW" --ref "$SOURCE_BRANCH" --json
 
 RUN_ID=""
 for _ in $(seq 1 20); do
