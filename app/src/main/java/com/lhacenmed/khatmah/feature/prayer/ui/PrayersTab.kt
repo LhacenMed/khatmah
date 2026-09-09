@@ -35,6 +35,7 @@ import com.lhacenmed.khatmah.core.nav.LocalTabReselected
 import com.lhacenmed.khatmah.core.nav.TabAction
 import com.lhacenmed.khatmah.core.nav.toIntent
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerRepository
+import com.lhacenmed.khatmah.feature.prayer.data.PrayerTimetable
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanConfig
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanPrefs
 import com.lhacenmed.khatmah.feature.prayer.notification.AdhanSound
@@ -108,14 +109,24 @@ private fun PrayersScreenContent(padding: PaddingValues) {
     // Cache: avoids recalculating the same date's prayers on every pager visit.
     val prayerCache = remember { HashMap<LocalDate, List<PrayerTime>>() }
 
-    val cityName = remember {
-        OnboardingPrefs.location(context)?.cityName.orEmpty()
+    val location by OnboardingPrefs.locationFlow.collectAsState()
+    val cityName = location?.cityName.orEmpty()
+
+    // Every cached day is stale the moment the times change — a calculation setting, a time the
+    // user fixed, a move. Emptying the cache is not enough on its own: the loads below have
+    // already run for the dates on screen, so the count is what asks them to run again.
+    var timetableRevision by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        PrayerTimetable.changes.collect {
+            prayerCache.clear()
+            timetableRevision++
+        }
     }
 
-    // Today's prayers — loaded once; powers the countdown regardless of selectedDate.
+    // Today's prayers — powers the countdown regardless of selectedDate.
     var todayPrayers by remember { mutableStateOf<List<PrayerTime>>(emptyList()) }
 
-    LaunchedEffect(cityName) {
+    LaunchedEffect(cityName, timetableRevision) {
         if (cityName.isNotBlank()) {
             todayPrayers = repo.getForDate(today).also { prayerCache[today] = it }
         }
@@ -161,7 +172,7 @@ private fun PrayersScreenContent(padding: PaddingValues) {
     // Tomorrow's prayers — loaded lazily once post-day state is reached.
     var tomorrowPrayers by remember { mutableStateOf<List<PrayerTime>>(emptyList()) }
 
-    LaunchedEffect(isPostDay, cityName) {
+    LaunchedEffect(isPostDay, cityName, timetableRevision) {
         if (!isPostDay) { tomorrowPrayers = emptyList(); return@LaunchedEffect }
         if (cityName.isBlank()) return@LaunchedEffect
         val tomorrow = today.plusDays(1)
@@ -257,7 +268,7 @@ private fun PrayersScreenContent(padding: PaddingValues) {
                 prayers.indexOfFirst { it.name == headerPrayer.name }.takeIf { it >= 0 }
             }
 
-            LaunchedEffect(pageDate, cityName) {
+            LaunchedEffect(pageDate, cityName, timetableRevision) {
                 if (cityName.isNotBlank() && prayerCache[pageDate] == null) {
                     val fetched = repo.getForDate(pageDate)
                     prayerCache[pageDate] = fetched

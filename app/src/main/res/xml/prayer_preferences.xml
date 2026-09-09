@@ -46,6 +46,23 @@
             app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
+    <!-- Above the calculation, because it has the last word over it: a prayer set here keeps its
+         time whatever the rows below are set to. -->
+    <PreferenceCategory android:title="@string/prayer_settings_times_section">
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:key="custom_times"
+            android:title="@string/prayer_settings_custom_times"
+            android:summary="@string/prayer_settings_custom_times_summary"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreferenceCompat
+            android:key="share_prayer_times"
+            android:persistent="false"
+            android:title="@string/prayer_settings_share_times"
+            android:summary="@string/prayer_settings_share_times_summary"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="@string/prayer_settings_calc_section">
         <SwitchPreferenceCompat
             android:key="auto_settings"

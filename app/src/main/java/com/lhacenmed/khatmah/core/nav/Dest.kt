@@ -20,6 +20,7 @@ import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahScreen
 import com.lhacenmed.khatmah.feature.khatmah.ui.SessionsScreen
 import com.lhacenmed.khatmah.feature.quran.ui.bookmarks.BookmarksScreen
 import com.lhacenmed.khatmah.feature.quran.ui.prints.PrintSelectScreen
+import com.lhacenmed.khatmah.feature.prayer.ui.settings.CustomTimesScreen
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.PrayerSettingsFragment
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.CalcMethodScreen
 import com.lhacenmed.khatmah.feature.prayer.ui.settings.calculations.DstScreen
@@ -176,6 +177,12 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
     data object PrayerSettings : Dest() {
         override val titleRes get() = R.string.prayer_settings_title
         override fun fragment() = PrayerSettingsFragment()
+    }
+    data object CustomTimes : Dest() {
+        override val titleRes get() = R.string.prayer_settings_custom_times
+        override fun screen() = @Composable {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) CustomTimesScreen()
+        }
     }
     data object CalcMethod : Dest() {
         override val titleRes get() = R.string.prayer_settings_calc_method

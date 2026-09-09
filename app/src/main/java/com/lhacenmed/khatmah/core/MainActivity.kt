@@ -46,7 +46,6 @@ import com.lhacenmed.khatmah.shared.util.ThemeManager
 import com.lhacenmed.khatmah.databinding.ActivityMainBinding
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarTab
 import com.lhacenmed.khatmah.feature.adhkar.ui.AdhkarViewModel
-import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.feature.quran.ui.home.QuranHomeViewModel
 import com.lhacenmed.khatmah.feature.quran.ui.home.QuranTab
 import com.lhacenmed.khatmah.feature.quran.ui.home.QuranTabFragment
@@ -65,7 +64,6 @@ import com.lhacenmed.khatmah.shared.reminders.ReminderRoute
 import com.lhacenmed.khatmah.shared.reminders.SunnahSurah
 import com.lhacenmed.khatmah.widget.PrayerWidget
 import com.lhacenmed.khatmah.widget.WidgetAction
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -169,7 +167,6 @@ class MainActivity : AppCompatActivity() {
         selectTab(selectedTab)
         // Deep links apply only on a fresh launch — never override the restored tab on recreate.
         if (savedInstanceState == null) handleLaunchIntent(intent)
-        observeSettingsForWidget()
         // Check for a newer build once per fresh launch; UpdateGate prompts when one is found.
         if (savedInstanceState == null) checkForUpdate()
 
@@ -614,17 +611,6 @@ class MainActivity : AppCompatActivity() {
             val category = adhkarVm.uiState.first { !it.isLoading }
                 .categories.firstOrNull { it.id == categoryId } ?: return@launch
             startActivity(Dest.AdhkarDetail(category.id, category.title).toIntent(this@MainActivity))
-        }
-    }
-
-    /** Push a widget update on every settings save while at least STARTED. */
-    private fun observeSettingsForWidget() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                PrayerSettings.flow
-                    .drop(1)
-                    .collect { PrayerWidget().updateAll(this@MainActivity) }
-            }
         }
     }
 

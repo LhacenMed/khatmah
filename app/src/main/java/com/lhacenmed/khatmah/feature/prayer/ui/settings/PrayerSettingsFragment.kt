@@ -10,7 +10,10 @@ import com.lhacenmed.khatmah.core.ui.collectWhileStarted
 import com.lhacenmed.khatmah.core.ui.components.ValuePreference
 import com.lhacenmed.khatmah.core.ui.components.go
 import com.lhacenmed.khatmah.core.ui.components.onClick
+import com.lhacenmed.khatmah.feature.prayer.data.CustomPrayerTimes
+import com.lhacenmed.khatmah.feature.prayer.data.CustomTimesPrefs
 import com.lhacenmed.khatmah.feature.prayer.data.DstMode
+import com.lhacenmed.khatmah.feature.prayer.data.changelog.PrayerTimeSharingPrefs
 import com.lhacenmed.khatmah.feature.prayer.data.HigherLatMode
 import com.lhacenmed.khatmah.feature.prayer.data.JuristicMethod
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerCalcSettings
@@ -40,11 +43,22 @@ class PrayerSettingsFragment : PreferenceFragmentCompat() {
         onClick("auto_location")   { go(Dest.OnboardingLocation) }
         onClick("manual_location") { go(Dest.CountrySelect(fromSettings = true)) }
 
+        onClick("custom_times") { go(Dest.CustomTimes) }
+
         onClick("calc_method") { go(Dest.CalcMethod) }
         onClick("juristic")    { go(Dest.Juristic) }
         onClick("dst")         { go(Dest.Dst) }
         onClick("corrections") { go(Dest.ManualCorrections) }
         onClick("higher_lat")  { go(Dest.HigherLat) }
+
+        // Read once rather than observed: this screen is the only place the choice is made.
+        findPreference<SwitchPreferenceCompat>("share_prayer_times")?.apply {
+            isChecked = PrayerTimeSharingPrefs.isOn.value
+            setOnPreferenceChangeListener { _, value ->
+                PrayerTimeSharingPrefs.set(requireContext(), value as Boolean)
+                true
+            }
+        }
 
         findPreference<SwitchPreferenceCompat>("auto_settings")?.setOnPreferenceChangeListener { _, value ->
             PrayerSettings.save(requireContext(), toggleAuto(value as Boolean))
@@ -55,6 +69,7 @@ class PrayerSettingsFragment : PreferenceFragmentCompat() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         collectWhileStarted(PrayerSettings.flow) { showCalculation(it) }
+        collectWhileStarted(CustomTimesPrefs.flow) { showCustomTimes(it) }
     }
 
     /**
@@ -75,6 +90,12 @@ class PrayerSettingsFragment : PreferenceFragmentCompat() {
                 ?: getString(R.string.prayers_city_unknown)
             value = location?.let { "%.4f°, %.4f°".format(it.lat, it.lng) }
         }
+    }
+
+    /** The row's value answers its title: are any of the times the user's own? */
+    private fun showCustomTimes(times: CustomPrayerTimes) {
+        findPreference<ValuePreference>("custom_times")?.value =
+            getString(if (times.hasNone) R.string.custom_times_none else R.string.custom_times_some)
     }
 
     private fun showCalculation(settings: PrayerCalcSettings) {

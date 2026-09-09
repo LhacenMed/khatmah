@@ -241,6 +241,19 @@
     <string name="prayer_settings_corrections">Manual Corrections</string>
     <string name="prayer_settings_higher_lat">Higher Latitude</string>
 
+    <!-- Custom prayer times -->
+    <string name="prayer_settings_times_section">Prayer Times</string>
+    <string name="prayer_settings_custom_times">Custom Times</string>
+    <string name="prayer_settings_custom_times_summary">Set prayer times yourself instead of calculating them</string>
+    <string name="custom_times_none">Calculated</string>
+    <string name="custom_times_some">Customized</string>
+    <string name="custom_times_all">Custom times for all prayers</string>
+    <string name="custom_times_status_custom">Custom</string>
+    <string name="custom_times_status_calculated">Calculated</string>
+    <string name="custom_times_clear">Use the calculated time</string>
+    <string name="prayer_settings_share_times">Help Improve Prayer Times</string>
+    <string name="prayer_settings_share_times_summary">Share the times you set yourself, and where you set them, so calculated times can be improved for your area</string>
+
     <!-- Juristic method options -->
     <string name="juristic_shafi">Shafi, Maliki, Hanbali</string>
     <string name="juristic_hanafi">Hanafi</string>

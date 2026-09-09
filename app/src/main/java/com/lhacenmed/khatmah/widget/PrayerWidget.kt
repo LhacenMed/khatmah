@@ -38,11 +38,11 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.lhacenmed.khatmah.core.MainActivity
 import com.lhacenmed.khatmah.R
-import com.lhacenmed.khatmah.feature.prayer.data.PrayerEngine
+import com.lhacenmed.khatmah.feature.prayer.data.CustomTimesPrefs
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerTime
+import com.lhacenmed.khatmah.feature.prayer.data.PrayerTimetable
 import com.lhacenmed.khatmah.shared.util.LocaleManager
-import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -106,22 +106,15 @@ class PrayerWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         PrayerSettings.init(context)
+        CustomTimesPrefs.init(context)
 
-        val location  = OnboardingPrefs.location(context)
         val zone      = ZoneId.systemDefault()
         val now       = LocalTime.now()
         val today     = LocalDate.now()
         val nowMs     = System.currentTimeMillis()
 
-        // Always calculate today's prayers first — needed for alarm scheduling.
-        val todayPrayers: List<PrayerTime> = location?.let { loc ->
-            runCatching {
-                PrayerEngine.calculate(
-                    loc.lat, loc.lng, today,
-                    PrayerSettings.get().resolve(loc.countryCode),
-                )
-            }.getOrDefault(emptyList())
-        } ?: emptyList()
+        // Always resolve today's prayers first — needed for alarm scheduling.
+        val todayPrayers = PrayerTimetable.forDate(context, today)
 
         // Post-day: all of today's prayers have passed AND Isha's 30-min window is over.
         // Switch to tomorrow's prayer list and count down to tomorrow's Fajr.
@@ -132,14 +125,10 @@ class PrayerWidget : GlanceAppWidget() {
         }
 
         val (displayPrayers, countdown) = when {
-            isPostDay && location != null -> {
-                val tomorrow     = today.plusDays(1)
-                val tmrPrayers   = runCatching {
-                    PrayerEngine.calculate(
-                        location.lat, location.lng, tomorrow,
-                        PrayerSettings.get().resolve(location.countryCode),
-                    )
-                }.getOrDefault(emptyList())
+            // isPostDay already implies a list, and a list implies somewhere to compute for.
+            isPostDay -> {
+                val tomorrow   = today.plusDays(1)
+                val tmrPrayers = PrayerTimetable.forDate(context, tomorrow)
                 val fajr = tmrPrayers.firstOrNull()
                 val cd   = fajr?.let {
                     val fajrMs = ZonedDateTime.of(tomorrow, it.time, zone).toInstant().toEpochMilli()

@@ -7,16 +7,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lhacenmed.khatmah.feature.prayer.data.CustomTimesPrefs
 import com.lhacenmed.khatmah.feature.prayer.data.PrayerCalcSettings
-import com.lhacenmed.khatmah.feature.prayer.data.PrayerEngine
+import com.lhacenmed.khatmah.feature.prayer.data.PrayerTimetable
 import com.lhacenmed.khatmah.feature.prayer.data.toAmPm
-import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import java.time.LocalDate
 
 /**
@@ -37,15 +39,14 @@ fun PrayerTimesPreviewBar(settings: PrayerCalcSettings, modifier: Modifier = Mod
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun PreviewBarImpl(settings: PrayerCalcSettings, modifier: Modifier) {
-    val context = LocalContext.current
-    val loc     = remember { OnboardingPrefs.location(context) }
+    val context     = LocalContext.current
+    val customTimes by CustomTimesPrefs.flow.collectAsState()
 
     // The computation is pure math (< 1 ms) so it runs synchronously inside remember.
-    val times = remember(settings, loc) {
-        if (loc == null || (loc.lat == 0.0 && loc.lng == 0.0)) emptyList()
-        else runCatching {
-            PrayerEngine.calculate(loc.lat, loc.lng, LocalDate.now(), settings.resolve(loc.countryCode))
-        }.getOrDefault(emptyList())
+    // Keyed on the pinned times as well, which the timetable reads for itself: a prayer pinned on
+    // the custom-times page has to move the bar there while the page is still open.
+    val times = remember(settings, customTimes) {
+        PrayerTimetable.forDate(context, LocalDate.now(), settings)
     }
 
     Surface(

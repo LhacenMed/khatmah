@@ -39,6 +39,24 @@ object SupabaseClient {
         )
     }
 
+    // ── Prayer time changes ────────────────────────────────────────────────────
+
+    /**
+     * Appends prayer-time changes to the log.
+     *
+     * Goes through `log_prayer_time_changes` rather than the table, because this key may only
+     * append: the table itself is closed to it, so a copy of the app cannot read back what other
+     * people have set or where they were. The function ignores an [event_id] it already holds,
+     * which is what makes a resend after a lost response free. Throws on anything else, leaving
+     * the rows in the outbox to try later.
+     */
+    suspend fun insertPrayerTimeChanges(rows: List<JSONObject>) = withContext(Dispatchers.IO) {
+        post(
+            url  = "$URL_BASE/rpc/log_prayer_time_changes",
+            body = JSONObject().put("changes", JSONArray(rows)).toString(),
+        )
+    }
+
     // ── HTTP helpers ───────────────────────────────────────────────────────────
 
     private fun get(url: String): List<Map<String, Any?>> {

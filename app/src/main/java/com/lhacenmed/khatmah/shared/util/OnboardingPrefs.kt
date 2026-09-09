@@ -2,6 +2,9 @@ package com.lhacenmed.khatmah.shared.util
 
 import android.content.Context
 import androidx.core.content.edit
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Persists onboarding completion state and the user's resolved location.
@@ -30,6 +33,22 @@ object OnboardingPrefs {
         val countryCode: String = "",
     )
 
+    private val _locationFlow = MutableStateFlow<LocationData?>(null)
+
+    /**
+     * The place in force; null until onboarding has chosen one.
+     *
+     * Prayer times are worked out for a place, so moving changes every one of them. The screens
+     * that read a location read it directly — it is one file read — but the surfaces that have to
+     * be *rebuilt* when it moves cannot poll for that, so the change is announced here.
+     */
+    val locationFlow: StateFlow<LocationData?> = _locationFlow.asStateFlow()
+
+    /** Load the persisted location into memory. Call once from App.onCreate. */
+    fun init(context: Context) {
+        _locationFlow.value = location(context)
+    }
+
     fun isComplete(context: Context): Boolean =
         prefs(context).getBoolean(KEY_COMPLETE, false)
 
@@ -47,6 +66,7 @@ object OnboardingPrefs {
             putLong(KEY_LNG_BITS,  lng.toBits())
             putString(KEY_COUNTRY, countryCode.uppercase())
         }
+        _locationFlow.value = location(context)
     }
 
     /** Returns saved location, or null when onboarding has not been completed. */

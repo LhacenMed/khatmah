@@ -6,9 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.annotation.RequiresApi
-import com.lhacenmed.khatmah.feature.prayer.data.PrayerCalcSettings
-import com.lhacenmed.khatmah.feature.prayer.data.PrayerEngine
-import com.lhacenmed.khatmah.feature.prayer.data.PrayerSettings
+import com.lhacenmed.khatmah.feature.prayer.data.PrayerTimetable
 import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import java.time.LocalDate
 import java.time.LocalTime
@@ -42,9 +40,8 @@ object ReminderScheduler {
 
     private fun schedulePrayer(context: Context, am: AlarmManager, config: ReminderConfig) {
         val prayerId = (config.type as ReminderType.Prayer).prayerId
-        val loc      = OnboardingPrefs.location(context) ?: run { cancelAll(context, am, config); return }
-        val settings = PrayerSettings.get().resolve(loc.countryCode)
-        val prayerMs = nextPrayerMs(prayerId, loc.lat, loc.lng, settings) ?: return
+        if (OnboardingPrefs.location(context) == null) { cancelAll(context, am, config); return }
+        val prayerMs = nextPrayerMs(context, prayerId) ?: return
 
         setAlarm(context, am, prayerMs, config.alarmCode, mainIntent(context, config.id, prayerMs))
 
@@ -61,17 +58,13 @@ object ReminderScheduler {
         }
     }
 
-    private fun nextPrayerMs(
-        prayerId: Int, lat: Double, lng: Double, settings: PrayerCalcSettings,
-    ): Long? {
+    private fun nextPrayerMs(context: Context, prayerId: Int): Long? {
         val zone  = ZoneId.systemDefault()
         val nowMs = System.currentTimeMillis()
         for (offset in 0L..1L) {
-            val date    = LocalDate.now().plusDays(offset)
-            val prayers = runCatching { PrayerEngine.calculate(lat, lng, date, settings) }
-                .getOrDefault(emptyList())
-            val prayer  = prayers.getOrNull(prayerId) ?: continue
-            val ms      = ZonedDateTime.of(date, prayer.time, zone).toInstant().toEpochMilli()
+            val date   = LocalDate.now().plusDays(offset)
+            val prayer = PrayerTimetable.forDate(context, date).getOrNull(prayerId) ?: continue
+            val ms     = ZonedDateTime.of(date, prayer.time, zone).toInstant().toEpochMilli()
             if (ms > nowMs) return ms
         }
         return null

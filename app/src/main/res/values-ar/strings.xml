@@ -241,6 +241,19 @@
     <string name="prayer_settings_corrections">التصحيحات اليدوية</string>
     <string name="prayer_settings_higher_lat">خطوط العرض العالية</string>
 
+    <!-- Custom prayer times -->
+    <string name="prayer_settings_times_section">أوقات الصلاة</string>
+    <string name="prayer_settings_custom_times">أوقات مخصصة</string>
+    <string name="prayer_settings_custom_times_summary">حدّد أوقات الصلاة بنفسك بدلًا من حسابها</string>
+    <string name="custom_times_none">محسوبة</string>
+    <string name="custom_times_some">مخصصة</string>
+    <string name="custom_times_all">أوقات مخصصة لجميع الصلوات</string>
+    <string name="custom_times_status_custom">مخصص</string>
+    <string name="custom_times_status_calculated">محسوب</string>
+    <string name="custom_times_clear">استخدام الوقت المحسوب</string>
+    <string name="prayer_settings_share_times">المساعدة في تحسين أوقات الصلاة</string>
+    <string name="prayer_settings_share_times_summary">مشاركة الأوقات التي تضبطها بنفسك وموقعك عند ضبطها، للمساعدة في تحسين الأوقات المحسوبة في منطقتك</string>
+
     <!-- Juristic method options -->
     <string name="juristic_shafi">شافعي، مالكي، حنبلي</string>
     <string name="juristic_hanafi">حنفي</string>

@@ -3,11 +3,11 @@ package com.lhacenmed.khatmah.shared.fcm
 import android.content.Context
 import com.google.firebase.messaging.FirebaseMessaging
 import com.lhacenmed.khatmah.shared.supabase.SupabaseClient
+import com.lhacenmed.khatmah.shared.util.DeviceId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import androidx.core.content.edit
 
 /**
  * Fetches the FCM token and upserts it into Supabase push_tokens.
@@ -26,22 +26,13 @@ object FcmTokenManager {
 
     /** Called by [KhatmahFcmService.onNewToken] on token refresh. */
     fun upload(context: Context, token: String) {
-        val deviceId = getDeviceId(context)
+        val deviceId = DeviceId.of(context)
         scope.launch {
             runCatching {
                 SupabaseClient.upsertPushToken(token, deviceId)
             }.onFailure {
                 // Non-fatal: notification delivery degrades gracefully
             }
-        }
-    }
-
-    private fun getDeviceId(context: Context): String {
-        val prefs = context.getSharedPreferences("fcm_prefs", Context.MODE_PRIVATE)
-        return prefs.getString("device_id", null) ?: run {
-            val id = java.util.UUID.randomUUID().toString()
-            prefs.edit { putString("device_id", id) }
-            id
         }
     }
 }
