@@ -48,8 +48,8 @@ sealed class Version(
 
 val currentVersion: Version = Version.Stable(
     versionMajor = 1,
-    versionMinor = 3,
-    versionPatch = 7,
+    versionMinor = 4,
+    versionPatch = 0,
 )
 
 val keystorePropertiesFile: File = rootProject.file("keystore.properties")

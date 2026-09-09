@@ -1,6 +1,9 @@
 {
-  "versionCode": 10309,
-  "versionName": "1.3.7",
-  "apkUrl": "https://github.com/LhacenMed/khatmah/releases/download/v1.3.7/khatmah-1.3.7-universal.apk",
-  "notes": "The prayer widget now follows the app's theme and language, and reminders open the reading they're about."
+  "versionCode": 10402,
+  "versionName": "1.4.0",
+  "apkUrl": "https://github.com/LhacenMed/khatmah/releases/download/v1.4.0/khatmah-1.4.0-universal.apk",
+  "notes": "## Custom prayer times\n\nSet any prayer's time yourself instead of having it calculated — one prayer, or the whole day. A time you set applies everywhere: the Prayers tab, the widget, and the adhan and reminder notifications.\n\nFind it in Prayer Settings, under Custom Times.\n\n## Changes apply instantly\n\nCalculation settings, custom times and a change of location now reach the Prayers tab, the widget and every scheduled notification straight away. The adhan used to keep its old schedule until the next restart.\n\n## Moving to a new place\n\nTimes you set by hand belong to the place you set them in. Move somewhere else and they are cleared, so the app goes back to calculating for where you actually are.\n\n## Helping improve prayer times\n\nTimes you set are shared, along with the location they were set for, so calculated times can improve for your area. It is on by default and can be turned off at any time in Prayer Settings.",
+  "notesByLanguage": {
+    "ar": "## أوقات صلاة مخصصة\n\nاضبط وقت أي صلاة بنفسك بدلًا من حسابه — صلاة واحدة أو اليوم كله. الوقت الذي تضبطه يُطبَّق في كل مكان: تبويب الصلوات، والأداة على الشاشة الرئيسية، وتنبيهات الأذان والتذكير.\n\nتجده في إعدادات الصلاة ضمن الأوقات المخصصة.\n\n## التغييرات تُطبَّق فورًا\n\nإعدادات الحساب والأوقات المخصصة وتغيير الموقع تصل الآن إلى تبويب الصلوات والأداة وكل تنبيه مجدول على الفور. كان الأذان يبقى على جدوله القديم حتى إعادة التشغيل التالية.\n\n## الانتقال إلى مكان جديد\n\nالأوقات التي تضبطها بنفسك تخص المكان الذي ضبطتها فيه. إذا انتقلت إلى مكان آخر تُمسح، ليعود التطبيق إلى حساب الأوقات للمكان الذي أنت فيه فعلًا.\n\n## المساعدة في تحسين أوقات الصلاة\n\nتُشارَك الأوقات التي تضبطها مع الموقع الذي ضُبطت من أجله، للمساعدة في تحسين الأوقات المحسوبة في منطقتك. الخيار مفعّل افتراضيًا ويمكن إيقافه في أي وقت من إعدادات الصلاة."
+  }
 }
