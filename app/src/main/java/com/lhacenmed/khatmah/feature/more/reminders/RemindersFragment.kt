@@ -178,17 +178,23 @@ class RemindersFragment : PreferenceFragmentCompat() {
             icon         = context.getDrawable(R.drawable.ic_notifications)
             isPersistent = false
         })
-        addPreference(ValuePreference(context).apply {
+        val time = ValuePreference(context).apply {
             key          = "${config.id}.time"
             title        = getString(R.string.reminders_schedule)
             icon         = context.getDrawable(R.drawable.ic_schedule)
             isPersistent = false
-            dependency   = config.id
             setOnPreferenceClickListener {
                 showEditor(ReminderEditorSheet.forReminder(config.id))
                 true
             }
-        })
+        }
+        addPreference(time)
+        // Named only once the row is in the hierarchy. A dependency is resolved the moment it is
+        // named, and a row that has not been added yet has no hierarchy to find the switch in —
+        // androidx throws there rather than waiting for one, which is why this cannot move up into
+        // the block above with the rest of the row's properties.
+        time.dependency = config.id
+
         bindReminderSwitch(config.id)
     }
 
