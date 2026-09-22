@@ -16,6 +16,7 @@ import com.lhacenmed.khatmah.feature.debug.DbBrowserScreen
 import com.lhacenmed.khatmah.feature.debug.FileBrowserScreen
 import com.lhacenmed.khatmah.feature.demo.DemoDetailScreen
 import com.lhacenmed.khatmah.feature.khatmah.ui.DailyAlarmScreen
+import com.lhacenmed.khatmah.feature.more.reminders.RemindersFragment
 import com.lhacenmed.khatmah.feature.khatmah.ui.NewKhatmahScreen
 import com.lhacenmed.khatmah.feature.khatmah.ui.SessionsScreen
 import com.lhacenmed.khatmah.feature.quran.ui.bookmarks.BookmarksScreen
@@ -100,6 +101,11 @@ sealed class Dest(val target: Class<out Activity>? = null) : java.io.Serializabl
     data object DailyAlarm : Dest() {
         override val titleRes get() = R.string.more_daily_alarm
         override fun screen() = @Composable { DailyAlarmScreen() }
+    }
+    /** Every alarm outside the adhan and the daily wird, in one screen. */
+    data object Reminders : Dest() {
+        override val titleRes get() = R.string.reminders_title
+        override fun fragment() = RemindersFragment()
     }
     /** Active khatmah sessions list: previously read ([showRead] = true) or upcoming (false). */
     data class Sessions(val showRead: Boolean) : Dest() {

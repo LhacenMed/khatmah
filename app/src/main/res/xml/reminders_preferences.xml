@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Every alarm the app can raise, in one screen.
+
+  The two seeded sections are declared here because they always exist: the daily adhkar, and the
+  three surahs the app suggests by itself. Reminders the user adds have no place in a static file,
+  so RemindersFragment builds their rows into the "added" category at the end — the category is
+  declared empty and hidden rather than created on demand, so the screen has the same shape whether
+  or not anything has been added to it.
+
+  Nothing here persists on its own: the rows front ReminderPrefs, so they are non-persistent and
+  RemindersFragment reads and writes them. Each time row declares a `dependency` on its switch,
+  which is what greys it out when the alarm is off — no code decides that.
+-->
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory android:title="@string/more_adhkar_alarms">
+        <SwitchPreferenceCompat
+            android:icon="@drawable/ic_wb_sunny"
+            android:key="adhkar:morning"
+            android:persistent="false"
+            android:title="@string/more_day_adhkar_alarm" />
+
+        <!-- Minutes after Fajr. Live only while the custom-time switch below is off. -->
+        <com.lhacenmed.khatmah.core.ui.components.ValueListPreference
+            android:dependency="adhkar:morning"
+            android:icon="@drawable/ic_schedule"
+            android:key="adhkar:morning.offset"
+            android:persistent="false"
+            android:title="@string/more_day_adhkar_time" />
+
+        <SwitchPreferenceCompat
+            android:dependency="adhkar:morning"
+            android:icon="@drawable/ic_edit"
+            android:key="adhkar:morning.custom"
+            android:persistent="false"
+            android:title="@string/more_adhkar_custom_time" />
+
+        <!-- A fixed clock time. Live only while the custom-time switch above is on. -->
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:dependency="adhkar:morning"
+            android:icon="@drawable/ic_schedule"
+            android:key="adhkar:morning.time"
+            android:persistent="false"
+            android:title="@string/more_adhkar_custom_time_value" />
+
+        <SwitchPreferenceCompat
+            android:icon="@drawable/ic_dark_mode"
+            android:key="adhkar:evening"
+            android:persistent="false"
+            android:title="@string/more_night_adhkar_alarm" />
+
+        <!-- Minutes before Maghrib. Live only while the custom-time switch below is off. -->
+        <com.lhacenmed.khatmah.core.ui.components.ValueListPreference
+            android:dependency="adhkar:evening"
+            android:icon="@drawable/ic_schedule"
+            android:key="adhkar:evening.offset"
+            android:persistent="false"
+            android:title="@string/more_night_adhkar_time" />
+
+        <SwitchPreferenceCompat
+            android:dependency="adhkar:evening"
+            android:icon="@drawable/ic_edit"
+            android:key="adhkar:evening.custom"
+            android:persistent="false"
+            android:title="@string/more_adhkar_custom_time" />
+
+        <!-- A fixed clock time. Live only while the custom-time switch above is on. -->
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:dependency="adhkar:evening"
+            android:icon="@drawable/ic_schedule"
+            android:key="adhkar:evening.time"
+            android:persistent="false"
+            android:title="@string/more_adhkar_custom_time_value" />
+    </PreferenceCategory>
+
+    <!--
+      The three surahs the app suggests. Their time rows open the same editor sheet a user's own
+      reminders open, so every surah reminder is set the same way and every one of them can be
+      moved to a single day of the week.
+    -->
+    <PreferenceCategory android:title="@string/more_sunnahs_alarms">
+        <SwitchPreferenceCompat
+            android:icon="@drawable/ic_notifications"
+            android:key="sunnah:al_kahf"
+            android:persistent="false"
+            android:title="@string/reminders_al_kahf_alarm" />
+
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:dependency="sunnah:al_kahf"
+            android:icon="@drawable/ic_schedule"
+            android:key="sunnah:al_kahf.time"
+            android:persistent="false"
+            android:title="@string/reminders_schedule" />
+
+        <SwitchPreferenceCompat
+            android:icon="@drawable/ic_notifications"
+            android:key="sunnah:al_mulk"
+            android:persistent="false"
+            android:title="@string/more_al_mulk_alarm" />
+
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:dependency="sunnah:al_mulk"
+            android:icon="@drawable/ic_schedule"
+            android:key="sunnah:al_mulk.time"
+            android:persistent="false"
+            android:title="@string/reminders_schedule" />
+
+        <SwitchPreferenceCompat
+            android:icon="@drawable/ic_notifications"
+            android:key="sunnah:al_baqarah"
+            android:persistent="false"
+            android:title="@string/more_al_baqarah_alarm" />
+
+        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
+            android:dependency="sunnah:al_baqarah"
+            android:icon="@drawable/ic_schedule"
+            android:key="sunnah:al_baqarah.time"
+            android:persistent="false"
+            android:title="@string/reminders_schedule" />
+    </PreferenceCategory>
+
+    <!-- Filled by RemindersFragment; hidden while the user has added nothing. -->
+    <PreferenceCategory
+        android:key="added"
+        android:title="@string/reminders_added" />
+
+    <Preference
+        android:icon="@drawable/ic_add"
+        android:key="add_reminder"
+        app:allowDividerAbove="true"
+        android:title="@string/reminders_add" />
+
+</PreferenceScreen>

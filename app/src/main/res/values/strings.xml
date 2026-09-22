@@ -74,10 +74,12 @@
     <string name="more_day_adhkar_time">Morning Adhkar Time</string>
     <string name="more_night_adhkar_alarm">Evening Adhkar Alarm</string>
     <string name="more_night_adhkar_time">Evening Adhkar Time</string>
+    <string name="more_adhkar_custom_time">Use a custom time instead</string>
+    <string name="more_adhkar_custom_time_value">Custom Time</string>
+    <string name="more_adhkar_offset_after">%1$d minutes after %2$s</string>
+    <string name="more_adhkar_offset_before">%1$d minutes before %2$s</string>
     <string name="more_al_mulk_alarm">Al-Mulk Alarm</string>
-    <string name="more_al_mulk_time">Al-Mulk Time</string>
     <string name="more_al_baqarah_alarm">Al-Baqarah Alarm</string>
-    <string name="more_al_baqarah_time">Al-Baqarah Time</string>
     <string name="more_language">Language</string>
     <string name="more_contact_us">Contact Us</string>
     <string name="more_twitter">Follow Us on Twitter</string>
@@ -376,6 +378,8 @@
 
     <!-- Notification body -->
     <string name="notif_pre_alert_body">%1$d minutes until %2$s</string>
+    <string name="notif_adhkar_body">Time for %1$s. Read now.</string>
+    <string name="notif_sunnah_body">Don\'t forget to read %1$s — tap to read.</string>
 
     <!-- Sound selection -->
     <string name="adhan_alert_before_minutes">%1$d minutes before</string>
@@ -681,4 +685,22 @@
     <string name="update_check_now">Check for updates</string>
     <string name="update_checking">Checking…</string>
     <string name="update_up_to_date">Up to date</string>
+
+    <!-- Reminders — the one screen holding every alarm outside the adhan and the daily wird. -->
+    <string name="reminders_title">Reminders</string>
+    <string name="reminders_added">My Reminders</string>
+    <string name="reminders_add">Add a reminder</string>
+    <string name="reminders_new_title">New reminder</string>
+    <string name="reminders_pick_target">Choose a surah or a dhikr</string>
+    <string name="reminders_already_added">Added</string>
+    <string name="reminders_schedule">Schedule</string>
+    <string name="reminders_time">Time</string>
+    <string name="reminders_repeat">Repeat</string>
+    <string name="reminders_repeat_daily">Daily</string>
+    <string name="reminders_save">Save</string>
+    <string name="reminders_cancel">Cancel</string>
+    <string name="reminders_delete">Delete</string>
+    <string name="reminders_al_kahf_alarm">Al-Kahf Alarm</string>
+    <string name="reminders_search_hint">Search for a surah or a dhikr</string>
+    <string name="reminders_no_matches">Nothing matches that</string>
 </resources>

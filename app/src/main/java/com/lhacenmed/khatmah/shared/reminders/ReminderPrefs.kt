@@ -20,9 +20,13 @@ object ReminderPrefs {
     private const val PREFS       = "reminder_prefs"
     private const val K_IDS       = "ids"
     private const val K_CUSTOM    = "custom_sounds"
+    private const val K_ADHKAR_DEFAULT_ON = "adhkar_default_on_v1"
 
     // Matches AdhanSound.Asset(AdhanSound.DEFAULT_ASSET).toKey()
     private const val DEFAULT_PRAYER_SOUND = "asset:adhan_mr.opus"
+
+    /** Where user-added reminders' alarm codes begin, clear of the seeded 0-29. */
+    private const val FIRST_USER_ALARM_CODE = 100
 
     @Volatile var version: Int = 0
         private set
@@ -47,6 +51,7 @@ object ReminderPrefs {
         } else {
             val configs = ids.mapNotNull { readOne(p, it) }.toMutableList()
             migrateKhatmahSlots(p, configs)
+            migrateAdhkarDefaultOn(p, configs)
             _flow.value = configs.sortedBy { it.alarmCode }
         }
         _customSoundsFlow.value = readCustomSounds(p)
@@ -73,6 +78,37 @@ object ReminderPrefs {
             if (sound is ReminderSound.Custom) addCustomSound(context, sound)
         }
     }
+
+    /**
+     * Drops a reminder the user added, and with it every key it wrote.
+     *
+     * Only user-added reminders are ever removed — a seeded one turned off still has a row to come
+     * back from, so callers disable those instead. Cancelling the alarm is the caller's to do
+     * before this: once the config is gone there is nothing left to cancel it by.
+     */
+    fun remove(context: Context, id: String) {
+        val p         = prefs(context.applicationContext)
+        val remaining = _flow.value.filterNot { it.id == id }
+
+        p.edit {
+            listOf("type", "en", "h", "m", "snd", "pre", "code", "link", "custom", "offset",
+                   "repeat", "label").forEach { remove("${id}_$it") }
+        }
+        writeIds(p, remaining.map { it.id })
+
+        _flow.value = remaining
+        version++
+    }
+
+    /**
+     * A free alarm code for a reminder the user is adding.
+     *
+     * Seeded reminders hold codes 0-29 and pick their own; user-added ones start past
+     * [FIRST_USER_ALARM_CODE] and climb, so a code is never reused while the alarm it named may
+     * still be pending.
+     */
+    fun nextAlarmCode(): Int =
+        (_flow.value.maxOfOrNull { it.alarmCode } ?: 0).coerceAtLeast(FIRST_USER_ALARM_CODE - 1) + 1
 
     fun addCustomSound(context: Context, sound: ReminderSound.Custom) {
         val p   = prefs(context.applicationContext)
@@ -106,9 +142,12 @@ object ReminderPrefs {
                 alarmCode       = i,
             ))
         }
-        // Adhkar — alarmCodes 20-21
-        add(fixedOff("adhkar:morning",  ReminderType.Adhkar("morning"),  7,  0, 20))
-        add(fixedOff("adhkar:evening",  ReminderType.Adhkar("evening"), 17, 30, 21))
+        // Adhkar — alarmCodes 20-21. Anchored to Fajr/Maghrib by default (see ReminderScheduler),
+        // enabled out of the box; timeHour/timeMinute only take effect once useCustomTime is set.
+        add(ReminderConfig(id = "adhkar:morning", type = ReminderType.Adhkar("morning"),
+            enabled = true, timeHour = 7,  timeMinute = 0, soundKey = "device", alarmCode = 20))
+        add(ReminderConfig(id = "adhkar:evening", type = ReminderType.Adhkar("evening"),
+            enabled = true, timeHour = 17, timeMinute = 30, soundKey = "device", alarmCode = 21))
         // Quran sunnah — alarmCodes 22-24
         add(fixedOff("sunnah:al_mulk",    ReminderType.QuranSunnah("al_mulk"),   21,  0, 22))
         add(fixedOff("sunnah:al_baqarah", ReminderType.QuranSunnah("al_baqarah"),20, 30, 23))
@@ -169,6 +208,22 @@ object ReminderPrefs {
     }
 
     /**
+     * One-time migration: adhkar reminders used to default to off. Existing installs that never
+     * touched them get switched on, anchored to Fajr/Maghrib, matching the new default.
+     */
+    private fun migrateAdhkarDefaultOn(p: SharedPreferences, configs: MutableList<ReminderConfig>) {
+        if (p.getBoolean(K_ADHKAR_DEFAULT_ON, false)) return
+        p.edit { putBoolean(K_ADHKAR_DEFAULT_ON, true) }
+        listOf("adhkar:morning", "adhkar:evening").forEach { id ->
+            val idx = configs.indexOfFirst { it.id == id }
+            if (idx >= 0 && !configs[idx].enabled) {
+                configs[idx] = configs[idx].copy(enabled = true)
+                writeOne(p, configs[idx])
+            }
+        }
+    }
+
+    /**
      * One-time migration: seeds the five khatmah slots for users who were on the old
      * single "khatmah" config before multi-slot support was added.
      */
@@ -196,6 +251,10 @@ object ReminderPrefs {
         putString("${c.id}_snd",  c.soundKey)
         putInt("${c.id}_pre",     c.preAlertMinutes)
         putInt("${c.id}_code",    c.alarmCode)
+        putBoolean("${c.id}_custom", c.useCustomTime)
+        putInt("${c.id}_offset",     c.anchorOffsetMinutes)
+        putInt("${c.id}_repeat",     c.repeatDayOfWeek)
+        if (c.label != null) putString("${c.id}_label", c.label) else remove("${c.id}_label")
         if (c.deepLink != null) putString("${c.id}_link", c.deepLink) else remove("${c.id}_link")
     }
 
@@ -212,6 +271,10 @@ object ReminderPrefs {
                 preAlertMinutes = p.getInt("${id}_pre",     0),
                 alarmCode       = p.getInt("${id}_code",    0),
                 deepLink        = p.getString("${id}_link", null),
+                useCustomTime       = p.getBoolean("${id}_custom", false),
+                anchorOffsetMinutes = p.getInt("${id}_offset",     30),
+                repeatDayOfWeek     = p.getInt("${id}_repeat", ReminderConfig.REPEAT_DAILY),
+                label               = p.getString("${id}_label", null),
             )
         }.getOrNull()
     }

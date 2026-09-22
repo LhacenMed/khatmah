@@ -145,7 +145,7 @@ class QuranTabFragment : Fragment(), Reselectable {
                 }
 
             is ReaderProgress.LastReading.Sunnah ->
-                sunnahReaderDest(requireContext(), last.surah)
+                sunnahReaderDest(requireContext(), last.surah.number)
                     ?.let(::go)
                     ?: showDownloadDialog()
         }

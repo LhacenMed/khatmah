@@ -55,14 +55,19 @@ object ReminderNotifier {
 
     // ── Notification IDs ──────────────────────────────────────────────────────
 
-    fun mainNotifId(config: ReminderConfig): Int = when (val t = config.type) {
-        is ReminderType.Prayer       -> 2000 + t.prayerId
-        is ReminderType.Adhkar       -> 2100 + t.categoryId.hashCode().and(0xFF)
-        is ReminderType.QuranSunnah  -> 2200 + t.surahKey.hashCode().and(0xFF)
-        // Use alarmCode to differentiate multiple khatmah slots (alarmCodes 25-29 → 2325-2329).
-        is ReminderType.DailyKhatmah -> 2300 + config.alarmCode
-        is ReminderType.Custom       -> 2400 + t.customId.hashCode().and(0xFF)
-    }
+    /**
+     * The notification a reminder owns, keyed by the alarm code it already owns.
+     *
+     * The code is what makes one reminder a different reminder from another — it is what its alarm
+     * is registered under — so keying the notification off it means two reminders can never land on
+     * the same notification and quietly replace each other. Deriving it from the type instead only
+     * worked while the set of reminders was small and fixed; the user can now add one for any surah
+     * in the mushaf.
+     *
+     * Kept clear of [preAlertNotifId]'s 2010-2015: alarm codes 0-5 are the prayers, and the rest
+     * start at 20.
+     */
+    fun mainNotifId(config: ReminderConfig): Int = 2000 + config.alarmCode
 
     fun preAlertNotifId(prayerId: Int) = 2010 + prayerId
 
@@ -231,6 +236,13 @@ object ReminderNotifier {
     private fun customUri(soundKey: String): String =
         soundKey.split(SEP).getOrElse(2) { "" }
 
+    /**
+     * The surah a [ReminderType.QuranSunnah] key names. The three the app suggests carry their
+     * [SunnahSurah] key; one the user added carries its surah number.
+     */
+    private fun surahNumber(surahKey: String): Int? =
+        SunnahSurah.of(surahKey)?.number ?: surahKey.toIntOrNull()
+
     private fun musicAttributes(): AudioAttributes = AudioAttributes.Builder()
         .setUsage(AudioAttributes.USAGE_NOTIFICATION)
         .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
@@ -238,14 +250,11 @@ object ReminderNotifier {
 
     private fun defaultDeepLink(type: ReminderType): String = when (type) {
         is ReminderType.Prayer       -> "prayers"
-        // Morning and evening adhkar deep-link directly to their detail pages.
-        is ReminderType.Adhkar       -> when (type.categoryId) {
-            "morning", "evening" -> ReminderRoute.adhkarDetail(type.categoryId)
-            else                 -> "adhkar"
-        }
+        // A dhikr reminder is a call to read that dhikr, so it opens the category itself. One for
+        // a category since deleted lands on the tab, which is where looking for it would start.
+        is ReminderType.Adhkar       -> ReminderRoute.adhkarDetail(type.categoryId)
         // A sunnah reminder is a call to read that surah, so it opens the surah itself.
-        is ReminderType.QuranSunnah  ->
-            SunnahSurah.of(type.surahKey)?.let(ReminderRoute::sunnah) ?: "quran"
+        is ReminderType.QuranSunnah  -> surahNumber(type.surahKey)?.let(ReminderRoute::sunnah) ?: "quran"
         // A wird reminder is a call to read it, so it opens the wird itself, not the tab it sits on.
         is ReminderType.DailyKhatmah -> ReminderRoute.WIRD
         is ReminderType.Custom       -> "quran"

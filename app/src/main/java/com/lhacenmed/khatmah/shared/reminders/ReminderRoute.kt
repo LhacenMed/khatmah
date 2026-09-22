@@ -23,10 +23,15 @@ object ReminderRoute {
     fun adhkarDetailCategory(route: String): String? =
         route.removePrefix(ADHKAR_DETAIL_PREFIX).takeIf { it != route }
 
-    /** The route that opens [surah] in the reader. */
-    fun sunnah(surah: SunnahSurah): String = "$SUNNAH_PREFIX${surah.key}"
+    /**
+     * The route that opens the surah numbered [surahNumber] in the reader.
+     *
+     * The number, rather than a name or a key, because a reminder may be for any surah in the
+     * mushaf — the ones the app suggests by itself are only the three in [SunnahSurah].
+     */
+    fun sunnah(surahNumber: Int): String = "$SUNNAH_PREFIX$surahNumber"
 
-    /** The surah in a [sunnah] route, or null when [route] is not one (or names no surah). */
-    fun sunnahSurah(route: String): SunnahSurah? =
-        route.removePrefix(SUNNAH_PREFIX).takeIf { it != route }?.let(SunnahSurah::of)
+    /** The surah number in a [sunnah] route, or null when [route] is not one. */
+    fun sunnahSurahNumber(route: String): Int? =
+        route.removePrefix(SUNNAH_PREFIX).takeIf { it != route }?.toIntOrNull()
 }

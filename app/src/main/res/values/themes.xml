@@ -87,6 +87,23 @@
         <item name="iconSpaceReserved">false</item>
     </style>
 
+    <!--
+      A value in the reminder editor sheet that opens a picker when pressed — the time, and how
+      often it repeats. Both read as one thing you can press rather than as text, so they share a
+      slab, an icon and a height.
+    -->
+    <style name="Widget.Khatmah.ReminderField" parent="">
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:background">@drawable/reminder_field_bg</item>
+        <item name="android:drawablePadding">12dp</item>
+        <item name="android:drawableTint">?attr/colorOnSurfaceVariant</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:paddingHorizontal">16dp</item>
+        <item name="android:textAppearance">?attr/textAppearanceBodyLarge</item>
+    </style>
+
     <style name="Widget.Khatmah.AnimatedCheckBox" parent="Widget.AppCompat.CompoundButton.CheckBox">
         <item name="android:button" tools:ignore="PrivateResource">@drawable/abc_btn_check_material_anim</item>
         <item name="android:buttonTint">@color/reader_checkbox_tint</item>

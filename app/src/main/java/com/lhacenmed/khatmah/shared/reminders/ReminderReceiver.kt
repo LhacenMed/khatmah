@@ -98,17 +98,22 @@ class ReminderReceiver : BroadcastReceiver() {
         return context.getString(ids.getOrElse(prayerId) { R.string.prayer_fajr })
     }
 
+    /**
+     * The title and body a fixed-time reminder posts.
+     *
+     * A reminder the user added carries its own [ReminderConfig.label] — the surah or the category
+     * they picked — so it names itself without a lookup; the seeded ones name themselves from the
+     * string table, which follows the app's language.
+     */
     private fun labelFor(context: Context, config: ReminderConfig): Pair<String, String> {
         val appName = context.getString(R.string.app_name)
         return when (val t = config.type) {
-            is ReminderType.Adhkar -> {
-                val name = adhkarName(context, t.categoryId)
-                name to name
-            }
-            is ReminderType.QuranSunnah -> {
-                val name = sunnahName(context, t.surahKey)
-                name to name
-            }
+            is ReminderType.Adhkar ->
+                appName to context.getString(R.string.notif_adhkar_body,
+                    config.label ?: adhkarName(context, t.categoryId))
+            is ReminderType.QuranSunnah ->
+                appName to context.getString(R.string.notif_sunnah_body,
+                    config.label ?: sunnahName(context, t.surahKey))
             is ReminderType.DailyKhatmah ->
                 context.getString(R.string.today_khatmah_title) to appName
             is ReminderType.Custom -> appName to appName

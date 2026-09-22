@@ -61,7 +61,6 @@ import com.lhacenmed.khatmah.shared.util.OnboardingPrefs
 import com.lhacenmed.khatmah.feature.more.MoreTab
 import com.lhacenmed.khatmah.feature.more.MoreTabFragment
 import com.lhacenmed.khatmah.shared.reminders.ReminderRoute
-import com.lhacenmed.khatmah.shared.reminders.SunnahSurah
 import com.lhacenmed.khatmah.widget.PrayerWidget
 import com.lhacenmed.khatmah.widget.WidgetAction
 import kotlinx.coroutines.flow.first
@@ -549,7 +548,7 @@ class MainActivity : AppCompatActivity() {
         } ?: return
 
         val adhkarCategory = ReminderRoute.adhkarDetailCategory(route)
-        val sunnahSurah    = ReminderRoute.sunnahSurah(route)
+        val sunnahSurah    = ReminderRoute.sunnahSurahNumber(route)
         when {
             adhkarCategory != null      -> openAdhkarDetail(adhkarCategory)
             sunnahSurah != null         -> openSunnah(sunnahSurah)
@@ -584,12 +583,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Brings the More tab up — where the sunnah surahs live — and asks it to open [surah], the
-     * same way its own row does, guards and download dialog included.
+     * Brings the More tab up — where the sunnah surahs live — and asks it to open the surah
+     * numbered [surahNumber], the same way its own row does, guards and download dialog included.
      */
-    private fun openSunnah(surah: SunnahSurah) = openOnTab(AppTabs.indexOf(MoreTab)) {
+    private fun openSunnah(surahNumber: Int) = openOnTab(AppTabs.indexOf(MoreTab)) {
         (supportFragmentManager.findFragmentByTag(MoreTab.route) as? MoreTabFragment)
-            ?.openSunnah(surah)
+            ?.openSunnah(surahNumber)
     }
 
     /**

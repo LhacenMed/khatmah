@@ -4,9 +4,8 @@
   so the rows, categories and dialogs are the platform's own.
 
   Almost nothing here persists on its own: these rows front stores that already exist
-  (ReminderPrefs, MushafPrefs, LocaleManager), so they are marked non-persistent and MoreTabFragment
-  reads and writes them. The alarm time rows declare a `dependency` on their switch, which is what
-  greys them out when the alarm is off — no code decides that.
+  (MushafPrefs, LocaleManager), so they are marked non-persistent and MoreTabFragment reads and
+  writes them. The alarms themselves live one screen along, in reminders_preferences.xml.
 -->
 <PreferenceScreen
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -54,6 +53,12 @@
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/more_settings">
+        <!-- Every alarm the app can raise, in one screen — see RemindersFragment. -->
+        <Preference
+            android:icon="@drawable/ic_notifications"
+            android:key="reminders"
+            android:title="@string/reminders_title" />
+
         <Preference
             android:icon="@drawable/ic_notifications_active"
             android:key="daily_alarm"
@@ -75,62 +80,6 @@
             android:icon="@drawable/ic_kaaba"
             android:key="qibla"
             android:title="@string/more_qibla_direction" />
-    </PreferenceCategory>
-
-    <PreferenceCategory android:title="@string/more_adhkar_alarms">
-        <SwitchPreferenceCompat
-            android:icon="@drawable/ic_wb_sunny"
-            android:key="adhkar:morning"
-            android:persistent="false"
-            android:title="@string/more_day_adhkar_alarm" />
-
-        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
-            android:dependency="adhkar:morning"
-            android:icon="@drawable/ic_schedule"
-            android:key="adhkar:morning.time"
-            android:persistent="false"
-            android:title="@string/more_day_adhkar_time" />
-
-        <SwitchPreferenceCompat
-            android:icon="@drawable/ic_dark_mode"
-            android:key="adhkar:evening"
-            android:persistent="false"
-            android:title="@string/more_night_adhkar_alarm" />
-
-        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
-            android:dependency="adhkar:evening"
-            android:icon="@drawable/ic_schedule"
-            android:key="adhkar:evening.time"
-            android:persistent="false"
-            android:title="@string/more_night_adhkar_time" />
-    </PreferenceCategory>
-
-    <PreferenceCategory android:title="@string/more_sunnahs_alarms">
-        <SwitchPreferenceCompat
-            android:icon="@drawable/ic_notifications"
-            android:key="sunnah:al_mulk"
-            android:persistent="false"
-            android:title="@string/more_al_mulk_alarm" />
-
-        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
-            android:dependency="sunnah:al_mulk"
-            android:icon="@drawable/ic_schedule"
-            android:key="sunnah:al_mulk.time"
-            android:persistent="false"
-            android:title="@string/more_al_mulk_time" />
-
-        <SwitchPreferenceCompat
-            android:icon="@drawable/ic_notifications"
-            android:key="sunnah:al_baqarah"
-            android:persistent="false"
-            android:title="@string/more_al_baqarah_alarm" />
-
-        <com.lhacenmed.khatmah.core.ui.components.ValuePreference
-            android:dependency="sunnah:al_baqarah"
-            android:icon="@drawable/ic_schedule"
-            android:key="sunnah:al_baqarah.time"
-            android:persistent="false"
-            android:title="@string/more_al_baqarah_time" />
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/more_khatmah_app">

@@ -74,10 +74,12 @@
     <string name="more_day_adhkar_time">وقت أذكار الصباح</string>
     <string name="more_night_adhkar_alarm">تنبيه أذكار المساء</string>
     <string name="more_night_adhkar_time">وقت أذكار المساء</string>
+    <string name="more_adhkar_custom_time">استخدام وقت مخصص بدلاً من ذلك</string>
+    <string name="more_adhkar_custom_time_value">وقت مخصص</string>
+    <string name="more_adhkar_offset_after">%1$d دقيقة بعد %2$s</string>
+    <string name="more_adhkar_offset_before">%1$d دقيقة قبل %2$s</string>
     <string name="more_al_mulk_alarm">تنبيه سورة الملك</string>
-    <string name="more_al_mulk_time">وقت سورة الملك</string>
     <string name="more_al_baqarah_alarm">تنبيه سورة البقرة</string>
-    <string name="more_al_baqarah_time">وقت سورة البقرة</string>
     <string name="more_language">اللغة</string>
     <string name="more_contact_us">تواصل معنا</string>
     <string name="more_twitter">تابعنا على تويتر</string>
@@ -370,6 +372,8 @@
 
     <!-- Notification body -->
     <string name="notif_pre_alert_body">%1$d دقيقة على %2$s</string>
+    <string name="notif_adhkar_body">حان وقت %1$s - اضغط للقراءة</string>
+    <string name="notif_sunnah_body">لا تنسَ قراءة %1$s - اضغط للقراءة</string>
 
     <!-- Sound selection -->
     <string name="adhan_alert_before_minutes">قبل %1$d دقيقة</string>
@@ -712,4 +716,22 @@
     <string name="update_check_now">التحقق من التحديثات</string>
     <string name="update_checking">جارٍ التحقق…</string>
     <string name="update_up_to_date">أنت على أحدث إصدار</string>
+
+    <!-- Reminders — the one screen holding every alarm outside the adhan and the daily wird. -->
+    <string name="reminders_title">التذكيرات</string>
+    <string name="reminders_added">تذكيراتي</string>
+    <string name="reminders_add">إضافة تذكير</string>
+    <string name="reminders_new_title">تذكير جديد</string>
+    <string name="reminders_pick_target">اختر السورة أو الذكر</string>
+    <string name="reminders_already_added">مُضاف</string>
+    <string name="reminders_schedule">التوقيت</string>
+    <string name="reminders_time">الوقت</string>
+    <string name="reminders_repeat">التكرار</string>
+    <string name="reminders_repeat_daily">يومياً</string>
+    <string name="reminders_save">حفظ</string>
+    <string name="reminders_cancel">إلغاء</string>
+    <string name="reminders_delete">حذف</string>
+    <string name="reminders_al_kahf_alarm">تنبيه سورة الكهف</string>
+    <string name="reminders_search_hint">ابحث عن سورة أو ذكر</string>
+    <string name="reminders_no_matches">لا توجد نتائج</string>
 </resources>

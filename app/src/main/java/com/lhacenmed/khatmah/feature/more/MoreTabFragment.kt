@@ -1,6 +1,5 @@
 package com.lhacenmed.khatmah.feature.more
 
-import android.os.Build
 import android.os.Bundle
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
@@ -17,14 +16,10 @@ import com.lhacenmed.khatmah.core.ui.collectWhileStarted
 import com.lhacenmed.khatmah.core.ui.components.ValuePreference
 import com.lhacenmed.khatmah.core.ui.components.go
 import com.lhacenmed.khatmah.core.ui.components.onClick
-import com.lhacenmed.khatmah.core.ui.components.showTimePicker
 import com.lhacenmed.khatmah.core.ui.tintIcons
 import com.lhacenmed.khatmah.feature.khatmah.data.KhatmahRepository
 import com.lhacenmed.khatmah.feature.quran.data.MushafPrefs
 import com.lhacenmed.khatmah.feature.quran.ui.reader.sunnahReaderDest
-import com.lhacenmed.khatmah.shared.reminders.ReminderConfig
-import com.lhacenmed.khatmah.shared.reminders.ReminderPrefs
-import com.lhacenmed.khatmah.shared.reminders.ReminderScheduler
 import com.lhacenmed.khatmah.shared.reminders.SunnahSurah
 import com.lhacenmed.khatmah.feature.update.UpdateChecker
 import com.lhacenmed.khatmah.feature.update.UpdatePrefs
@@ -35,14 +30,6 @@ import kotlinx.coroutines.launch
 
 // Items within this distance from the top animate directly; farther ones jump-then-animate.
 private const val SMOOTH_SCROLL_THRESHOLD = 4
-
-/** The reminders shown here, paired with the row that sets each one's time. */
-private val ReminderIds = listOf(
-    "adhkar:morning",
-    "adhkar:evening",
-    "sunnah:al_mulk",
-    "sunnah:al_baqarah",
-)
 
 /**
  * Everything the app keeps outside the four reading tabs: the current khatmah, the sunnah surahs,
@@ -67,7 +54,6 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
         bindNavigation()
         bindSunnahSurahs()
         bindLanguage()
-        bindReminders()
         bindUpdates()
 
         findPreference<PreferenceCategory>("debug")?.isVisible = BuildConfig.DEBUG
@@ -84,7 +70,6 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
         // rows on every touch is one moving part more than the screen needs.
         listView.isVerticalScrollBarEnabled = false
         observeSessionCounts()
-        observeReminders()
         observeMushafPrint()
         collectWhileStarted(UpdatePrefs.autoPrompt) { showUpdateRows() }
     }
@@ -108,6 +93,7 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
         onClick("previous_sessions") { go(Dest.Sessions(showRead = true)) }
         onClick("upcoming_sessions") { go(Dest.Sessions(showRead = false)) }
         onClick("bookmarks")         { go(Dest.Bookmarks) }
+        onClick("reminders")         { go(Dest.Reminders) }
         onClick("daily_alarm")       { go(Dest.DailyAlarm) }
         onClick("new_khatmah")       { go(Dest.NewKhatmah) }
         onClick("prayer_settings")   { go(Dest.PrayerSettings) }
@@ -120,9 +106,9 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
     }
 
     private fun bindSunnahSurahs() {
-        onClick("surat_kahf")    { openSunnah(SunnahSurah.AlKahf) }
-        onClick("surat_mulk")    { openSunnah(SunnahSurah.AlMulk) }
-        onClick("surat_baqarah") { openSunnah(SunnahSurah.AlBaqarah) }
+        onClick("surat_kahf")    { openSunnah(SunnahSurah.AlKahf.number) }
+        onClick("surat_mulk")    { openSunnah(SunnahSurah.AlMulk.number) }
+        onClick("surat_baqarah") { openSunnah(SunnahSurah.AlBaqarah.number) }
     }
 
     /**
@@ -144,25 +130,6 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
         }
     }
 
-    /**
-     * Each alarm is a switch plus the row that sets its time. The time row's `dependency` in XML
-     * already greys it out when the alarm is off, so nothing here has to think about that.
-     */
-    private fun bindReminders() {
-        ReminderIds.forEach { id ->
-            findPreference<SwitchPreferenceCompat>(id)?.setOnPreferenceChangeListener { _, value ->
-                config(id)?.let { save(it.copy(enabled = value as Boolean)) }
-                true
-            }
-            onClick("$id.time") {
-                val current = config(id)?.takeIf { it.enabled } ?: return@onClick
-                showTimePicker(requireContext(), current.timeHour, current.timeMinute) { hour, minute ->
-                    save(current.copy(timeHour = hour, timeMinute = minute))
-                }
-            }
-        }
-    }
-
     // ── State ─────────────────────────────────────────────────────────────────
 
     /** Session counters, shown as pills on the two session rows. */
@@ -171,18 +138,6 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
         collectWhileStarted(repo.activeSessionCounts()) { counts ->
             findPreference<BadgePreference>("previous_sessions")?.count = counts.read
             findPreference<BadgePreference>("upcoming_sessions")?.count = counts.upcoming
-        }
-    }
-
-    /** Switch states and alarm times, so a change made anywhere shows up here. */
-    private fun observeReminders() {
-        collectWhileStarted(ReminderPrefs.flow) { reminders ->
-            ReminderIds.forEach { id ->
-                val config = reminders.find { it.id == id }
-                findPreference<SwitchPreferenceCompat>(id)?.isChecked = config?.enabled == true
-                findPreference<ValuePreference>("$id.time")?.value =
-                    config?.let { "%02d:%02d".format(it.timeHour, it.timeMinute) } ?: "--:--"
-            }
         }
     }
 
@@ -196,17 +151,17 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
     // ── Actions ───────────────────────────────────────────────────────────────
 
     /**
-     * Opens a sunnah surah as a session windowed to that surah's pages.
+     * Opens the surah numbered [surahNumber] as a session windowed to that surah's pages.
      *
      * Public because a sunnah reminder leads here too: the row and the notification are two ways
      * of asking for the same read. A print that cannot be windowed — not QCF4, or QCF4 with no
      * pages on disk for this riwaya yet — lands on the download dialog rather than doing nothing,
      * which would leave the row looking broken.
      */
-    fun openSunnah(surah: SunnahSurah) {
+    fun openSunnah(surahNumber: Int) {
         val context = requireContext()
         lifecycleScope.launch {
-            val dest = sunnahReaderDest(context, surah) ?: return@launch showDownloadDialog()
+            val dest = sunnahReaderDest(context, surahNumber) ?: return@launch showDownloadDialog()
             go(dest)
         }
     }
@@ -220,16 +175,6 @@ class MoreTabFragment : PreferenceFragmentCompat(), Reselectable {
             .setNegativeButton(R.string.today_cancel, null)
             .show()
     }
-
-    private fun save(config: ReminderConfig) {
-        val context = requireContext()
-        ReminderPrefs.save(context, config)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            ReminderScheduler.schedule(context, config)
-        }
-    }
-
-    private fun config(id: String): ReminderConfig? = ReminderPrefs.flow.value.find { it.id == id }
 
     // ── Updates ───────────────────────────────────────────────────────────────
 
