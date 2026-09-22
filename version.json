@@ -1,9 +1,9 @@
 {
-  "versionCode": 10403,
-  "versionName": "1.4.1",
-  "apkUrl": "https://github.com/LhacenMed/khatmah/releases/download/v1.4.1/khatmah-1.4.1-universal.apk",
-  "notes": "## Reminders\n\n- Every alarm now lives on one **Reminders** screen, reached from the More tab.\n- Add a reminder for **any surah** in the mushaf, or for any adhkar category.\n- Reminders can repeat **daily, or on one day of the week** — so Surat Al-Kahf can sit on Friday.\n- Surat Al-Mulk, Al-Baqarah and Al-Kahf each have their own reminder; Al-Kahf had none before.",
+  "versionCode": 10404,
+  "versionName": "1.4.2",
+  "apkUrl": "https://github.com/LhacenMed/khatmah/releases/download/v1.4.2/khatmah-1.4.2-universal.apk",
+  "notes": "## Fixes\n\n- Fixed a crash that made the **Reminders** screen impossible to open after adding a reminder of your own.",
   "notesByLanguage": {
-    "ar": "## التذكيرات\n\n- جميع التنبيهات أصبحت في شاشة **التذكيرات** واحدة، من تبويب المزيد.\n- أضف تذكيراً لأي **سورة** في المصحف، أو لأي قسم من الأذكار.\n- يمكن تكرار التذكير **يومياً أو في يوم محدد من الأسبوع** — لتكون سورة الكهف يوم الجمعة.\n- سور الملك والبقرة والكهف لكل منها تذكير خاص؛ وسورة الكهف لم يكن لها تذكير سابقاً."
+    "ar": "## إصلاحات\n\n- إصلاح تعطل كان يمنع فتح شاشة **التذكيرات** بعد إضافة تذكير خاص بك."
   }
 }
