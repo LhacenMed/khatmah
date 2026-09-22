@@ -15,10 +15,108 @@
 #
 # Usage:
 #   ./scripts/release.sh
+#   ./scripts/release.sh --type beta --bump build \
+#       --notes "Fixed the thing." --notes-ar "تم إصلاح المشكلة." --yes
+#
+# Any flag left unset falls back to its interactive prompt, so partial flags
+# (e.g. just --type) still ask for the rest. Passing --yes skips the
+# confirmation prompt.
+#
+# Release notes are markdown, so they carry characters the shell wants for
+# itself — ` runs a command, $ expands a variable, # starts a comment. The
+# script receives whatever the shell hands it, so how the notes are quoted at
+# the prompt decides whether they arrive intact:
+#
+#   bash / zsh          '...'        single quotes, literal, newlines included
+#   PowerShell          @'...'@      single-quoted here-string
+#   any shell, always   --notes-file <path>  or  --notes-file -  (stdin)
+#
+# Double quotes are NOT safe in either shell: bash runs `backticks` and eats
+# $words, PowerShell treats ` as its escape character. Use --notes-file, or
+# feed the notes on stdin with a quoted heredoc, when in doubt:
+#
+#   ./scripts/release.sh --type beta --bump build --yes --notes-file - <<'EOF'
+#   ## What's new
+#   - Fixed the `reader` crash
+#   EOF
 #
 # Requirements: gh (authenticated) and jq. No keystore, no Android SDK.
 
 set -euo pipefail
+
+usage() {
+    cat <<'USAGE'
+Usage: ./scripts/release.sh [options]
+
+  --type <stable|alpha|beta|rc>       Release type (default prompt: stable)
+  --bump <patch|minor|major|build>    Version bump kind (default prompt: patch)
+  --notes <text>                      English release notes
+  --notes-file <path|->               English notes from a file, or - for stdin
+  --notes-ar <text>                   Arabic release notes (optional)
+  --notes-ar-file <path|->            Arabic notes from a file, or - for stdin
+  -y, --yes                           Skip the confirmation prompt
+  -h, --help                          Show this help
+
+Any option left unset falls back to its interactive prompt.
+
+Quoting markdown notes: use '...' in bash/zsh and @'...'@ in PowerShell.
+Double quotes let the shell run `backticks` and expand $words before the
+script ever sees them. --notes-file (or - for stdin) is always safe.
+USAGE
+}
+
+# ── Parse flags ─────────────────────────────────────────────────────────────────
+FLAG_TYPE="" FLAG_BUMP="" FLAG_NOTES="" FLAG_NOTES_FILE=""
+FLAG_NOTES_AR="" FLAG_NOTES_AR_FILE="" FLAG_YES=0
+
+# `set -u` turns a flag left without its value into "$2: unbound variable", which
+# says nothing about which flag was left dangling. This names it.
+need_value() {
+    [[ $# -ge 2 ]] || { echo "✗ ${1} needs a value."; exit 1; }
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --type)            need_value "$@"; FLAG_TYPE="$2"; shift 2 ;;
+        --type=*)          FLAG_TYPE="${1#*=}"; shift ;;
+        --bump)            need_value "$@"; FLAG_BUMP="$2"; shift 2 ;;
+        --bump=*)          FLAG_BUMP="${1#*=}"; shift ;;
+        --notes)           need_value "$@"; FLAG_NOTES="$2"; shift 2 ;;
+        --notes=*)         FLAG_NOTES="${1#*=}"; shift ;;
+        --notes-file)      need_value "$@"; FLAG_NOTES_FILE="$2"; shift 2 ;;
+        --notes-file=*)    FLAG_NOTES_FILE="${1#*=}"; shift ;;
+        --notes-ar)        need_value "$@"; FLAG_NOTES_AR="$2"; shift 2 ;;
+        --notes-ar=*)      FLAG_NOTES_AR="${1#*=}"; shift ;;
+        --notes-ar-file)   need_value "$@"; FLAG_NOTES_AR_FILE="$2"; shift 2 ;;
+        --notes-ar-file=*) FLAG_NOTES_AR_FILE="${1#*=}"; shift ;;
+        -y|--yes)          FLAG_YES=1; shift ;;
+        -h|--help)         usage; exit 0 ;;
+        *) echo "✗ Unknown option: $1"; usage; exit 1 ;;
+    esac
+done
+
+if [[ -n "$FLAG_NOTES" && -n "$FLAG_NOTES_FILE" ]]; then
+    echo "✗ Pass either --notes or --notes-file, not both."; exit 1
+fi
+if [[ -n "$FLAG_NOTES_AR" && -n "$FLAG_NOTES_AR_FILE" ]]; then
+    echo "✗ Pass either --notes-ar or --notes-ar-file, not both."; exit 1
+fi
+if [[ "$FLAG_NOTES_FILE" == "-" && "$FLAG_NOTES_AR_FILE" == "-" ]]; then
+    echo "✗ Only one of --notes-file/--notes-ar-file can read stdin."; exit 1
+fi
+
+# Prompts read the terminal itself rather than stdin, because stdin may be carrying
+# the notes (--notes-file -) and would otherwise be at end-of-file by the time the
+# first question is asked — every prompt would take the empty answer and the run
+# would abort without saying why. Only when the session looks interactive, though:
+# somewhere with no terminal behind it (CI, a pipe) this falls back to stdin, so an
+# unattended run still ends at end-of-file rather than waiting for a person forever.
+ask() {
+    local __dest="$1" __prompt="$2"
+    if [[ -t 1 && -r /dev/tty ]]; then read -rp "$__prompt" "$__dest" < /dev/tty
+    else                               read -rp "$__prompt" "$__dest"
+    fi
+}
 
 # ── Bootstrap ───────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -68,51 +166,74 @@ echo "  Runs on         : GitHub Actions"
 echo ""
 
 # ── Step 2: Choose version type ─────────────────────────────────────────────────
-echo "  Release type:"
-echo "    1) Stable          (e.g. 1.2.3)"
-echo "    2) Alpha           (e.g. 1.2.3-alpha.1)"
-echo "    3) Beta            (e.g. 1.2.3-beta.1)"
-echo "    4) Release Candidate  (e.g. 1.2.3-rc.1)"
-echo ""
-read -rp "  Select [1-4, default 1]: " TYPE_CHOICE
-TYPE_CHOICE="${TYPE_CHOICE:-1}"
+if [[ -n "$FLAG_TYPE" ]]; then
+    case "${FLAG_TYPE,,}" in
+        stable)                       NEW_TYPE="Stable" ;;
+        alpha)                        NEW_TYPE="Alpha" ;;
+        beta)                         NEW_TYPE="Beta" ;;
+        rc|release-candidate)         NEW_TYPE="ReleaseCandidate" ;;
+        *) echo "✗ --type must be one of: stable, alpha, beta, rc"; exit 1 ;;
+    esac
+else
+    echo "  Release type:"
+    echo "    1) Stable          (e.g. 1.2.3)"
+    echo "    2) Alpha           (e.g. 1.2.3-alpha.1)"
+    echo "    3) Beta            (e.g. 1.2.3-beta.1)"
+    echo "    4) Release Candidate  (e.g. 1.2.3-rc.1)"
+    echo ""
+    ask TYPE_CHOICE "  Select [1-4, default 1]: "
+    TYPE_CHOICE="${TYPE_CHOICE:-1}"
 
-case "$TYPE_CHOICE" in
-    1) NEW_TYPE="Stable" ;;
-    2) NEW_TYPE="Alpha" ;;
-    3) NEW_TYPE="Beta" ;;
-    4) NEW_TYPE="ReleaseCandidate" ;;
-    *) echo "✗ Invalid choice"; exit 1 ;;
-esac
-
-# ── Step 3: Choose bump kind ────────────────────────────────────────────────────
-echo ""
-echo "  Version bump:"
-echo "    1) patch  — bug fixes          (x.y.Z)"
-echo "    2) minor  — new features       (x.Y.0)"
-echo "    3) major  — breaking changes   (X.0.0)"
-
-if [[ "$NEW_TYPE" != "Stable" ]]; then
-    echo "    4) build  — pre-release iteration (same x.y.z, +build)"
+    case "$TYPE_CHOICE" in
+        1) NEW_TYPE="Stable" ;;
+        2) NEW_TYPE="Alpha" ;;
+        3) NEW_TYPE="Beta" ;;
+        4) NEW_TYPE="ReleaseCandidate" ;;
+        *) echo "✗ Invalid choice"; exit 1 ;;
+    esac
 fi
 
-echo ""
-BUMP_EXTRA=""; [[ "$NEW_TYPE" != "Stable" ]] && BUMP_EXTRA=" or 4"
-read -rp "  Select [1-3${BUMP_EXTRA}, default 1]: " BUMP_CHOICE
-BUMP_CHOICE="${BUMP_CHOICE:-1}"
+# ── Step 3: Choose bump kind ────────────────────────────────────────────────────
+if [[ -n "$FLAG_BUMP" ]]; then
+    BUMP_KIND="${FLAG_BUMP,,}"
+    case "$BUMP_KIND" in
+        patch|minor|major) ;;
+        build)
+            if [[ "$NEW_TYPE" == "Stable" ]]; then
+                echo "✗ --bump build is only for pre-release types"; exit 1
+            fi
+            ;;
+        *) echo "✗ --bump must be one of: patch, minor, major, build"; exit 1 ;;
+    esac
+else
+    echo ""
+    echo "  Version bump:"
+    echo "    1) patch  — bug fixes          (x.y.Z)"
+    echo "    2) minor  — new features       (x.Y.0)"
+    echo "    3) major  — breaking changes   (X.0.0)"
 
-case "$BUMP_CHOICE" in
-    1) BUMP_KIND="patch" ;;
-    2) BUMP_KIND="minor" ;;
-    3) BUMP_KIND="major" ;;
-    4)
-        if [[ "$NEW_TYPE" == "Stable" ]]; then
-            echo "✗ Build increment is only for pre-release types"; exit 1
-        fi
-        BUMP_KIND="build"
-        ;;
-    *) echo "✗ Invalid choice"; exit 1 ;;
-esac
+    if [[ "$NEW_TYPE" != "Stable" ]]; then
+        echo "    4) build  — pre-release iteration (same x.y.z, +build)"
+    fi
+
+    echo ""
+    BUMP_EXTRA=""; [[ "$NEW_TYPE" != "Stable" ]] && BUMP_EXTRA=" or 4"
+    ask BUMP_CHOICE "  Select [1-3${BUMP_EXTRA}, default 1]: "
+    BUMP_CHOICE="${BUMP_CHOICE:-1}"
+
+    case "$BUMP_CHOICE" in
+        1) BUMP_KIND="patch" ;;
+        2) BUMP_KIND="minor" ;;
+        3) BUMP_KIND="major" ;;
+        4)
+            if [[ "$NEW_TYPE" == "Stable" ]]; then
+                echo "✗ Build increment is only for pre-release types"; exit 1
+            fi
+            BUMP_KIND="build"
+            ;;
+        *) echo "✗ Invalid choice"; exit 1 ;;
+    esac
+fi
 
 version::bump "$NEW_TYPE" "$BUMP_KIND"
 NEW_NAME="$(version::name "$NEW_TYPE" "$V_MAJOR" "$V_MINOR" "$V_PATCH" "$V_BUILD")"
@@ -122,26 +243,62 @@ TAG="v${NEW_NAME}"
 # Written in an editor rather than at the prompt: notes are markdown, run to several
 # lines, and carry an optional Arabic translation. One file holds both languages, so
 # they are written and reviewed side by side and cannot drift apart.
-AR_MARKER="[ar]"
-CUT_MARKER="[cut]"
-
-# Everything above the Arabic marker (english) or below it (arabic), stopping at the
-# cut. The help text lives below that cut rather than behind a comment prefix,
-# because the comment prefix would have to be "#" and "#" is a markdown heading.
-notes_section() {
-    awk -v ar="$AR_MARKER" -v cut="$CUT_MARKER" -v want="$1" '
-        { line = $0; gsub(/^[ 	]+|[ 	]+$/, "", line) }
-        line == cut { exit }
-        line == ar  { seen = 1; next }
-        (want == "arabic") != (seen == 1) { next }
-        # Blank lines are held back until real content follows them, so the
-        # padding the template leaves at either end never reaches the notes.
-        line == "" { if (started) pending++; next }
-        { while (pending-- > 0) print ""; pending = 0; started = 1; print }
-    ' "$NOTES_FILE"
+# A file, or "-" for stdin — the one way of passing markdown that no shell can
+# reinterpret on the way in.
+read_notes_file() {
+    local raw
+    if [[ "$1" == "-" ]]; then
+        raw="$(cat)"
+    else
+        [[ -f "$1" ]] || { echo "✗ ${2} not found: ${1}" >&2; exit 1; }
+        raw="$(cat "$1")"
+    fi
+    # A leading byte-order mark is dropped. PowerShell writes one when it pipes, and
+    # Windows editors write one when they save; it shows as nothing in the terminal,
+    # but it would sit in front of the first "##" and stop it being a heading.
+    printf '%s' "${raw#$'﻿'}"
 }
 
-cat > "$NOTES_FILE" <<TEMPLATE
+# Any notes flag at all takes the non-interactive path. Keying this on the English
+# notes alone would send "--notes-ar ... " on its own to the editor, where the
+# Arabic that was passed is never read and silently does not reach the release.
+if [[ -n "$FLAG_NOTES" || -n "$FLAG_NOTES_FILE" || -n "$FLAG_NOTES_AR" || -n "$FLAG_NOTES_AR_FILE" ]]; then
+    if [[ -n "$FLAG_NOTES_FILE" ]]; then
+        NOTES="$(read_notes_file "$FLAG_NOTES_FILE" --notes-file)"
+    else
+        NOTES="$FLAG_NOTES"
+    fi
+
+    if [[ -n "$FLAG_NOTES_AR_FILE" ]]; then
+        NOTES_AR="$(read_notes_file "$FLAG_NOTES_AR_FILE" --notes-ar-file)"
+    else
+        NOTES_AR="$FLAG_NOTES_AR"
+    fi
+
+    [[ -n "$NOTES" ]] || { echo "✗ English notes are required — pass --notes or --notes-file."; exit 1; }
+else
+
+    AR_MARKER="[ar]"
+    CUT_MARKER="[cut]"
+
+    # Everything above the Arabic marker (english) or below it (arabic), stopping at
+    # the cut. The help text lives below that cut rather than behind a comment
+    # prefix, because the comment prefix would have to be "#" and "#" is a markdown
+    # heading.
+    notes_section() {
+        awk -v ar="$AR_MARKER" -v cut="$CUT_MARKER" -v want="$1" '
+            { line = $0; gsub(/^[ 	]+|[ 	]+$/, "", line) }
+            line == cut { exit }
+            line == ar  { seen = 1; next }
+            (want == "arabic") != (seen == 1) { next }
+            # Blank lines are held back until real content follows them, so the
+            # padding the template leaves at either end never reaches the notes.
+            line == "" { if (started) pending++; next }
+            { while (pending-- > 0) print ""; pending = 0; started = 1; print }
+        ' "$NOTES_FILE"
+    }
+
+    cat > "$NOTES_FILE" <<TEMPLATE
 
 
 ${AR_MARKER}
@@ -159,11 +316,12 @@ English notes. Everything from ${CUT_MARKER} down is ignored, and saving with
 no English notes aborts the release.
 TEMPLATE
 
-eval "$(git var GIT_EDITOR) \"\$NOTES_FILE\""
+    eval "$(git var GIT_EDITOR) \"\$NOTES_FILE\""
 
-NOTES="$(notes_section english)"
-NOTES_AR="$(notes_section arabic)"
-[[ -n "$NOTES" ]] || { echo "  Aborted — no release notes written."; exit 0; }
+    NOTES="$(notes_section english)"
+    NOTES_AR="$(notes_section arabic)"
+    [[ -n "$NOTES" ]] || { echo "  Aborted — no release notes written."; exit 0; }
+fi
 
 # ── Step 5: Preview + confirm ────────────────────────────────────────────────────
 echo ""
@@ -185,8 +343,12 @@ if git::release_published "$TAG"; then
     echo "✗ Release ${TAG} is already published — bump to a different version."; exit 1
 fi
 
-read -rp "  Proceed? [y/N]: " CONFIRM
-[[ "${CONFIRM,,}" == "y" ]] || { echo "  Aborted."; exit 0; }
+if [[ "$FLAG_YES" -eq 1 ]]; then
+    echo "  Proceeding (--yes)."
+else
+    ask CONFIRM "  Proceed? [y/N]: "
+    [[ "${CONFIRM,,}" == "y" ]] || { echo "  Aborted."; exit 0; }
+fi
 
 # ── Step 6: Dispatch the cloud pipeline ──────────────────────────────────────────
 # Remember the newest run id first, so we can identify the one we just created —
